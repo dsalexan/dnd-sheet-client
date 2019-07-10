@@ -1,22 +1,24 @@
 <template>
-  <div class="sheet-dev">
-    {{ sheet.name }}
-    <button @click="reset_sheet">Reset</button>
-    <form class="charsheet">
-      <dnd-header>
-      </dnd-header>
-    </form>
-  </div>
+    <div class="sheet-dev">
+        {{ sheet.name }}
+        <button @click="reset_sheet">Reset</button>
+        <form class="charsheet">
+            <!-- <dnd-header /> -->
+            <dnd-main />
+        </form>
+    </div>
 </template>
 
 <script>
 import {mapState, mapMutations} from 'vuex'
 
 import Header from '@/components/dnd/Header.vue'
+import Main from '@/components/dnd/Main.vue'
 
 export default {
   name: 'sheet',
   components: {
+    'dnd-main': Main,
     'dnd-header': Header
   },
   computed: mapState([

@@ -718,6 +718,8 @@ export default {
                     &:checked
                       background-color: black
 
+        
+        
         div.passive-perception
           display: flex
           flex-direction: row-reverse

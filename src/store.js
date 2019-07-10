@@ -14,6 +14,12 @@ export default new Vuex.Store({
         race: undefined,
         alignment: undefined,
         experience_points: undefined
+      },
+      stats: {
+        attributes: {
+          str: 19,
+          dex: 8
+        }
       }
     }
   },
@@ -35,6 +41,9 @@ export default new Vuex.Store({
       state.sheet.misc.race = undefined
       state.sheet.misc.alignment = undefined
       state.sheet.misc.experience_points = undefined
+
+      state.sheet.stats.attributes.str = undefined
+      state.sheet.stats.attributes.dex = undefined
     }
   },
   actions: {
