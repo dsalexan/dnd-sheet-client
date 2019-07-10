@@ -263,7 +263,7 @@
             <div class="hitdice">
               <div>
                 <div class="total">
-                  <label onclick="totalhd_clicked()" for="totalhd">Total</label><input name="totalhd" placeholder="2d10"
+                  <label for="totalhd">Total</label><input name="totalhd" placeholder="2d10"
                     type="text" />
                 </div>
                 <div class="remaining">
@@ -641,6 +641,8 @@ export default {
                     text-align: center
                     
           div.attr-applications
+            flex-grow: 1
+            margin-left: 10px
               
             div.inspiration
               display: flex
@@ -969,6 +971,8 @@ export default {
               
           textarea
             border: 0
+            width: calc(100% - (2 * #{$radius}))
+            margin-bottom: $radius
 
       section.equipment
         border: 1px solid black
@@ -1064,5 +1068,15 @@ export default {
             padding: 5px
             height: 43em
             height: 75em
+  
+  input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
+    color: rgba(0, 0, 0, 0.1) !important
+    border-color: transparent !important
+
+  input, textarea
+    opacity: 0 !important
+
+  div.attr-applications
+    background: grey
 </style>
 

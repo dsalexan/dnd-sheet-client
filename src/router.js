@@ -3,6 +3,7 @@ import Router from 'vue-router'
 import Home from './views/Home.vue'
 
 import Sheet from './views/Sheet.vue'
+import SheetDev from './views/SheetDev.vue'
 
 Vue.use(Router)
 
@@ -27,6 +28,11 @@ export default new Router({
       path: '/sheet',
       name: 'sheet',
       component: Sheet
+    },
+    {
+      path: '/sheet-dev',
+      name: 'sheet-dev',
+      component: SheetDev
     }
   ]
 })
