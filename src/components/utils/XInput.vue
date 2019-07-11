@@ -137,5 +137,10 @@ export default {
                 border: 1px solid black
                 text-align: center
                 border-radius: $radius
+
+    
+    .clean
+        input:disabled
+            background-color: initial
 </style>
 

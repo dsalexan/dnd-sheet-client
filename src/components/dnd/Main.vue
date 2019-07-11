@@ -7,7 +7,7 @@
                 </div>
                 <div class="attr-applications">
                     <x-input class="inspiration" name="inspiration" type="checkbox" label="Inspiration" v-model="sheet.stats.inspiration" box reactive="false" />
-                    <x-input class="proficiencybonus" name="proficiencybonus" label="Proficiency Bonus" :value="sheetProficiencyBonus" placeholder="+2" box reactive="false" disabled />
+                    <x-input class="proficiencybonus clean" name="proficiencybonus" label="Proficiency Bonus" :value="sheetProficiencyBonus" placeholder="+2" box reactive="false" disabled />
                     <!-- <dnd-list-section label="Saving Throw" placeholder="+0" v-model="sheet.stats.proficiencies.saves" :map="mapSaves"/> -->
 
                     <div class="list-section box">
@@ -36,6 +36,10 @@
                     </div>
                 </div>
             </section>
+            <x-input class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="sheetPassiveProficiency('perception')" box reactive="false" disabled />   
+            <div class="otherprofs box textblock">
+                <label for="otherprofs">Other Proficiencies and Languages</label><textarea name="otherprofs"></textarea>
+            </div>
         </section>
     </main>
 </template>
@@ -60,7 +64,7 @@ export default {
     data(){
         return {
             attributes: attributes.list,
-            skills: skills
+            skills: skills.list
         }
     },
     computed: {
@@ -68,7 +72,8 @@ export default {
             'sheet'
         ]),
         ...mapGetters([
-            'sheetProficiencyBonus'
+            'sheetProficiencyBonus',
+            'sheetPassiveProficiency'
         ])
     }
 }
@@ -127,10 +132,6 @@ export default {
                 div.attr-applications
                     flex-grow: 1
                     margin-left: 10px
-
-                    .proficiencybonus
-                        input:disabled
-                            background-color: initial
 
                     div.list-section
                         border: 1px solid black

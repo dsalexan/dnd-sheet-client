@@ -1,13 +1,14 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
+import _ from 'lodash'
+
 import * as dnd5e from './assets/rules/dnd/5e'
 
 Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    rules: dnd5e,
     sheet: {
       name: undefined,
       misc: {
@@ -71,7 +72,7 @@ export default new Vuex.Store({
     sheetProficiencyBonus: function(state, getters){
       let level = getters.sheetlevel
       if(level == undefined) return undefined
-      let bonus = state.rules.proficiency_bonus[level]
+      let bonus = dnd5e.proficiency_bonus[level]
       return bonus >= 0 ? '+' + bonus : bonus
     },
     sheetModifier: state => {
@@ -97,6 +98,17 @@ export default new Vuex.Store({
         return mod >= 0 ? '+' + mod : mod
       }
     },
+    sheetPassiveProficiency: (state, getters) => {
+      return (slug) => {
+        let path = dnd5e.proficiencies[slug]
+        if(path == undefined) return undefined
+      
+        let proficient = _.get(state.sheet.stats.proficiencies, path)
+        console.log('PROFICIENT', proficient)
+        return 1
+        // let modifier = getters.sheetProficiencyModifier()
+      }
+    }
   },
   mutations: {
     RESET_SHEET: (state) => {
