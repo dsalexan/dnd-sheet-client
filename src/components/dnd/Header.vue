@@ -1,5 +1,5 @@
 <template>
-    <header class="header">
+    <header class="dnd-header">
         <section class="charname">
             <!-- <label for="charname">Character Name</label><input name="charname" placeholder="Thoradin Fireforge" v-model="sheet.name"/> -->
             <x-input name="charname" label="Name" placeholder="John Jones" v-model="sheet.name"></x-input>
@@ -40,7 +40,7 @@ export default {
 <style lang="sass">
     @import '@/assets/sass/dnd5e-sheet.sass'
 
-    header
+    header.dnd-header
         display: flex !important
         align-contents: stretch
         align-items: stretch

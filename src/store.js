@@ -1,6 +1,8 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
+import { DnD } from './assets/rules'
+
 Vue.use(Vuex)
 
 export default new Vuex.Store({
@@ -18,7 +20,22 @@ export default new Vuex.Store({
       stats: {
         attributes: {
           str: 19,
-          dex: 8
+          dex: 8,
+          con: undefined,
+          int: undefined,
+          wis: undefined,
+          cha: undefined
+        },
+        inspiration: false,
+        proficiencies: {
+          saves: {
+            str: false,
+            dex: false,
+            con: false,
+            int: false,
+            wis: false,
+            cha: false
+          }
         }
       }
     }
@@ -29,6 +46,32 @@ export default new Vuex.Store({
       if(result)
         return result[1]
       else return undefined
+    },
+    sheetModifier: state => {
+      return attr => {
+        let attribute = state.sheet.stats.attributes[attr]
+
+        if(attribute !== 0 && !attribute) return undefined
+        let mod = Math.floor((attribute - 10) / 2)
+
+        return mod >= 0 ? '+' + mod : mod
+      }
+    },
+    sheetSaveModifier: state => {
+      return attr => {
+        let attribute = state.sheet.stats.attributes[attr]
+
+        if(attribute !== 0 && !attribute) return undefined
+        let mod = Math.floor((attribute - 10) / 2)
+
+        mod = mod >= 0 ? '+' + mod : mod
+
+        let proficiency = state.sheet.stats.proficiencies.saves[attr]
+        let proficiency_bonus = 2
+
+        return mod + (proficiency ? proficiency_bonus : 0)
+      }
+
     }
   },
   mutations: {
@@ -44,6 +87,19 @@ export default new Vuex.Store({
 
       state.sheet.stats.attributes.str = undefined
       state.sheet.stats.attributes.dex = undefined
+      state.sheet.stats.attributes.con = undefined
+      state.sheet.stats.attributes.int = undefined
+      state.sheet.stats.attributes.wis = undefined
+      state.sheet.stats.attributes.cha = undefined
+
+      state.sheet.stats.inspiration = false
+      
+      state.sheet.stats.proficiencies.saves.str = undefined
+      state.sheet.stats.proficiencies.saves.dex = undefined
+      state.sheet.stats.proficiencies.saves.con = undefined
+      state.sheet.stats.proficiencies.saves.int = undefined
+      state.sheet.stats.proficiencies.saves.wis = undefined
+      state.sheet.stats.proficiencies.saves.cha = undefined
     }
   },
   actions: {

@@ -1,8 +1,5 @@
 <template>
-  <div class="sheet">
-    <img alt="Vue logo" src="../assets/logo.png">
-    
-    
+  <div class="sheet">     
     <form class="charsheet">
       <header>
         <section class="charname">
@@ -263,7 +260,7 @@
             <div class="hitdice">
               <div>
                 <div class="total">
-                  <label for="totalhd">Total</label><input name="totalhd" placeholder="2d10"
+                  <label onclick="totalhd_clicked()" for="totalhd">Total</label><input name="totalhd" placeholder="2d10"
                     type="text" />
                 </div>
                 <div class="remaining">
@@ -406,13 +403,10 @@
 </template>
 
 <script>
-// @ is an alias to /src
-import HelloWorld from '@/components/HelloWorld.vue'
 
 export default {
   name: 'sheet',
   components: {
-    HelloWorld
   }
 }
 </script>
@@ -1071,14 +1065,14 @@ export default {
             height: 43em
             height: 75em
   
-  input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
-    color: rgba(0, 0, 0, 0.1) !important
-    border-color: transparent !important
+  // input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
+  //   color: rgba(0, 0, 0, 0.1) !important
+  //   border-color: transparent !important
 
-  input, textarea
-    opacity: 0 !important
+  // input, textarea
+  //   opacity: 0 !important
 
-  div.attr-applications
-    background: grey
+  // div.attr-applications
+  //   background: grey
 </style>
 
