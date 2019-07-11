@@ -63,13 +63,14 @@ export default new Vuex.Store({
 
         if(attribute !== 0 && !attribute) return undefined
         let mod = Math.floor((attribute - 10) / 2)
-
-        mod = mod >= 0 ? '+' + mod : mod
+        console.log('sheet save', attribute, mod)
 
         let proficiency = state.sheet.stats.proficiencies.saves[attr]
         let proficiency_bonus = 2
 
-        return mod + (proficiency ? proficiency_bonus : 0)
+        mod = mod + (proficiency ? parseInt(proficiency_bonus) : 0)
+        
+        return mod >= 0 ? '+' + mod : mod
       }
 
     }

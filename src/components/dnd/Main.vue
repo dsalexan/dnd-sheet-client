@@ -8,7 +8,8 @@
                 <div class="attr-applications">
                     <x-input class="inspiration" name="inspiration" type="checkbox" label="Inspiration" v-model="sheet.stats.inspiration" box />
                     <x-input class="proficiencybonus" name="proficiencybonus" label="Proficiency Bonus" placeholder="+2" box />
-                    <dnd-list-section />
+                    <dnd-list-section label="Saving Throw" placeholder="+0" :value="sheet.stats.proficiencies.saves" mode="saves"/>
+                    <dnd-list-section label="Skills" placeholder="+0" :value="sheets.stats.proficiencies.skills" mode="skills"/>
                 </div>
             </section>
         </section>
@@ -17,6 +18,8 @@
 
 <script>
 import {mapState} from 'vuex'
+
+import { attributes, skills } from '@/assets/rules/dnd/5e'
 
 import Scores from '@/components/dnd/Scores.vue'
 import ListSection from '@/components/dnd/ListSection.vue'
@@ -31,9 +34,19 @@ export default {
         'dnd-list-section': ListSection,
         'x-input': XInput
     },
-    computed: mapState([
-        'sheet'
-    ])
+    computed: {
+        ...mapState([
+            'sheet'
+        ]),
+        array_attrs(){
+            return attributes.list.map(a => ({
+                name: a.name,
+                attribute: a.alias.toLowerCase(),
+                value: this.$store.state.sheet.stats.proficiencies.saves[a.alias.toLowerCase()]
+            }))
+        },
+        array_skills: () => []
+    }
 }
 </script>
 

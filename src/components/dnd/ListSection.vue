@@ -2,16 +2,14 @@
     <div class="list-section box">
         <ul>
             <dnd-proficiency 
-                v-for="(attr, index) in attributes" :key="index"
+                v-for="(item, index) in value" :key="index"
                 tag="li" 
-                placeholder="+0" 
-                :label="attr.name" 
-                :attribute="attr.alias.toLowerCase()" 
-                v-model="sheet.stats.proficiencies.saves[attr.alias.toLowerCase()]"/>
+                :placeholder="placeholder" 
+                :label="item.name" 
+                :attribute="item.attribute" 
+                v-model="item.value"/>
         </ul>
-        <div class="label">
-            Saving Throws
-        </div>
+        <div class="label">{{ label }}</div>
     </div>
 </template>
 
@@ -26,14 +24,15 @@ import XInput from '@/components/utils/XInput.vue'
 
 export default {
     name: 'dnd-list-section',
+    props: {
+        label: String,
+        placeholder: String,
+        value: Array,
+        mode: String
+    },
     components: {
         'x-input': XInput,
         'dnd-proficiency': Proficiency
-    },
-    data() {
-        return {
-            attributes: attributes.list
-        }
     },
     computed: {
         ...mapState([
@@ -41,7 +40,18 @@ export default {
         ]),
         ...mapGetters({
             modifier: 'sheetModifier'
-        })
+        }),
+        data(){
+            let mapAttributes = {}
+            for(let attr of attributes){
+                mapAttributes[attr.alias.toLowerCase()] = attr
+            }
+
+            if(this.mode == 'saves')
+                return this.value.map(a => ({
+                    name: mapAttributes[a]
+                }))
+        }
     }
 }
 </script>

@@ -1,6 +1,6 @@
 <template>
     <div class="sheet-dev">
-        {{ sheet.stats.proficiencies.saves.str }}
+        {{ sheet.stats.proficiencies.saves }}
         <button @click="reset_sheet">Reset</button>
         <form class="charsheet">
             <dnd-header />
