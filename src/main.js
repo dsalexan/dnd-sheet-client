@@ -7,6 +7,10 @@ import './registerServiceWorker'
 import './assets/css/normalize.css'
 
 
+import { DnD } from './assets/rules'
+Object.defineProperty(Vue.prototype, '$DnD', { value: DnD });
+
+
 Vue.config.productionTip = false
 
 new Vue({

@@ -7,7 +7,8 @@
                 :placeholder="placeholder" 
                 :label="item.name" 
                 :attribute="item.attribute" 
-                v-model="item.value"/>
+                :value="item.value"
+                @change="handleChange"/>
         </ul>
         <div class="label">{{ label }}</div>
     </div>
@@ -24,6 +25,10 @@ import XInput from '@/components/utils/XInput.vue'
 
 export default {
     name: 'dnd-list-section',
+    model: {
+        prop: 'value',
+        event: 'change'
+    },
     props: {
         label: String,
         placeholder: String,
@@ -40,17 +45,13 @@ export default {
         ]),
         ...mapGetters({
             modifier: 'sheetModifier'
-        }),
-        data(){
-            let mapAttributes = {}
-            for(let attr of attributes){
-                mapAttributes[attr.alias.toLowerCase()] = attr
-            }
-
-            if(this.mode == 'saves')
-                return this.value.map(a => ({
-                    name: mapAttributes[a]
-                }))
+        })
+    },
+    methods: {
+        handleChange(e){
+            console.log(e.target)
+            this.value = e.target.value
+            this.$emit('change', this.value)
         }
     }
 }

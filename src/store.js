@@ -1,12 +1,13 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
-import { DnD } from './assets/rules'
+import * as dnd5e from './assets/rules/dnd/5e'
 
 Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
+    rules: dnd5e,
     sheet: {
       name: undefined,
       misc: {
@@ -35,6 +36,26 @@ export default new Vuex.Store({
             int: false,
             wis: false,
             cha: false
+          },
+          skills: {
+            acrobatics: false,
+            animal_handling: false,
+            arcana: false,
+            athletics: false,
+            deception: false,
+            history: false,
+            insight: false,
+            intimidation: false,
+            investigation: false,
+            medicine: false,
+            nature: false,
+            perception: false,
+            performance: false,
+            persuasion: false,
+            religion: false,
+            sleight_of_hand: false,
+            stealth: false,
+            survival: false,
           }
         }
       }
@@ -42,10 +63,16 @@ export default new Vuex.Store({
   },
   getters: {
     sheetlevel: state => {
-      let result = /\d+/gm.exec(state.sheet.misc.class_level)
-      if(result)
-        return result[1]
-      else return undefined
+      let class_level = state.sheet.misc.class_level
+      if(class_level == undefined) return undefined
+      let result = class_level.match(/\d+/gi)
+      return result != null ? result[0] : undefined
+    },
+    sheetProficiencyBonus: function(state, getters){
+      let level = getters.sheetlevel
+      if(level == undefined) return undefined
+      let bonus = state.rules.proficiency_bonus[level]
+      return bonus >= 0 ? '+' + bonus : bonus
     },
     sheetModifier: state => {
       return attr => {
@@ -57,23 +84,19 @@ export default new Vuex.Store({
         return mod >= 0 ? '+' + mod : mod
       }
     },
-    sheetSaveModifier: state => {
-      return attr => {
-        let attribute = state.sheet.stats.attributes[attr]
+    sheetProficiencyModifier: (state, getters) => {
+      return (attr, proficient) => {
+        let mod = getters.sheetModifier(attr) 
+        if(mod == undefined) return undefined
 
-        if(attribute !== 0 && !attribute) return undefined
-        let mod = Math.floor((attribute - 10) / 2)
-        console.log('sheet save', attribute, mod)
+        let proficiency_bonus = getters.sheetProficiencyBonus
+        if(proficiency_bonus == undefined) return undefined
 
-        let proficiency = state.sheet.stats.proficiencies.saves[attr]
-        let proficiency_bonus = 2
-
-        mod = mod + (proficiency ? parseInt(proficiency_bonus) : 0)
+        mod = parseInt(mod) + (proficient ? parseInt(proficiency_bonus) : 0)
         
         return mod >= 0 ? '+' + mod : mod
       }
-
-    }
+    },
   },
   mutations: {
     RESET_SHEET: (state) => {
@@ -101,6 +124,25 @@ export default new Vuex.Store({
       state.sheet.stats.proficiencies.saves.int = undefined
       state.sheet.stats.proficiencies.saves.wis = undefined
       state.sheet.stats.proficiencies.saves.cha = undefined
+      
+      state.sheet.stats.proficiencies.skills.acrobatics = undefined
+      state.sheet.stats.proficiencies.skills.animal_handling = undefined
+      state.sheet.stats.proficiencies.skills.arcana = undefined
+      state.sheet.stats.proficiencies.skills.athletics = undefined
+      state.sheet.stats.proficiencies.skills.deception = undefined
+      state.sheet.stats.proficiencies.skills.history = undefined
+      state.sheet.stats.proficiencies.skills.insight = undefined
+      state.sheet.stats.proficiencies.skills.intimidation = undefined
+      state.sheet.stats.proficiencies.skills.investigation = undefined
+      state.sheet.stats.proficiencies.skills.medicine = undefined
+      state.sheet.stats.proficiencies.skills.nature = undefined
+      state.sheet.stats.proficiencies.skills.perception = undefined
+      state.sheet.stats.proficiencies.skills.performance = undefined
+      state.sheet.stats.proficiencies.skills.persuasion = undefined
+      state.sheet.stats.proficiencies.skills.religion = undefined
+      state.sheet.stats.proficiencies.skills.sleight_of_hand = undefined
+      state.sheet.stats.proficiencies.skills.stealth = undefined
+      state.sheet.stats.proficiencies.skills.survival = undefined
     }
   },
   actions: {

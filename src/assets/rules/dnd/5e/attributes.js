@@ -24,5 +24,13 @@ export default {
             name: 'Charisma',
             alias: 'CHA'
         }
-    ]
+    ],
+    map: (list) => {
+        let m = {}
+        for(let attr of list){
+            m[attr.alias.toLowerCase()] = attr
+        }
+
+        return m
+    }
 }

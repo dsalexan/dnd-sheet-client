@@ -1,1 +1,1 @@
-export {default as DnD} from './dnd'
+export {default as dnd} from './dnd'

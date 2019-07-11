@@ -6,10 +6,34 @@
                     <dnd-scores></dnd-scores>
                 </div>
                 <div class="attr-applications">
-                    <x-input class="inspiration" name="inspiration" type="checkbox" label="Inspiration" v-model="sheet.stats.inspiration" box />
-                    <x-input class="proficiencybonus" name="proficiencybonus" label="Proficiency Bonus" placeholder="+2" box />
-                    <dnd-list-section label="Saving Throw" placeholder="+0" :value="sheet.stats.proficiencies.saves" mode="saves"/>
-                    <dnd-list-section label="Skills" placeholder="+0" :value="sheets.stats.proficiencies.skills" mode="skills"/>
+                    <x-input class="inspiration" name="inspiration" type="checkbox" label="Inspiration" v-model="sheet.stats.inspiration" box reactive="false" />
+                    <x-input class="proficiencybonus" name="proficiencybonus" label="Proficiency Bonus" :value="sheetProficiencyBonus" placeholder="+2" box reactive="false" disabled />
+                    <!-- <dnd-list-section label="Saving Throw" placeholder="+0" v-model="sheet.stats.proficiencies.saves" :map="mapSaves"/> -->
+
+                    <div class="list-section box">
+                        <ul>
+                            <dnd-proficiency 
+                                v-for="(attr, index) in attributes" :key="index"
+                                tag="li" 
+                                placeholder="+0" 
+                                :label="attr.name" 
+                                :attribute="attr.alias.toLowerCase()" 
+                                v-model="sheet.stats.proficiencies.saves[attr.alias.toLowerCase()]"/>
+                        </ul>
+                        <div class="label">Saving Throws</div>
+                    </div>
+                    <div class="list-section box">
+                        <ul>
+                            <dnd-proficiency 
+                                v-for="(skill, index) in skills" :key="index"
+                                tag="li" 
+                                placeholder="+0" 
+                                :label="skill.name" 
+                                :attribute="skill.attribute" 
+                                v-model="sheet.stats.proficiencies.skills[skill.slug]"/>
+                        </ul>
+                        <div class="label">Skills</div>
+                    </div>
                 </div>
             </section>
         </section>
@@ -17,13 +41,12 @@
 </template>
 
 <script>
-import {mapState} from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 import { attributes, skills } from '@/assets/rules/dnd/5e'
 
 import Scores from '@/components/dnd/Scores.vue'
-import ListSection from '@/components/dnd/ListSection.vue'
-
+import Proficiency from '@/components/dnd/Proficiency.vue'
 
 import XInput from '@/components/utils/XInput.vue'
 
@@ -31,21 +54,22 @@ export default {
     name: 'dnd-main',
     components: {
         'dnd-scores': Scores,
-        'dnd-list-section': ListSection,
+        'dnd-proficiency': Proficiency,
         'x-input': XInput
+    },
+    data(){
+        return {
+            attributes: attributes.list,
+            skills: skills
+        }
     },
     computed: {
         ...mapState([
             'sheet'
         ]),
-        array_attrs(){
-            return attributes.list.map(a => ({
-                name: a.name,
-                attribute: a.alias.toLowerCase(),
-                value: this.$store.state.sheet.stats.proficiencies.saves[a.alias.toLowerCase()]
-            }))
-        },
-        array_skills: () => []
+        ...mapGetters([
+            'sheetProficiencyBonus'
+        ])
     }
 }
 </script>
@@ -104,52 +128,56 @@ export default {
                     flex-grow: 1
                     margin-left: 10px
 
-                    // div.list-section
-                    //     border: 1px solid black
-                    //     border-radius: $radius
-                    //     padding: $gutter $gutter/2
-                        
-                    //     div.label
-                    //         margin-top: $gutter
-                    //         margin-bottom: $gutter / 4
-                    //         text-align: center
-                    //         text-transform: uppercase
-                    //         font-size: 10px
-                    //         font-weight: bold
-                        
-                    //     ul li
-                    //         display: flex
-                    //         align-items: center
+                    .proficiencybonus
+                        input:disabled
+                            background-color: initial
 
-                    //         > *
-                    //             margin-left: $gutter / 2
+                    div.list-section
+                        border: 1px solid black
+                        border-radius: $radius
+                        padding: $gutter $gutter/2
+                        
+                        div.label
+                            margin-top: $gutter
+                            margin-bottom: $gutter / 4
+                            text-align: center
+                            text-transform: uppercase
+                            font-size: 10px
+                            font-weight: bold
+                        
+                        ul li
+                            display: flex
+                            align-items: center
 
-                    //         label
-                    //             text-transform: none
-                    //             font-size: 8px
-                    //             text-align: left
-                    //             order: 3
+                            > *
+                                margin-left: $gutter / 2
+
+                            label
+                                text-transform: none
+                                font-size: 8px
+                                text-align: left
+                                order: 3
                                 
-                    //             span.skill
-                    //                 color: $faded-dark
+                                span.skill
+                                    color: $faded-dark
 
-                    //         input
-                    //             &[type="text"]
-                    //                 width: 30px
-                    //                 font-size: 12px
-                    //                 text-align: center
-                    //                 border: 0
-                    //                 border-bottom: 1px solid black
-                    //                 order: 2
-                    //             &[type="checkbox"]
-                    //                 appearance: none
-                    //                 width: $bubble-size
-                    //                 height: $bubble-size
-                    //                 border: 1px solid black
-                    //                 border-radius: $bubble-size
-                    //                 order: 1
-                    //                 &:checked
-                    //                 background-color: black
+                            input
+                                &[type="text"]
+                                    width: 30px
+                                    font-size: 12px
+                                    text-align: center
+                                    border: 0
+                                    border-bottom: 1px solid black
+                                    order: 2
+                                &[type="checkbox"]
+                                    appearance: none
+                                    width: $bubble-size
+                                    height: $bubble-size
+                                    border: 1px solid black
+                                    border-radius: $bubble-size
+                                    order: 1
+                                    &:checked
+                                        background-color: black
 
 </style>
 

@@ -1,6 +1,6 @@
 <template>
     <div class="sheet-dev">
-        {{ sheet.stats.proficiencies.saves }}
+        {{ sheet.misc.class_level }} - 
         <button @click="reset_sheet">Reset</button>
         <form class="charsheet">
             <dnd-header />
@@ -10,7 +10,7 @@
 </template>
 
 <script>
-import {mapState, mapMutations} from 'vuex'
+import {mapState, mapMutations, mapGetters} from 'vuex'
 
 import Header from '@/components/dnd/Header.vue'
 import Main from '@/components/dnd/Main.vue'
@@ -21,9 +21,11 @@ export default {
     'dnd-main': Main,
     'dnd-header': Header
   },
-  computed: mapState([
-    'sheet'
-  ]),
+  computed: {
+    ...mapState([
+      'sheet'
+    ])
+  },
   methods: {
     ...mapMutations([
       'RESET_SHEET'
