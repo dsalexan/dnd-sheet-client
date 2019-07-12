@@ -40,7 +40,7 @@ input[type="checkbox"]
 div.box
     margin-top: $gutter
 
-div.textblock
+.textblock
     display: flex
     flex-direction: column-reverse
     width: 100%
@@ -48,7 +48,7 @@ div.textblock
     width: calc(100% - #{$radius*2} - 2px)
     margin-left: $radius
     
-    label
+    & /deep/ label
         text-align: center
         border: 1px solid black
         border-top: 0
@@ -58,7 +58,7 @@ div.textblock
         padding: 4px 0
         font-weight: bold
 
-    textarea
+    & /deep/ textarea
         border: 1px solid black
 
 ul

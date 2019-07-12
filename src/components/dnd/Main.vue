@@ -35,12 +35,9 @@
                     </div>
                 </div>
             </section>
-            <x-input class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="sheetPassiveProficiency('perception')" box reactive="false" disabled />  transparent   
+            <x-input class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="sheetPassiveProficiency('perception')" box reactive="false" disabled transparent/>
 
-            <div class="otherprofs box textblock">
-                <label for="otherprofs">Other Proficiencies and Languages</label>
-                <textarea name="otherprofs"></textarea>
-            </div>
+            <x-input class="otherprofs textblock" type="textarea" label="Other Proficiencies and Languages" />
         </section>
         <section>
             <section class="combat">
@@ -91,7 +88,7 @@
         </section>
         <section>
             <section class="features">
-                <x-input type="textarea" label="Features & Traits" />
+                <x-input class="textblock" type="textarea" label="Features & Traits" />
             </section>
         </section>
     </main>
@@ -239,9 +236,12 @@ export default {
                                         background-color: black
 
             
-            div.otherprofs textarea
-                height: 26em
-                width: 100%
+            div.otherprofs 
+                padding-top: $gutter
+
+                textarea
+                    height: 26em
+                    width: 100%
 
                          
             section.combat
@@ -464,23 +464,18 @@ export default {
                 > div
                     padding: $gutter
 
-            section.features
+            section.features        
                 padding: 0 $gutter
-                
+
                 div
-                    padding: $gutter
-                    border: 1px solid black
-                    border-radius: $radius
                     display: flex
                     flex-direction: column-reverse
 
                     > label
                         text-align: center
-                        padding-top: $gutter
 
                     textarea
-                        border: 0
-                        padding: 5px
+                        padding: $gutter
                         height: 43em
                         height: 66em
                         width: calc(100% - 10px)
