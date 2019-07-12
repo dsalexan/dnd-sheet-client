@@ -12,7 +12,7 @@ export default new Vuex.Store({
     sheet: {
       name: undefined,
       misc: {
-        class_level: undefined,
+        class_level: 'Fighter 1',
         background: undefined,
         player: undefined,
         race: undefined,
@@ -25,7 +25,7 @@ export default new Vuex.Store({
           dex: 8,
           con: undefined,
           int: undefined,
-          wis: undefined,
+          wis: 15,
           cha: undefined
         },
         inspiration: false,
@@ -100,13 +100,18 @@ export default new Vuex.Store({
     },
     sheetPassiveProficiency: (state, getters) => {
       return (slug) => {
-        let path = dnd5e.proficiencies[slug]
-        if(path == undefined) return undefined
+        let reference = dnd5e.proficiencies[slug]
+        if(reference == undefined) return undefined
+
+        let attribute = reference.slug
+        if(reference.type == 'skill'){
+          attribute = dnd5e.skills.map(dnd5e.skills.list)[reference.slug].attribute
+        }
       
-        let proficient = _.get(state.sheet.stats.proficiencies, path)
-        console.log('PROFICIENT', proficient)
-        return 1
-        // let modifier = getters.sheetProficiencyModifier()
+        let proficient = _.get(state.sheet.stats.proficiencies, reference.path)
+        let modifier = getters.sheetProficiencyModifier(attribute, proficient)
+        if(modifier == undefined) return undefined
+        return parseInt(modifier) + 10
       }
     }
   },

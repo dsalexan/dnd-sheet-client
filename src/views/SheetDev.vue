@@ -1,6 +1,6 @@
 <template>
     <div class="sheet-dev">
-        {{ sheet.misc.class_level }} - 
+        {{ sheet.stats.proficiencies.skills.perception }} - 
         <button @click="reset_sheet">Reset</button>
         <form class="charsheet">
             <dnd-header />

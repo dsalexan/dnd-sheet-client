@@ -57,7 +57,7 @@ export default {
         },
         {
             name: "Perception",
-            attribute: "cha",
+            attribute: "wis",
             slug: "perception"
         },
         {
@@ -96,5 +96,6 @@ export default {
         for(let i of list){
             m[i.slug] = i
         }
+        return m
     }
 }
