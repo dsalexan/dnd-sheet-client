@@ -1,7 +1,7 @@
 <template>
     <component 
         :is="tag"
-        :class="{active: isReactive ? !(value !== 0 && !value) : false, box: isBox}">
+        :class="{active: isReactive ? !(value !== 0 && !value) : false, box: isBox, transparent: isTransparent}">
 
         <template v-if="label != null && label != undefined">
             <template v-if="isBox">
@@ -15,14 +15,14 @@
             </template>
         </template>
         
-        <input 
+        <component :is="type == 'textarea' ? 'textarea' : 'input'"
             :name="name" 
             :placeholder="placeholder" 
             @input="handleInput"
             @change="handleChange"
             :value="value"
             :checked="value"
-            :type="type"
+            :type="type == 'textarea' ? false : type"
             :disabled="isDisabled"/>
     </component>
 </template>
@@ -63,6 +63,10 @@ export default {
         reactive: {
             type: [String, Boolean],
             default: true
+        },
+        transparent: {
+            type: [String, Boolean],
+            default: false
         }
     },
     computed: {
@@ -77,6 +81,10 @@ export default {
         isBox() {
             if(typeof this.box == 'boolean') return this.box
             else if(typeof this.box == 'string') return !!eval(this.box)
+        },
+        isTransparent() {
+            if(typeof this.transparent == 'boolean') return this.transparent
+            else if(typeof this.transparent == 'string') return this.transparent.toLowerCase() != 'false'
         }
     },
     methods: {
@@ -141,6 +149,10 @@ export default {
     
     .clean
         input:disabled
-            background-color: initial
+            background-color: white
+
+    .transparent
+        input::placeholder, input, label
+            color: transparent !important
 </style>
 

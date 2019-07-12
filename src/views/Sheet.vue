@@ -1065,14 +1065,14 @@ export default {
             height: 43em
             height: 75em
   
-  // input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
-  //   color: rgba(0, 0, 0, 0.1) !important
-  //   border-color: transparent !important
+  input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
+    color: rgba(0, 0, 0, 0.1) !important
+    border-color: transparent !important
 
-  // input, textarea
-  //   opacity: 0 !important
+  input, textarea
+    opacity: 0 !important
 
-  // div.attr-applications
-  //   background: grey
+  div.attr-applications
+    background: grey
 </style>
 

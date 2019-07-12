@@ -6,9 +6,8 @@
                     <dnd-scores></dnd-scores>
                 </div>
                 <div class="attr-applications">
-                    <x-input class="inspiration" name="inspiration" type="checkbox" label="Inspiration" v-model="sheet.stats.inspiration" box reactive="false" />
-                    <x-input class="proficiencybonus clean" name="proficiencybonus" label="Proficiency Bonus" :value="sheetProficiencyBonus" placeholder="+2" box reactive="false" disabled />
-                    <!-- <dnd-list-section label="Saving Throw" placeholder="+0" v-model="sheet.stats.proficiencies.saves" :map="mapSaves"/> -->
+                    <x-input class="inspiration" name="inspiration" type="checkbox" label="Inspiration" v-model="sheet.stats.inspiration" box reactive="false"  transparent />
+                    <x-input class="proficiencybonus clean" name="proficiencybonus" label="Proficiency Bonus" :value="sheetProficiencyBonus" placeholder="+2" box reactive="false" disabled  transparent />
 
                     <div class="list-section box">
                         <ul>
@@ -36,7 +35,7 @@
                     </div>
                 </div>
             </section>
-            <x-input class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="sheetPassiveProficiency('perception')" box reactive="false" disabled />   
+            <x-input class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="sheetPassiveProficiency('perception')" box reactive="false" disabled />  transparent   
 
             <div class="otherprofs box textblock">
                 <label for="otherprofs">Other Proficiencies and Languages</label>
@@ -46,67 +45,53 @@
         <section>
             <section class="combat">
                 <div class="armorclass">
-                    <x-input label="Armor Class" name="ac" placeholder="10" v-model="sheet.stats.combat.ac" />
+                    <x-input label="Armor Class" name="ac" placeholder="10" v-model="sheet.stats.combat.ac" transparent/>
                 </div>
                 <div class="initiative">
-                    <div>
-                        <label for="initiative">Initiative</label><input name="initiative" placeholder="+0" type="text" />
-                    </div>
+                    <x-input class="clean" label="Initiative" name="initiative" placeholder="+0" :value="sheetModifier('dex')" disabled transparent/>
                 </div>
                 <div class="speed">
-                    <div>
-                        <label for="speed">Speed</label><input name="speed" placeholder="30" type="text" />
-                    </div>
+                    <x-input label="Speed" name="speed" placeholder="30" v-model="sheet.stats.combat.speed" transparent/>
                 </div>
                 <div class="hp">
                     <div class="regular">
-                        <div class="max">
-                        <label for="maxhp">Hit Point Maximum</label><input name="maxhp" placeholder="10" type="text" />
-                        </div>
-                        <div class="current">
-                        <label for="currenthp">Current Hit Points</label><input name="currenthp" type="text" />
-                        </div>
+                        <x-input class="max" label="Hit Point Maximum" name="maxhp" placeholder="10" v-model="sheet.stats.combat.hp.maximum" transparent/>
+                        <x-input class="current" label="Current Hit Points" name="currenthp" placeholder="10" v-model="sheet.stats.combat.hp.current" reactive="false" transparent/>
                     </div>
-                    <div class="temporary">
-                        <label for="temphp">Temporary Hit Points</label><input name="temphp" type="text" />
-                    </div>
+                    <x-input class="temporary" label="Temporary Hit Points" name="temphp" placeholder="10" v-model="sheet.stats.combat.hp.temporary" reactive="false" transparent/>
                 </div>
                 <div class="hitdice">
                     <div>
-                        <div class="total">
-                        <label onclick="totalhd_clicked()" for="totalhd">Total</label><input name="totalhd" placeholder="2d10"
-                            type="text" />
+                        <x-input class="total" label="Total" name="totalhd" placeholder="1d10" v-model="sheet.stats.combat.hit_dice.total" transparent/>
+                        <x-input class="remaining" label="Hit Dice" name="remaininghd" placeholder="1d10" v-model="sheet.stats.combat.hit_dice.current" reactive="false" transparent/>
+                    </div>
+                </div>
+                <dnd-death-saves v-model="sheet.stats.combat.death_saves" />
+            </section>
+            <section class="attacksandspellcasting">
+                <div>
+                    <label>Attacks & Spellcasting</label>
+                    <div class="table">
+                        <div class="row header">
+                            <div>Name</div>
+                            <div>Atk Bonus</div>
+                            <div>Damage</div>
                         </div>
-                        <div class="remaining">
-                        <label for="remaininghd">Hit Dice</label><input name="remaininghd" type="text" />
+                        <div class="row" v-for="(item, index) of sheet.stats.combat.attacks_spellcasting" :key="index">
+                            <x-input v-model="sheet.stats.combat.attacks_spellcasting[index].name"></x-input>
+                            <x-input v-model="sheet.stats.combat.attacks_spellcasting[index].attack_bonus"></x-input>
+                            <x-input v-model="sheet.stats.combat.attacks_spellcasting[index].damage_type"></x-input>
                         </div>
                     </div>
                 </div>
-                <div class="deathsaves">
-                    <div>
-                        <div class="label">
-                        <label>Death Saves</label>
-                        </div>
-                        <div class="marks">
-                        <div class="deathsuccesses">
-                            <label>Successes</label>
-                            <div class="bubbles">
-                            <input name="deathsuccess1" type="checkbox" />
-                            <input name="deathsuccess2" type="checkbox" />
-                            <input name="deathsuccess3" type="checkbox" />
-                            </div>
-                        </div>
-                        <div class="deathfails">
-                            <label>Failures</label>
-                            <div class="bubbles">
-                            <input name="deathfail1" type="checkbox" />
-                            <input name="deathfail2" type="checkbox" />
-                            <input name="deathfail3" type="checkbox" />
-                            </div>
-                        </div>
-                        </div>
-                    </div>
-                </div>
+            </section>
+            <section class="equipment">
+                <dnd-equipment v-model="sheet.equipment"></dnd-equipment>
+            </section>
+        </section>
+        <section>
+            <section class="features">
+                <x-input type="textarea" label="Features & Traits" />
             </section>
         </section>
     </main>
@@ -119,6 +104,8 @@ import { attributes, skills } from '@/assets/rules/dnd/5e'
 
 import Scores from '@/components/dnd/Scores.vue'
 import Proficiency from '@/components/dnd/Proficiency.vue'
+import DeathSaves from '@/components/dnd/DeathSaves.vue'
+import Equipment from '@/components/dnd/Equipment.vue'
 
 import XInput from '@/components/utils/XInput.vue'
 
@@ -127,6 +114,8 @@ export default {
     components: {
         'dnd-scores': Scores,
         'dnd-proficiency': Proficiency,
+        'dnd-death-saves': DeathSaves,
+        'dnd-equipment': Equipment,
         'x-input': XInput
     },
     data(){
@@ -140,6 +129,7 @@ export default {
             'sheet'
         ]),
         ...mapGetters([
+            'sheetModifier',
             'sheetProficiencyBonus',
             'sheetPassiveProficiency'
         ])
@@ -305,6 +295,7 @@ export default {
                                 display: flex
                                 justify-content: space-around
                                 align-items: baseline
+                                padding-top: $radius * 0.75
                                 
                                 label
                                     font-size: 10px
@@ -325,8 +316,8 @@ export default {
                                 input
                                     border: 0
                                     width: 100%
-                                    padding: 1em 0
-                                    font-size: 20px
+                                    padding: 0.75em 0
+                                    font-size: 30px
                                     text-align: center
 
                                 label
@@ -345,7 +336,7 @@ export default {
                             background-color: $bg
                             
                             input
-                                padding: 1em 0
+                                padding: 0.75em 0
                                 font-size: 20px
                                 border: 0
                                 text-align: center
@@ -376,7 +367,7 @@ export default {
                             display: flex
                             align-items: baseline
                             justify-content: space-around
-                            padding: $gutter/2 0
+                            margin: $gutter
                             
                             label
                                 font-size: 10px
@@ -386,10 +377,9 @@ export default {
                                 
                             input
                                 font-size: 12px
-                                flex-grow: 1
                                 border: 0
                                 border-bottom: 1px solid $faded
-                                width: 50%
+                                width: 40%
                                 margin-right: 0.25em
                                 padding: 0 0.25em
                                 text-align: center
@@ -408,51 +398,91 @@ export default {
                                 text-align: center
                                 border: 0
                                 flex: 1
-
+                    
+                    
                     &.deathsaves
                         > div
                             margin: $gutter
                             background: $bg
-                            border: 1px solid black
                             border-radius: $radius
-                            display: flex
-                            flex-direction: column-reverse
-                            
-                            > div.label
-                                text-align: center
-                                
-                                label
-                                    font-size: 10px
-                                
-                            > div.marks
-                                display: flex
-                                flex: 1
-                                flex-direction: column
-                                justify-content: center
-                                
-                                div.deathsuccesses, div.deathfails
-                                    display: flex
-                                    align-items: center
+                        
+                        div.bubbles
+                            margin-left: $gutter / 2
 
-                                    > *
+                            input[type="checkbox"]
+                                width: $bubble-size
+                                height: $bubble-size
+                                border-radius: $bubble-size
 
-                                    label
-                                        font-size: 8px
-                                        text-align: right
-                                        flex: 1 50%
-                            
-                            div.bubbles
-                                flex: 1 40%
-                                margin-left: $gutter / 2
-
-                                input[type="checkbox"]
-                                    appearance: none
-                                    width: $bubble-size
-                                    height: $bubble-size
-                                    border: 1px solid black
-                                    border-radius: $bubble-size
-                                    &:checked
-                                        background-color: black
+            section.attacksandspellcasting
+                border: 1px solid black
+                border-radius: $radius
+                margin-top: $gutter
+                
+                > div
+                    margin: $gutter
+                    display: flex
+                    flex-direction: column
                     
+                    > label
+                        order: 3
+                        text-align: center
+                        padding-top: $gutter
+
+                    > div.table
+                        width: 100%
+
+                        div.row
+                            display: grid
+                            grid-template-columns: 2fr 1fr 1fr
+
+                            &.header
+                                font-size: 10px
+                                color: $faded
+
+                            > div
+                                margin: 0 $gutter /2
+
+                                &:first-of-type
+                                    margin-left: 0
+
+                                &:last-of-type
+                                    margin-right: 0
+
+                                input
+                                    width: calc(100% - 4px)
+                                    border: 0
+                                    background-color: $faded-light
+                                    font-size: 10px
+                                    padding: 3px
+            
+            section.equipment
+                border: 1px solid black
+                border-radius: $radius
+                margin-top: $gutter
+                
+                > div
+                    padding: $gutter
+
+            section.features
+                padding: 0 $gutter
+                
+                div
+                    padding: $gutter
+                    border: 1px solid black
+                    border-radius: $radius
+                    display: flex
+                    flex-direction: column-reverse
+
+                    > label
+                        text-align: center
+                        padding-top: $gutter
+
+                    textarea
+                        border: 0
+                        padding: 5px
+                        height: 43em
+                        height: 66em
+                        width: calc(100% - 10px)
 </style>
 

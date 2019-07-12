@@ -12,7 +12,7 @@ export default new Vuex.Store({
     sheet: {
       name: undefined,
       misc: {
-        class_level: 'Fighter 1',
+        class_level: 'F 1',
         background: undefined,
         player: undefined,
         race: undefined,
@@ -21,11 +21,11 @@ export default new Vuex.Store({
       },
       stats: {
         attributes: {
-          str: 19,
-          dex: 8,
+          str: undefined,
+          dex: undefined,
           con: undefined,
           int: undefined,
-          wis: 15,
+          wis: undefined,
           cha: undefined
         },
         inspiration: false,
@@ -60,9 +60,102 @@ export default new Vuex.Store({
           }
         },
         combat: {
-          ac: undefined
+          ac: undefined,
+          initiative: undefined,
+          speed: undefined,
+          hp: {
+            maximum: undefined,
+            current: undefined,
+            temporary: undefined
+          },
+          hit_dice: {
+            total: undefined,
+            current: undefined
+          },
+          death_saves: {
+            success: [true, false, true],
+            failure: [false, true, false]
+          },
+          attacks_spellcasting: [
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },{
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },{
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },{
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            },
+            {
+              name: undefined,
+              attack_bonus: undefined,
+              damage_type: undefined
+            }
+          ]
         }
+      },
+      equipment: {
+        treasure: {
+          coins: {
+            cp: 15,
+            sp: undefined,
+            ep: undefined,
+            gp: undefined,
+            pp: undefined
+          }
+        },
+        items: [
+          {
+            name: 'Item #1',
+            slug: 'item_1',
+            reference: '$ref:item_1'
+          }
+        ]
       }
+
     }
   },
   getters: {
@@ -165,6 +258,32 @@ export default new Vuex.Store({
       state.sheet.stats.proficiencies.skills.survival = undefined
 
       state.sheet.stats.combat.ac = undefined
+      state.sheet.stats.combat.initiative = undefined
+      state.sheet.stats.combat.speed = undefined
+      state.sheet.stats.combat.hp.maximum = undefined
+      state.sheet.stats.combat.hp.current = undefined
+      state.sheet.stats.combat.hp.temporary = undefined
+      state.sheet.stats.combat.hit_dice.total = undefined
+      state.sheet.stats.combat.hit_dice.current = undefined
+
+      state.sheet.stats.combat.death_saves.success[0] = false
+      state.sheet.stats.combat.death_saves.success[1] = false
+      state.sheet.stats.combat.death_saves.success[2] = false
+      state.sheet.stats.combat.death_saves.failure[0] = false
+      state.sheet.stats.combat.death_saves.failure[1] = false
+      state.sheet.stats.combat.death_saves.failure[2] = false
+
+      for(let item of state.sheet.stats.combat.attacks_spellcasting){
+        item.name = undefined
+        item.attack_bonus = undefined
+        item.damage_type = undefined
+      }
+
+      for(let coin of dnd5e.economy.money.coins.list){
+        state.sheet.equipment.treasure.coins[coin.slug] = undefined
+      }
+      state.sheet.equipment.item = []
+      
     }
   },
   actions: {
