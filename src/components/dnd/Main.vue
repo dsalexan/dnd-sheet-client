@@ -180,5 +180,9 @@ export default {
                                     &:checked
                                         background-color: black
 
+            
+            div.otherprofs textarea
+                height: 26em
+                width: 100%
 </style>
 
