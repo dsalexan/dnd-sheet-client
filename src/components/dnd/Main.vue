@@ -44,11 +44,9 @@
             </div>
         </section>
         <section>
-          <section class="combat">
+            <section class="combat">
                 <div class="armorclass">
-                    <div>
-                        <label for="ac">Armor Class</label><input name="ac" placeholder="10" type="text" />
-                    </div>
+                    <x-input label="Armor Class" name="ac" placeholder="10" v-model="sheet.stats.combat.ac" />
                 </div>
                 <div class="initiative">
                     <div>

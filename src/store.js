@@ -58,6 +58,9 @@ export default new Vuex.Store({
             stealth: false,
             survival: false,
           }
+        },
+        combat: {
+          ac: undefined
         }
       }
     }
@@ -160,6 +163,8 @@ export default new Vuex.Store({
       state.sheet.stats.proficiencies.skills.sleight_of_hand = undefined
       state.sheet.stats.proficiencies.skills.stealth = undefined
       state.sheet.stats.proficiencies.skills.survival = undefined
+
+      state.sheet.stats.combat.ac = undefined
     }
   },
   actions: {
