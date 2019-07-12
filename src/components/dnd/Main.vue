@@ -478,7 +478,7 @@ export default {
                     textarea
                         padding: $gutter
                         height: 43em
-                        height: 66em
+                        height: 78em
                         width: calc(100% - 10px)
 </style>
 

@@ -3,9 +3,10 @@
         {{ sheet }} - 
         <button @click="reset_sheet">Reset</button>
         <form class="charsheet">
-            <dnd-header />
-            <!--<dnd-main /> -->
-            <dnd-header type="physical" />
+            <!-- <dnd-header />
+            <dnd-main />
+            <dnd-header type="physical" /> -->
+            <dnd-spellcasting type="spellcasting" />
         </form>
     </div>
 </template>
@@ -15,12 +16,14 @@ import {mapState, mapMutations, mapGetters} from 'vuex'
 
 import Header from '@/components/dnd/Header.vue'
 import Main from '@/components/dnd/Main.vue'
+import Spellcasting from '@/components/dnd/Spellcasting.vue'
 
 export default {
   name: 'sheet',
   components: {
     'dnd-main': Main,
-    'dnd-header': Header
+    'dnd-header': Header,
+    'dnd-spellcasting': Spellcasting
   },
   computed: {
     ...mapState([
@@ -49,6 +52,9 @@ export default {
     margin-right: auto
     margin-left: auto
     margin-top: 10px
+
+    .dnd-header + div.dnd-spellcasting
+      padding-top: $gutter * 2
 
   // input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
   //   color: transparent !important

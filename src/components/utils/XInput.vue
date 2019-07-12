@@ -15,15 +15,25 @@
             </template>
         </template>
         
-        <input
-            :name="name" 
-            :placeholder="placeholder" 
-            @input="handleInput"
-            @change="handleChange"
-            :value="value"
-            :checked="value"
-            :type="type == 'textarea' ? false : type"
-            :disabled="isDisabled"/>
+        <template v-if="type == 'textarea'">
+            <textarea
+                :name="name" 
+                :placeholder="placeholder" 
+                @input="handleInput"
+                :value="value"
+                :disabled="isDisabled"/>
+        </template>
+        <template v-else>
+            <input
+                :name="name" 
+                :placeholder="placeholder" 
+                @input="handleInput"
+                @change="handleChange"
+                :value="value"
+                :checked="value"
+                :type="type == 'textarea' ? false : type"
+                :disabled="isDisabled"/>
+        </template>
     </component>
 </template>
 
