@@ -15,7 +15,7 @@
             </template>
         </template>
         
-        <component :is="type == 'textarea' ? 'textarea' : 'input'"
+        <input
             :name="name" 
             :placeholder="placeholder" 
             @input="handleInput"
@@ -89,10 +89,19 @@ export default {
     },
     methods: {
         handleInput(e){
-            if(this.$props.type == 'text') this.$emit('input', e.target.value)
+            if(this.$props.type != 'text') return
+            
+            this.$emit('input', e.target.value)
         },
         handleChange(e){
-            if(this.$props.type == 'checkbox') this.$emit('input', e.target.checked)
+            if(this.$props.type != 'checkbox') return 
+
+            this.$emit('input', e.target.checked)
+        }
+    },
+    watch: {
+        value: function(val){
+            console.log('VALUE', val)
         }
     }
 }

@@ -141,6 +141,7 @@ export default {
         display: flex
         justify-content: space-between
         margin-top: $gutter*2
+        margin-bottom: $gutter*2
         
         div.label-container
             height: $small-box-width - $radius - 2px

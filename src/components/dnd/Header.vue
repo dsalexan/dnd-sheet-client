@@ -1,21 +1,31 @@
 <template>
     <header class="dnd-header">
         <section class="charname">
-            <!-- <label for="charname">Character Name</label><input name="charname" placeholder="Thoradin Fireforge" v-model="sheet.name"/> -->
             <x-input name="charname" label="Name" placeholder="John Jones" v-model="sheet.name"></x-input>
         </section>
         <section class="misc">
-            <ul>
-                <!-- <li>
-                    <label for="classlevel">Class & Level</label><input name="classlevel" placeholder="Paladin 2" v-model="sheet.misc.classlevel"/>
-                </li> -->
-                <x-input tag="li" name="class_level" label="Class & Level" placeholder="Unknown 1" v-model="sheet.misc.class_level"></x-input>
+            <ul v-if="type == 'system'">
+                <x-input tag="li" label="Class & Level" placeholder="Unknown 1" v-model="sheet.misc.class_level"></x-input>
 
-                <x-input tag="li" name="background" label="Background" placeholder="Acolyte" v-model="sheet.misc.background"></x-input>
-                <x-input tag="li" name="player" label="Player Name" placeholder="John Doe" v-model="sheet.misc.player"></x-input>
-                <x-input tag="li" name="race" label="Race" placeholder="Human" v-model="sheet.misc.race"></x-input>
-                <x-input tag="li" name="alignment" label="Alignment" placeholder="True Neutral" v-model="sheet.misc.alignment"></x-input>
-                <x-input tag="li" name="experience_points" label="Experience Points" placeholder="0" v-model="sheet.misc.experience_points"></x-input>
+                <x-input tag="li" label="Background" placeholder="Acolyte" v-model="sheet.misc.background"></x-input>
+                <x-input tag="li" label="Player Name" placeholder="John Doe" v-model="sheet.misc.player"></x-input>
+                <x-input tag="li" label="Race" placeholder="Human" v-model="sheet.misc.race"></x-input>
+                <x-input tag="li" label="Alignment" placeholder="True Neutral" v-model="sheet.misc.alignment"></x-input>
+                <x-input tag="li" label="Experience Points" placeholder="0" v-model="sheet.misc.experience_points"></x-input>
+            </ul>
+            <ul v-else-if="type == 'physical'">
+                <x-input tag="li" label="Age" v-model="sheet.misc.age"></x-input>
+                <x-input tag="li" label="Height" v-model="sheet.misc.height"></x-input>
+                <x-input tag="li" label="Weight" v-model="sheet.misc.weight"></x-input>
+
+                <x-input tag="li" label="Eyes" v-model="sheet.misc.eye_color"></x-input>
+                <x-input tag="li" label="Hair" v-model="sheet.misc.hair_color"></x-input>
+                <x-input tag="li" label="Skin" v-model="sheet.misc.skin_color"></x-input>
+            </ul>
+            <ul v-else-if="type == 'spellcasting'">
+                <x-input tag="li" label="Spellcasting Ability" placeholder="INT" v-model="sheet.misc.class_level"></x-input>
+                <x-input tag="li" label="Attack Bonus" placeholder="+0" v-model="sheet.misc.background"></x-input>
+                <x-input tag="li" label="Saving Throw" placeholder="9" v-model="sheet.misc.player"></x-input>
             </ul>
         </section>
     </header>
@@ -28,6 +38,12 @@ import XInput from '@/components/utils/XInput.vue'
 
 export default {
     name: 'dnd-header',
+    props: {
+        type: {
+            type: String,
+            default: 'system'
+        }
+    },
     components: {
         'x-input': XInput
     },

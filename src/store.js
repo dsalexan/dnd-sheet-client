@@ -17,7 +17,13 @@ export default new Vuex.Store({
         player: undefined,
         race: undefined,
         alignment: undefined,
-        experience_points: undefined
+        experience_points: undefined,
+        age: undefined,
+        height: undefined,
+        weight: undefined,
+        eye_color: undefined,
+        hair_color: undefined,
+        skin_color: undefined
       },
       stats: {
         attributes: {
@@ -221,6 +227,13 @@ export default new Vuex.Store({
       state.sheet.misc.race = undefined
       state.sheet.misc.alignment = undefined
       state.sheet.misc.experience_points = undefined
+      
+      state.sheet.misc.age = undefined
+      state.sheet.misc.height = undefined
+      state.sheet.misc.weight = undefined
+      state.sheet.misc.eye_color = undefined
+      state.sheet.misc.hair_color = undefined
+      state.sheet.misc.skin_color = undefined
 
       state.sheet.stats.attributes.str = undefined
       state.sheet.stats.attributes.dex = undefined
