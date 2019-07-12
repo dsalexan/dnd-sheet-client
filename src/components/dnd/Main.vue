@@ -37,9 +37,79 @@
                 </div>
             </section>
             <x-input class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="sheetPassiveProficiency('perception')" box reactive="false" disabled />   
+
             <div class="otherprofs box textblock">
-                <label for="otherprofs">Other Proficiencies and Languages</label><textarea name="otherprofs"></textarea>
+                <label for="otherprofs">Other Proficiencies and Languages</label>
+                <textarea name="otherprofs"></textarea>
             </div>
+        </section>
+        <section>
+          <section class="combat">
+                <div class="armorclass">
+                    <div>
+                        <label for="ac">Armor Class</label><input name="ac" placeholder="10" type="text" />
+                    </div>
+                </div>
+                <div class="initiative">
+                    <div>
+                        <label for="initiative">Initiative</label><input name="initiative" placeholder="+0" type="text" />
+                    </div>
+                </div>
+                <div class="speed">
+                    <div>
+                        <label for="speed">Speed</label><input name="speed" placeholder="30" type="text" />
+                    </div>
+                </div>
+                <div class="hp">
+                    <div class="regular">
+                        <div class="max">
+                        <label for="maxhp">Hit Point Maximum</label><input name="maxhp" placeholder="10" type="text" />
+                        </div>
+                        <div class="current">
+                        <label for="currenthp">Current Hit Points</label><input name="currenthp" type="text" />
+                        </div>
+                    </div>
+                    <div class="temporary">
+                        <label for="temphp">Temporary Hit Points</label><input name="temphp" type="text" />
+                    </div>
+                </div>
+                <div class="hitdice">
+                    <div>
+                        <div class="total">
+                        <label onclick="totalhd_clicked()" for="totalhd">Total</label><input name="totalhd" placeholder="2d10"
+                            type="text" />
+                        </div>
+                        <div class="remaining">
+                        <label for="remaininghd">Hit Dice</label><input name="remaininghd" type="text" />
+                        </div>
+                    </div>
+                </div>
+                <div class="deathsaves">
+                    <div>
+                        <div class="label">
+                        <label>Death Saves</label>
+                        </div>
+                        <div class="marks">
+                        <div class="deathsuccesses">
+                            <label>Successes</label>
+                            <div class="bubbles">
+                            <input name="deathsuccess1" type="checkbox" />
+                            <input name="deathsuccess2" type="checkbox" />
+                            <input name="deathsuccess3" type="checkbox" />
+                            </div>
+                        </div>
+                        <div class="deathfails">
+                            <label>Failures</label>
+                            <div class="bubbles">
+                            <input name="deathfail1" type="checkbox" />
+                            <input name="deathfail2" type="checkbox" />
+                            <input name="deathfail3" type="checkbox" />
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </section>
     </main>
 </template>
@@ -184,5 +254,207 @@ export default {
             div.otherprofs textarea
                 height: 26em
                 width: 100%
+
+                         
+            section.combat
+                background-color: $faded-light
+                display: flex
+                flex-wrap: wrap
+                border-radius: $radius
+                
+                > div
+                    overflow: hidden
+                
+                    &.armorclass, &.initiative, &.speed
+                        flex-basis: 33.333%
+                        
+                        > div
+                            display: flex
+                            flex-direction: column-reverse
+                            align-items: center
+                            margin-top: $gutter
+                        
+                            label
+                                font-size: 8px
+                                width: $large-box-width - $radius*2
+                                border: 1px solid black
+                                border-top: 0
+                                background-color: $bg
+                                text-align: center
+                                padding-top: 5px
+                                padding-bottom: 5px
+                                border-radius: 0 0 $radius $radius
+
+                            input
+                                height: $large-box-width
+                                width: $large-box-width
+                                border-radius: $radius
+                                border: 1px solid black
+                                text-align: center
+                                font-size: 30px
+                    
+                    &.hp
+                        flex-basis: 100%
+                        
+                        > div.regular
+                            background-color: $bg
+                            border: 1px solid black
+                            margin: $gutter
+                            margin-bottom: $gutter / 2
+                            border-radius: $radius $radius 0 0
+                        
+                            > div.max
+                                display: flex
+                                justify-content: space-around
+                                align-items: baseline
+                                
+                                label
+                                    font-size: 10px
+                                    text-transform: none
+                                    color: $faded-dark
+                                
+                                input
+                                    width: 40%
+                                    border: 0
+                                    border-bottom: 1px solid $faded
+                                    font-size: 12px
+                                    text-align: center
+
+                            > div.current
+                                display: flex
+                                flex-direction: column-reverse
+
+                                input
+                                    border: 0
+                                    width: 100%
+                                    padding: 1em 0
+                                    font-size: 20px
+                                    text-align: center
+
+                                label
+                                    font-size: 10px
+                                    padding-bottom: 5px
+                                    text-align: center
+                                    font-weight: bold
+                            
+                        > div.temporary
+                            margin: $gutter
+                            margin-top: 0
+                            border: 1px solid black
+                            border-radius: 0 0 $radius $radius
+                            display: flex
+                            flex-direction: column-reverse
+                            background-color: $bg
+                            
+                            input
+                                padding: 1em 0
+                                font-size: 20px
+                                border: 0
+                                text-align: center
+
+                            label
+                                font-size: 10px
+                                padding-bottom: 5px
+                                text-align: center
+                                font-weight: bold
+                            
+                    &.hitdice, &.deathsaves
+                        $height: 100px
+                        flex: 1 50%
+                        height: $height
+                        
+                        > div
+                            height: $height - $gutter*2
+                        
+                    &.hitdice > div
+                        background-color: $bg
+                        margin: $gutter
+                        border: 1px solid black
+                        border-radius: $radius
+                        display: flex
+                        flex-direction: column
+
+                        > div.total
+                            display: flex
+                            align-items: baseline
+                            justify-content: space-around
+                            padding: $gutter/2 0
+                            
+                            label
+                                font-size: 10px
+                                color: $faded-dark
+                                margin: 0.25em
+                                text-transform: none
+                                
+                            input
+                                font-size: 12px
+                                flex-grow: 1
+                                border: 0
+                                border-bottom: 1px solid $faded
+                                width: 50%
+                                margin-right: 0.25em
+                                padding: 0 0.25em
+                                text-align: center
+                            
+                        > div.remaining
+                            flex: 1
+                            display: flex
+                            flex-direction: column-reverse
+
+                            label
+                                text-align: center
+                                padding: 2px
+                                font-size: 10px
+                                
+                            input
+                                text-align: center
+                                border: 0
+                                flex: 1
+
+                    &.deathsaves
+                        > div
+                            margin: $gutter
+                            background: $bg
+                            border: 1px solid black
+                            border-radius: $radius
+                            display: flex
+                            flex-direction: column-reverse
+                            
+                            > div.label
+                                text-align: center
+                                
+                                label
+                                    font-size: 10px
+                                
+                            > div.marks
+                                display: flex
+                                flex: 1
+                                flex-direction: column
+                                justify-content: center
+                                
+                                div.deathsuccesses, div.deathfails
+                                    display: flex
+                                    align-items: center
+
+                                    > *
+
+                                    label
+                                        font-size: 8px
+                                        text-align: right
+                                        flex: 1 50%
+                            
+                            div.bubbles
+                                flex: 1 40%
+                                margin-left: $gutter / 2
+
+                                input[type="checkbox"]
+                                    appearance: none
+                                    width: $bubble-size
+                                    height: $bubble-size
+                                    border: 1px solid black
+                                    border-radius: $bubble-size
+                                    &:checked
+                                        background-color: black
+                    
 </style>
 
