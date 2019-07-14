@@ -160,8 +160,32 @@ export default new Vuex.Store({
             reference: '$ref:item_1'
           }
         ]
+      },
+      spells: {
+        by_level: {
+          0: ['cantrip 1'],
+          1: [],
+          2: [],
+          3: [],
+          4: [],
+          5: [],
+          6: [],
+          7: [],
+          8: [],
+          9: []
+        },
+        slots: {
+          1: 10,
+          2: undefined,
+          3: undefined,
+          4: undefined,
+          5: undefined,
+          6: undefined,
+          7: undefined,
+          8: undefined,
+          9: undefined
+        }
       }
-
     }
   },
   getters: {
@@ -218,11 +242,14 @@ export default new Vuex.Store({
     },
     sheetClass: (state, getters) => {
       let level = getters.sheetlevel
+      if(level == undefined) return undefined
+
       let class_name = state.sheet.misc.class_level.replace(level, '').trim()
       return dnd5e.classes.name[class_name]       
     },
     sheetSpellcasting: (state, getters) => {
       let classe = getters.sheetClass
+      if(classe == undefined) return undefined
       let spellcasting = classe.spellcasting
 
       if(typeof spellcasting == 'string'){
@@ -232,7 +259,7 @@ export default new Vuex.Store({
       }
 
       return undefined
-    },
+    }
   },
   mutations: {
     RESET_SHEET: (state) => {
@@ -313,6 +340,12 @@ export default new Vuex.Store({
         state.sheet.equipment.treasure.coins[coin.slug] = undefined
       }
       state.sheet.equipment.item = []
+      
+      state.sheet.spells.list = []
+      for(let i = 1; i <= 9; i++){
+        state.sheet.spells.slots[i] = undefined
+        state.sheet.spells.by_level[i] = []
+      }
       
     }
   },

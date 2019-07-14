@@ -8,14 +8,19 @@
                 </template>
                 <template v-else>
                     <div class="inputs">
-                        <x-input class="total clean" label="Slots Total" :value="10" disabled reactive="false"/>
-                        <x-input class="expended" label="Slots Expended"  reactive="false"/>
+                        <x-input class="total clean" label="Slots Total" :value="total" disabled reactive="false"/>
+                        <x-input class="expended" label="Slots Expended" :value="expended" @input="$emit('expended', $event)" reactive="false" :disabled="isDisabled"/>
                     </div>
                 </template>
             </div>
         </div>
         <div class="body">
-            <x-input v-for="index in lines" :key="index" class="input"></x-input>
+            <x-input 
+                v-for="index in lines" :key="index" 
+                class="input" 
+                :disabled="isDisabled || (entries == -1 ? false : index > entries)"
+                :value="spells[index-1]"
+                @input="$emit('spell', index-1, $event)"></x-input>
         </div>
     </div>
 </template>
@@ -34,10 +39,40 @@ export default {
         lines: {
             type: Number,
             default: 10
+        },
+        total: {
+            type: Number,
+            default: 0
+        },
+        expended: {
+            type: Number,
+            default: undefined
+        },
+        spells: {
+            type: Array,
+            default: () => []
+        },
+        disabled: {
+            type: [String, Boolean],
+            default: false
+        },
+        entries: {
+            type: Number,
+            default: -1
         }
     },
     components: {
         'x-input': XInputVue
+    },
+    computed: {
+        isDisabled() {
+            if(typeof this.disabled == 'boolean') return this.disabled
+        }
+    },
+    watch: {
+        spells: function(val){
+            console.log('spells', val)
+        }
     }
 }
 </script>
@@ -150,6 +185,9 @@ export default {
                     width: calc(100% - 20px)
                     background-color: #f7f7f7
                     padding: 5px 10px
+
+                    &:disabled
+                        background-color: white
 
 </style>
 

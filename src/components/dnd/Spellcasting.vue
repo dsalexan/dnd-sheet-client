@@ -5,26 +5,53 @@
                 <x-input class="clean" name="spellcasting_class" label="Spellcasting Class" placeholder="Unknown" :value="spellcasting_class" reactive="false" disabled></x-input>
             </section>
             <section class="misc">
-                <x-input class="clean" label="Spellcasting Ability" placeholder="INT" :value="spellcasting.ability.toUpperCase()" reactive="false" disabled/>
+                <x-input class="clean" label="Spellcasting Ability" placeholder="INT" :value="spellcasting_ability" reactive="false" disabled/>
                 <x-input class="clean" label="Spell Attack Bonus" placeholder="+0" :value="spell_attack_bonus" reactive="false" disabled/>
                 <x-input class="clean" label="Spell Save DC" placeholder="10" :value="spell_save_dc" reactive="false" disabled/>
             </section>
         </header>
         <main>
             <div>
-                <dnd-spell-slot :level="0" :lines="10"></dnd-spell-slot>
-                <dnd-spell-slot :level="1" :lines="13"></dnd-spell-slot>
-                <dnd-spell-slot :level="2" :lines="13"></dnd-spell-slot>
+                <dnd-spell-slot 
+                    :level="0" 
+                    :lines="10" 
+                    :entries="cantrips_known" 
+                    :disabled="cantrips_known <= 0" 
+                    :spells="sheet.spells.by_level[0]"
+                    @spell="(index, value) => value ? sheet.spells.by_level[0].splice(index, 1, value) : sheet.spells.by_level[0].splice(index, 1) "></dnd-spell-slot>
+                <dnd-spell-slot 
+                    v-for="(lvl, index) in [1,2]" :key="lvl"
+                    :level="lvl" 
+                    :lines="[13,13][index]" 
+                    :total="spell_slots(lvl)" 
+                    :entries="spells_left_to_know" :disabled="spell_slots(lvl) <= 0"
+                    :expended="sheet.spells.slots[lvl]"
+                    @expended="sheet.spells.slots[lvl] = parseInt($event)"
+                    :spells="sheet.spells.by_level[lvl]"
+                    @spell="(index, value) => value ? sheet.spells.by_level[lvl].splice(index, 1, value) : sheet.spells.by_level[lvl].splice(index, 1) "></dnd-spell-slot>
             </div>
-            <div>
-                <dnd-spell-slot :level="3" :lines="13"></dnd-spell-slot>
-                <dnd-spell-slot :level="4" :lines="13"></dnd-spell-slot>
-                <dnd-spell-slot :level="5" :lines="10"></dnd-spell-slot>
+            <div> 
+                <dnd-spell-slot 
+                    v-for="(lvl, index) in [3,4,5]" :key="lvl"
+                    :level="lvl" 
+                    :lines="[13,13,10][index]" 
+                    :total="spell_slots(lvl)" 
+                    :entries="spells_left_to_know" :disabled="spell_slots(lvl) <= 0"
+                    :expended="sheet.spells.slots[lvl]"
+                    @expended="sheet.spells.slots[lvl] = parseInt($event)"
+                    :spells="sheet.spells.by_level[lvl]"
+                    @spell="(index, value) => value ? sheet.spells.by_level[lvl].splice(index, 1, value) : sheet.spells.by_level[lvl].splice(index, 1) "></dnd-spell-slot>
             </div><div>
-                <dnd-spell-slot :level="6" :lines="9"></dnd-spell-slot>
-                <dnd-spell-slot :level="7" :lines="9"></dnd-spell-slot>
-                <dnd-spell-slot :level="8" :lines="7"></dnd-spell-slot>
-                <dnd-spell-slot :level="9" :lines="7"></dnd-spell-slot>
+                <dnd-spell-slot 
+                    v-for="(lvl, index) in [6,7,8,9]" :key="lvl"
+                    :level="lvl" 
+                    :lines="[9,9,7,7][index]" 
+                    :total="spell_slots(lvl)" 
+                    :entries="spells_left_to_know" :disabled="spell_slots(lvl) <= 0"
+                    :expended="sheet.spells.slots[lvl]"
+                    @expended="sheet.spells.slots[lvl] = parseInt($event)"
+                    :spells="sheet.spells.by_level[lvl]"
+                    @spell="(index, value) => value ? sheet.spells.by_level[lvl].splice(index, 1, value) : sheet.spells.by_level[lvl].splice(index, 1) "></dnd-spell-slot>
             </div>
         </main>
     </div>
@@ -47,12 +74,23 @@ export default {
             'sheet'
         ]),
         ...mapGetters({
+            level: 'sheetlevel',
             character_class: 'sheetClass',
             spellcasting: 'sheetSpellcasting',
-            proficiency_bonus: 'sheetProficiencyModifier'
+            proficiency_bonus: 'sheetProficiencyModifier',
+            spells_known: 'sheetSpellsKnown'
         }),
+        spellcasting_ability(){
+            let spellcasting = this.spellcasting
+            if(spellcasting == undefined) return undefined
+
+            return spellcasting.ability.toUpperCase()
+        },
         spell_attack_bonus(){
-            return this.proficiency_bonus(this.spellcasting.ability, true)
+            let spellcasting = this.spellcasting
+            if(spellcasting == undefined) return undefined
+
+            return this.proficiency_bonus(spellcasting.ability, true)
         },
         spell_save_dc(){
             let bonus = this.spell_attack_bonus
@@ -60,8 +98,39 @@ export default {
             return parseInt(bonus) + 8
         },
         spellcasting_class(){
-            let c = this.character_class
-            return c.spellcasting ? c.name : undefined
+            let classe = this.character_class
+            if(classe == undefined) return undefined
+
+            return classe.spellcasting ? classe.name : undefined
+        },
+        cantrips_known(){
+            let classe = this.character_class
+            if(classe == undefined) return 0
+
+            let level = this.level
+            if(level == undefined) return 0
+
+            return classe.spellcasting ? (classe.table[level].cantrips_known || 0) : 0
+        },
+        spell_slots(){
+            return function(spell_level){
+                let classe = this.character_class
+                if(classe == undefined) return 0
+
+                let level = this.level
+                if(level == undefined) return 0
+
+                return classe.spellcasting ? (classe.table[level].spell_slots[spell_level] || 0) : 0
+            }
+        },
+        spells_left_to_know(){
+            let classe = this.character_class
+            if(classe == undefined) return undefined
+
+            let level = this.level
+            if(level == undefined) return undefined
+
+            return classe.spellcasting ? (classe.table[level].spells_known || 0) : 0
         }
     }
 }

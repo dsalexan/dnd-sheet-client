@@ -111,7 +111,7 @@ export default {
     },
     watch: {
         value: function(val){
-            console.log('VALUE', val)
+            // console.log('VALUE', val)
         }
     }
 }
@@ -173,5 +173,6 @@ export default {
     .transparent
         input::placeholder, input, label
             color: transparent !important
+
 </style>
 

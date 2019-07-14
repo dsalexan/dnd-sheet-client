@@ -4,8 +4,8 @@
         <button @click="reset_sheet">Reset</button>
         <form class="charsheet">
             <dnd-header />
-            <!-- <dnd-main />
-            <dnd-header type="physical" /> -->
+            <dnd-main />
+            <dnd-header type="physical" />
             <dnd-spellcasting type="spellcasting" />
         </form>
     </div>
