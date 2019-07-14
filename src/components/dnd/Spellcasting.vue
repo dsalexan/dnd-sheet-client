@@ -2,14 +2,31 @@
     <div class="dnd-spellcasting">
         <header class="dnd-header">
             <section class="charname">
-                <x-input name="spellcasting_class" label="Spellcasting Class" placeholder="Unknown" v-model="sheet.name"></x-input>
+                <x-input class="clean" name="spellcasting_class" label="Spellcasting Class" placeholder="Unknown" :value="spellcasting_class" reactive="false" disabled></x-input>
             </section>
             <section class="misc">
-                <x-input label="Ability" placeholder="INT" v-model="sheet.misc.class_level"></x-input>
-                <x-input label="Attack Bonus" placeholder="+0" v-model="sheet.misc.background"></x-input>
-                <x-input label="Saving Throw" placeholder="9" v-model="sheet.misc.player"></x-input>
+                <x-input class="clean" label="Spellcasting Ability" placeholder="INT" :value="spellcasting.ability.toUpperCase()" reactive="false" disabled/>
+                <x-input class="clean" label="Spell Attack Bonus" placeholder="+0" :value="spell_attack_bonus" reactive="false" disabled/>
+                <x-input class="clean" label="Spell Save DC" placeholder="10" :value="spell_save_dc" reactive="false" disabled/>
             </section>
         </header>
+        <main>
+            <div>
+                <dnd-spell-slot :level="0" :lines="10"></dnd-spell-slot>
+                <dnd-spell-slot :level="1" :lines="13"></dnd-spell-slot>
+                <dnd-spell-slot :level="2" :lines="13"></dnd-spell-slot>
+            </div>
+            <div>
+                <dnd-spell-slot :level="3" :lines="13"></dnd-spell-slot>
+                <dnd-spell-slot :level="4" :lines="13"></dnd-spell-slot>
+                <dnd-spell-slot :level="5" :lines="10"></dnd-spell-slot>
+            </div><div>
+                <dnd-spell-slot :level="6" :lines="9"></dnd-spell-slot>
+                <dnd-spell-slot :level="7" :lines="9"></dnd-spell-slot>
+                <dnd-spell-slot :level="8" :lines="7"></dnd-spell-slot>
+                <dnd-spell-slot :level="9" :lines="7"></dnd-spell-slot>
+            </div>
+        </main>
     </div>
 </template>
 
@@ -17,15 +34,36 @@
 import {mapState, mapMutations, mapGetters} from 'vuex'
 
 import XInput from '@/components/utils/XInput.vue'
+import SpellSlot from '@/components/dnd/SpellSlot.vue'
 
 export default {
     name: 'dnd-spellcasting',
     components: {
-        'x-input': XInput
+        'x-input': XInput,
+        'dnd-spell-slot': SpellSlot
     },
-    computed: mapState([
-        'sheet'
-    ])
+    computed: {
+        ...mapState([
+            'sheet'
+        ]),
+        ...mapGetters({
+            character_class: 'sheetClass',
+            spellcasting: 'sheetSpellcasting',
+            proficiency_bonus: 'sheetProficiencyModifier'
+        }),
+        spell_attack_bonus(){
+            return this.proficiency_bonus(this.spellcasting.ability, true)
+        },
+        spell_save_dc(){
+            let bonus = this.spell_attack_bonus
+            if(bonus == undefined) return undefined
+            return parseInt(bonus) + 8
+        },
+        spellcasting_class(){
+            let c = this.character_class
+            return c.spellcasting ? c.name : undefined
+        }
+    }
 }
 </script>
 
@@ -39,6 +77,7 @@ export default {
             display: flex !important
             align-contents: stretch
             align-items: stretch
+            margin-bottom: $gutter * 2
             
             section.charname
                 border: 1px solid black
@@ -75,6 +114,7 @@ export default {
 
                 display: flex
                 flex-wrap: wrap
+                background-color: lightgray
                 
                 > div
                     flex-basis: 33.333%
@@ -102,5 +142,14 @@ export default {
                         text-align: center
                         font-size: 20px
             
+        main
+            display: grid
+            grid-template-columns: 1fr 1fr 1fr
+            grid-column-gap: 20px
 
+            div.dnd-spell-slot
+                padding-top: $gutter*2
+
+                &:first-of-type
+                    padding-top: 0
 </style>

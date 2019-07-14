@@ -12,7 +12,7 @@ export default new Vuex.Store({
     sheet: {
       name: undefined,
       misc: {
-        class_level: 'F 1',
+        class_level: 'Bard 1',
         background: undefined,
         player: undefined,
         race: undefined,
@@ -32,7 +32,7 @@ export default new Vuex.Store({
           con: undefined,
           int: undefined,
           wis: undefined,
-          cha: undefined
+          cha: 15
         },
         inspiration: false,
         proficiencies: {
@@ -215,7 +215,24 @@ export default new Vuex.Store({
         if(modifier == undefined) return undefined
         return parseInt(modifier) + 10
       }
-    }
+    },
+    sheetClass: (state, getters) => {
+      let level = getters.sheetlevel
+      let class_name = state.sheet.misc.class_level.replace(level, '').trim()
+      return dnd5e.classes.name[class_name]       
+    },
+    sheetSpellcasting: (state, getters) => {
+      let classe = getters.sheetClass
+      let spellcasting = classe.spellcasting
+
+      if(typeof spellcasting == 'string'){
+        return _.get(classe, spellcasting)
+      }else if(typeof spellcasting == 'object'){
+        throw Error('Unimplemented')
+      }
+
+      return undefined
+    },
   },
   mutations: {
     RESET_SHEET: (state) => {

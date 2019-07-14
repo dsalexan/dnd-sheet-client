@@ -1,0 +1,1 @@
+export {default as college_of_lore} from './college_of_lore'
