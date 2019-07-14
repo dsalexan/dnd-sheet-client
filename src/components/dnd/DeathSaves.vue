@@ -8,13 +8,13 @@
                 <div class="deathsuccesses">
                     <label>Successes</label>
                     <div class="bubbles">
-                        <input v-for="(success, index) of content.success" :key="index" type="checkbox" v-model="content.success[index]" @change="$emit('change', content)"/>
+                        <input v-for="(val, index) of success" :key="index" type="checkbox" v-model="success[index]" @change="$emit('change', compile())"/>
                     </div>
                 </div>
                 <div class="deathfails">
                     <label>Failures</label>
                     <div class="bubbles">
-                        <input v-for="(failure, index) of content.failure" :key="index" type="checkbox" v-model="content.failure[index]" @change="$emit('change', content)"/>
+                        <input v-for="(val, index) of failure" :key="index" type="checkbox" v-model="failure[index]" @change="$emit('change', compile())"/>
                     </div>
                 </div>
             </div>
@@ -31,26 +31,42 @@ export default {
     },
     props: {
         value: {
-            type: Object,
-            default: {
-                success: [false, false, false],
-                failure: [false, false, false]
-            }
+            type: String,
+            default: undefined
         },
         transparent: {
             type: [String, Boolean],
             default: false
         }
     },
-    data() {
-        return {
-            content: this.value
-        }
-    },
     computed: {
         isTransparent() {
             if(typeof this.transparent == 'boolean') return this.transparent
             else if(typeof this.transparent == 'string') return this.transparent.toLowerCase() != 'false'
+        },
+        success(){
+            if(this.$props.value == undefined) return [false, false, false]
+
+            let arr = this.$props.value.split(',').filter(i => i == 'success').map(i => true)
+            for(let i = arr.length; i < 3; i++)
+                arr[i] = false
+
+            return arr
+        },
+        failure(){
+            if(this.$props.value == undefined) return [false, false, false]
+
+            let arr = this.$props.value.split(',').filter(i => i == 'failure').map(i => true)
+            for(let i = arr.length; i < 3; i++)
+                arr[i] = false
+
+            return arr
+        }
+    },
+    methods: {
+        compile(){
+            let arr = [].concat(this.success.filter(i => i).map(i => 'success'), this.failure.filter(i => i).map(i => 'failure'))
+            return arr.join(',')
         }
     }
 }

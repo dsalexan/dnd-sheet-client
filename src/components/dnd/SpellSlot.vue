@@ -71,7 +71,7 @@ export default {
     },
     watch: {
         spells: function(val){
-            console.log('spells', val)
+            // console.log('spells', val)
         }
     }
 }

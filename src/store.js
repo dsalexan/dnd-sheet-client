@@ -78,10 +78,7 @@ export default new Vuex.Store({
             total: undefined,
             current: undefined
           },
-          death_saves: {
-            success: [true, false, true],
-            failure: [false, true, false]
-          },
+          death_saves: undefined,
           attacks_spellcasting: [
             {
               name: undefined,
@@ -323,12 +320,7 @@ export default new Vuex.Store({
       state.sheet.stats.combat.hit_dice.total = undefined
       state.sheet.stats.combat.hit_dice.current = undefined
 
-      state.sheet.stats.combat.death_saves.success[0] = false
-      state.sheet.stats.combat.death_saves.success[1] = false
-      state.sheet.stats.combat.death_saves.success[2] = false
-      state.sheet.stats.combat.death_saves.failure[0] = false
-      state.sheet.stats.combat.death_saves.failure[1] = false
-      state.sheet.stats.combat.death_saves.failure[2] = false
+      state.sheet.stats.combat.death_saves = undefined
 
       for(let item of state.sheet.stats.combat.attacks_spellcasting){
         item.name = undefined
@@ -342,7 +334,7 @@ export default new Vuex.Store({
       state.sheet.equipment.item = []
       
       state.sheet.spells.list = []
-      for(let i = 1; i <= 9; i++){
+      for(let i = 0; i <= 9; i++){
         state.sheet.spells.slots[i] = undefined
         state.sheet.spells.by_level[i] = []
       }
