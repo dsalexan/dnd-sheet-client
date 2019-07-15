@@ -63,7 +63,10 @@ export default new Vuex.Store({
             sleight_of_hand: false,
             stealth: false,
             survival: false,
-          }
+          },
+          others: [
+            'other #1'
+          ]
         },
         combat: {
           ac: undefined,
@@ -158,6 +161,7 @@ export default new Vuex.Store({
           }
         ]
       },
+      features: [],
       spells: {
         by_level: {
           0: ['cantrip 1'],
@@ -311,6 +315,8 @@ export default new Vuex.Store({
       state.sheet.stats.proficiencies.skills.stealth = undefined
       state.sheet.stats.proficiencies.skills.survival = undefined
 
+      state.sheet.stats.proficiencies.others = []
+
       state.sheet.stats.combat.ac = undefined
       state.sheet.stats.combat.initiative = undefined
       state.sheet.stats.combat.speed = undefined
@@ -332,6 +338,8 @@ export default new Vuex.Store({
         state.sheet.equipment.treasure.coins[coin.slug] = undefined
       }
       state.sheet.equipment.item = []
+
+      state.sheet.features = []
       
       state.sheet.spells.list = []
       for(let i = 0; i <= 9; i++){

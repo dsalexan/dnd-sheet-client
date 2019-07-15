@@ -1,5 +1,5 @@
 <template>
-    <div class="dnd-equipment">
+    <div class="dnd-equipment" :class="{transparent: !!transparent}">
         <label>Equipment</label>
         <div class="money">
             <ul>
@@ -30,7 +30,8 @@ export default {
                 },
                 items: []
             })
-        }
+        },
+        transparent: Boolean
     },
     components: {
         'x-input': XInput
@@ -91,5 +92,16 @@ div.dnd-equipment
     > textarea
         flex: 1
         border: 0
+
+    &.transparent
+        > div.money
+            ul > li
+                > /deep/ label, > /deep/ input
+                    color: transparent !important
+                    border-color: transparent !important
+        
+        > textarea, > textarea::placeholder
+            color: transparent !important
+            border-color: transparent !important
 </style>
 

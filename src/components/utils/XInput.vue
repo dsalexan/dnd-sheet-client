@@ -17,22 +17,25 @@
         
         <template v-if="type == 'textarea'">
             <textarea
+                ref="input"
                 :name="name" 
                 :placeholder="placeholder" 
-                @input="handleInput"
                 :value="value"
-                :disabled="isDisabled"/>
+                :disabled="isDisabled"
+
+                v-on="inputListeners"/>
         </template>
         <template v-else>
             <input
+                ref="input"
                 :name="name" 
                 :placeholder="placeholder" 
-                @input="handleInput"
-                @change="handleChange"
                 :value="value"
                 :checked="value"
                 :type="type == 'textarea' ? false : type"
-                :disabled="isDisabled"/>
+                :disabled="isDisabled"
+
+                v-on="inputListeners"/>
         </template>
     </component>
 </template>
@@ -95,18 +98,36 @@ export default {
         isTransparent() {
             if(typeof this.transparent == 'boolean') return this.transparent
             else if(typeof this.transparent == 'string') return this.transparent.toLowerCase() != 'false'
+        },
+        inputListeners: function () {
+            var vm = this
+            // `Object.assign` mescla objetos para formar um novo objeto
+            return Object.assign({},
+                // Nós adicionamos todas as escutas do pai
+                this.$listeners,
+                // Então podemos adicionar escutas personalizadas ou substituir
+                // comportamento de algumas escutas.
+                {
+                    // Isso garante que o componente funcione com o v-model
+                    input: vm.handleInput,
+                    change: vm.handleChange
+                }
+            )
         }
     },
     methods: {
         handleInput(e){
             if(this.$props.type != 'text') return
             
-            this.$emit('input', e.target.value)
+            this.$emit('input', e.target.value == "" ? undefined : e.target.value)
         },
         handleChange(e){
             if(this.$props.type != 'checkbox') return 
 
             this.$emit('input', e.target.checked)
+        },
+        focus(){
+            this.$refs.input.focus()
         }
     },
     watch: {
