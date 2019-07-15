@@ -45,6 +45,14 @@ export default {
             qtd_lines: this.lines
         }
     },
+    watch: {
+        lines: function(val){
+            this.qtd_lines = val
+        },
+        value: function(val){
+            if(val.length < this.$props.lines) this.qtd_lines = this.$props.lines
+        }
+    },
     methods: {
         realIndex: function(index, col){
             return col*this.$props.lines + index
