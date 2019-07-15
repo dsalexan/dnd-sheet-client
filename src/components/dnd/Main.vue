@@ -37,7 +37,12 @@
             </section>
             <x-input class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="sheetPassiveProficiency('perception')" box reactive="false" disabled/>
 
-            <x-input class="otherprofs textblock" type="textarea" label="Other Proficiencies and Languages" />
+            <!-- <x-input class="otherprofs textblock" type="textarea" label="Other Proficiencies and Languages" /> -->
+            <section class="otherprofs textblock">
+                <!-- <x-input class="textblock" type="textarea" label="Features & Traits" /> -->
+                <label>Other Proficiencies and Languages</label>
+                <dnd-list :lines="12" :cols="2"></dnd-list>
+            </section>
         </section>
         <section>
             <section class="combat">
@@ -87,8 +92,10 @@
             </section>
         </section>
         <section>
-            <section class="features">
-                <x-input class="textblock" type="textarea" label="Features & Traits" />
+            <section class="features textblock">
+                <!-- <x-input class="textblock" type="textarea" label="Features & Traits" /> -->
+                <label>Features & Traits</label>
+                <dnd-list></dnd-list>
             </section>
         </section>
     </main>
@@ -103,6 +110,7 @@ import Scores from '@/components/dnd/Scores.vue'
 import Proficiency from '@/components/dnd/Proficiency.vue'
 import DeathSaves from '@/components/dnd/DeathSaves.vue'
 import Equipment from '@/components/dnd/Equipment.vue'
+import List from '@/components/dnd/List.vue'
 
 import XInput from '@/components/utils/XInput.vue'
 
@@ -113,6 +121,7 @@ export default {
         'dnd-proficiency': Proficiency,
         'dnd-death-saves': DeathSaves,
         'dnd-equipment': Equipment,
+        'dnd-list': List,
         'x-input': XInput
     },
     data(){
@@ -237,12 +246,8 @@ export default {
                                         background-color: black
 
             
-            div.otherprofs 
+            section.otherprofs 
                 padding-top: $gutter
-
-                textarea
-                    height: 26em
-                    width: 100%
 
                          
             section.combat
@@ -467,18 +472,13 @@ export default {
 
             section.features        
                 padding: 0 $gutter
+                display: flex
+                flex-direction: column-reverse
 
-                div
-                    display: flex
-                    flex-direction: column-reverse
 
-                    > label
-                        text-align: center
+                > label
+                    text-align: center
 
-                    textarea
-                        padding: $gutter
-                        height: 43em
-                        height: 65em
-                        width: calc(100% - 10px)
+
 </style>
 
