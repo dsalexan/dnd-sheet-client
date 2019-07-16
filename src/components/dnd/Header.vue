@@ -5,34 +5,34 @@
         </section>
         <section class="misc">
             <ul v-if="type == 'system'">
-                <x-input tag="li" label="Class & Level" placeholder="Unknown 1" v-model="sheet.misc.class_level"></x-input>
+                <x-input transparent tag="li" label="Class & Level" placeholder="Unknown 1" :value="sheet.misc.class_level" @input="set_class_level"></x-input>
 
-                <x-input tag="li" label="Background" placeholder="Acolyte" v-model="sheet.misc.background"></x-input>
-                <x-input tag="li" label="Player Name" placeholder="John Doe" v-model="sheet.misc.player"></x-input>
-                <x-input tag="li" label="Race" placeholder="Human" v-model="sheet.misc.race"></x-input>
-                <x-input tag="li" label="Alignment" placeholder="True Neutral" v-model="sheet.misc.alignment"></x-input>
-                <x-input tag="li" label="Experience Points" placeholder="0" v-model="sheet.misc.experience_points"></x-input>
+                <x-input transparent tag="li" label="Background" placeholder="Acolyte" :value="sheet.misc.background" @input="set_background"></x-input>
+                <x-input transparent tag="li" label="Player Name" placeholder="John Doe" v-model="sheet.misc.player"></x-input>
+                <x-input transparent tag="li" label="Race" placeholder="Human" :value="sheet.misc.race" @input="set_race"></x-input>
+                <x-input transparent tag="li" label="Alignment" placeholder="True Neutral" v-model="sheet.misc.alignment"></x-input>
+                <x-input transparent tag="li" label="Experience Points" placeholder="0" v-model="sheet.misc.experience_points"></x-input>
             </ul>
             <ul v-else-if="type == 'physical'">
-                <x-input tag="li" label="Age" v-model="sheet.misc.age"></x-input>
-                <x-input tag="li" label="Height" v-model="sheet.misc.height"></x-input>
-                <x-input tag="li" label="Weight" v-model="sheet.misc.weight"></x-input>
+                <x-input transparent tag="li" label="Age" v-model="sheet.misc.age"></x-input>
+                <x-input transparent tag="li" label="Height" v-model="sheet.misc.height"></x-input>
+                <x-input transparent tag="li" label="Weight" v-model="sheet.misc.weight"></x-input>
 
-                <x-input tag="li" label="Eyes" v-model="sheet.misc.eye_color"></x-input>
-                <x-input tag="li" label="Hair" v-model="sheet.misc.hair_color"></x-input>
-                <x-input tag="li" label="Skin" v-model="sheet.misc.skin_color"></x-input>
+                <x-input transparent tag="li" label="Eyes" v-model="sheet.misc.eye_color"></x-input>
+                <x-input transparent tag="li" label="Hair" v-model="sheet.misc.hair_color"></x-input>
+                <x-input transparent tag="li" label="Skin" v-model="sheet.misc.skin_color"></x-input>
             </ul>
             <ul v-else-if="type == 'spellcasting'">
-                <x-input tag="li" label="Spellcasting Ability" placeholder="INT" v-model="sheet.misc.class_level"></x-input>
-                <x-input tag="li" label="Attack Bonus" placeholder="+0" v-model="sheet.misc.background"></x-input>
-                <x-input tag="li" label="Saving Throw" placeholder="9" v-model="sheet.misc.player"></x-input>
+                <x-input transparent tag="li" label="Spellcasting Ability" placeholder="INT" v-model="sheet.misc.class_level"></x-input>
+                <x-input transparent tag="li" label="Attack Bonus" placeholder="+0" v-model="sheet.misc.background"></x-input>
+                <x-input transparent tag="li" label="Saving Throw" placeholder="9" v-model="sheet.misc.player"></x-input>
             </ul>
         </section>
     </header>
 </template>
 
 <script>
-import {mapState} from 'vuex'
+import {mapState, mapActions} from 'vuex'
 
 import XInput from '@/components/utils/XInput.vue'
 
@@ -49,7 +49,14 @@ export default {
     },
     computed: mapState([
         'sheet'
-    ])
+    ]),
+    methods: {
+        ...mapActions({
+            set_class_level: 'sheet/SET_CLASS_LEVEL',
+            set_race: 'sheet/SET_RACE',
+            set_background: 'sheet/SET_BACKGROUND'
+        })   
+    }
 }
 </script>
 

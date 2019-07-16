@@ -3,7 +3,7 @@
         <div class="column" v-for="c in cols" :key="c">
             <x-input 
                 class="input"
-                v-for="index of qtd_lines" :key="index"
+                v-for="index of Math.max(qtd_lines, value.length)" :key="index"
                 :index="realIndex(index-1, c-1)"
                 :ref="`input${realIndex(index-1, c-1)}`"
                 :value="value[realIndex(index-1, c-1)] || ''"

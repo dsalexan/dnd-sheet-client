@@ -5,12 +5,18 @@ import * as dnd5e from '@/assets/rules/dnd/5e'
 export default {
     namespaced: true,
     state: {
+        subscriptions: {
+            features: {},
+            equipment: {},
+            proficiencies: {},
+            spells: {}
+        },
         name: undefined,
         misc: {
-            class_level: 'Bard 1',
-            background: undefined,
+            class_level: 'Bard 1', // SUBSCRIPTION
+            background: undefined, // SUBSCRIPTION
             player: undefined,
-            race: undefined,
+            race: undefined, // SUBSCRIPTION
             alignment: undefined,
             experience_points: undefined,
             age: undefined,
@@ -138,7 +144,7 @@ export default {
                 ]
             }
         },
-        equipment: {
+        equipment: { // SUBSCRIPTION
             treasure: {
                 coins: {
                     cp: 15,
@@ -156,7 +162,7 @@ export default {
                 }
             ]
         },
-        features: [],
+        features: [], // SUBSCRIPTION
         spells: {
             by_level: {
                 0: ['cantrip 1'],
@@ -241,6 +247,18 @@ export default {
 
             let class_name = state.misc.class_level.replace(level, '').trim()
             return dnd5e.classes.name[class_name]
+        },
+        race: (state, getters) => {
+            let race = state.race
+            if(race == undefined) return undefined
+
+            return dnd5e.races.name[race]
+        },
+        background: (state, getters) => {
+            let background = state.background
+            if(background == undefined) return undefined
+            
+            return dnd5e.backgrounds.name[background]
         },
         spellcasting: (state, getters) => {
             let classe = getters.class
@@ -341,9 +359,61 @@ export default {
                 state.spells.by_level[i] = []
             }
 
-        }
+        },
+        SET_PROFICIENCIES(state, { value, index }){
+            if(value == undefined)
+                state.stats.proficiencies.others.splice(index, 1)
+            else
+                state.stats.proficiencies.others.splice(index, 1, value)
+        },
     },
     actions: {
+        // actions as mutations
+        SET_CLASS_LEVEL({ dispatch, state }, value){
+            state.misc.class_level = value
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'getters', path: 'class'})
+        },
+        SET_BACKGROUND({ dispatch, state }, value){
+            state.misc.background = value
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'getters', path: 'background'})
+        },
+        SET_RACE({ dispatch, state }, value){
+            state.misc.race = value
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'getters', path: 'race'})
+        },
+        SET_EQUIPMENT({ dispatch, state }, { value, index }){
+            if(value == undefined)
+                state.equipment.items.splice(index, 1)
+            else
+                state.equipment.items.splice(index, 1, value)
 
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'state', path: 'equipment.items'})
+        },
+        SET_FEATURES({ dispatch, state }, { value, index }){
+            if(value == undefined)
+                state.features.splice(index, 1)
+            else
+                state.features.splice(index, 1, value)
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'state', path: 'features'})
+        },
+
+        UPDATE_SUBSCRIPTIONS({ commit, state, getters }, {source, path}){
+            // state.subscriptions 
+
+            let meta
+            if(source == 'getters'){
+                meta = [_.get(getters, path)]
+            }else if(source == 'state'){
+                meta = [..._get(state, path)]
+            }
+
+            for(let m of meta.filter(_ => !!_ && !!_.subscriptions)){
+                for(let key of m.subscriptions){
+                    state.subscriptions[key][m.meta] = m
+                }
+            }
+
+            console.log('SUBSCRIPTIONS UPDATED', state.subscriptions)
+        }
     }
 }

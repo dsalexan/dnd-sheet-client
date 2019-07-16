@@ -1,4 +1,5 @@
 export default {
+    meta: 'class',
     name: 'Bard',
     slug: 'bard',
 
@@ -6,6 +7,7 @@ export default {
 
     hit_dice: '1d8',
     proficiencies: {
+        meta: 'proficiencies',
         armor: ['light_armor'],
         weapons: ['simple', 'hand_crossbow', 'longsword', 'rapier', 'shortsword'],
         tools: [
@@ -278,6 +280,7 @@ export default {
     },
     features: {
         spellcasting: {
+            meta: 'feature',
             name: 'Spellcasting',
             slug: 'spellcasting',
             text: undefined,
@@ -290,6 +293,7 @@ export default {
             }
         },
         bardic_inspiration: {
+            meta: 'feature',
             name: 'Bardic Inspiration',
             slug: 'bardic_inspiration',
             text: `<p>You can inspire others through stirring words or music. To do so, you use a Bonus Action on Your Turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6.</p>
@@ -298,44 +302,52 @@ export default {
             <p>Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level.</p>`
         },
         jack_of_all_trades: {
+            meta: 'feature',
             name: 'Jack of All Trades',
             slug: 'jack_of_all_trades',
             text: `<p>Starting at 2nd level, you can add half your Proficiency Bonus, rounded down, to any ability check you make that doesn't already include your Proficiency Bonus.</p>`
         },
         song_of_rest: {
+            meta: 'feature',
             name: 'Song of Rest',
             slug: 'song_of_rest',
             text: `<p>Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a Short Rest. If you or any friendly creatures who can hear your Performance regain Hit Points by spending Hit Dice at the end of the Short Rest, each of those creatures regains an extra 1d6 Hit Points.</p>
             <p>The extra Hit Points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level.</p>`
         },
         bard_college: {
+            meta: 'feature',
             name: 'Bard College',
             slug: 'bard_college',
             text: `The way of a bard is gregarious. Bards seek each other out to sw ap so n g s and stories, boast of their accomplishments, and share their knowledge. Bards form loose associations, which they call colleges, to facilitate their gatherings and p reserve their traditions.`,
             mechanics: '$subclass:bard_college'
         },
         expertise: {
+            meta: 'feature',
             name: 'Expertise',
             slug: 'expertise',
             text: `<p>At 3rd level, choose two of your skill proficiencies. Your Proficiency Bonus is doubled for any ability check you make that uses either of the chosen proficiencies.</p>
             <p>At 10th level, you can choose another two skill proficiencies to gain this benefit.</p>`
         },
         ability_score_improvement: {
+            meta: 'feature',
             name: 'Ability Score Improvement',
             slug: 'ability_score_improvement',
             text: `<p>When you reach 4th level, and again at 8th, 12th, 16th, and 19th level, you can increase one ability score of your choice by 2, or you can increase two Ability Scores of your choice by 1. As normal, you can’t increase an ability score above 20 using this feature.</p>`
         },
         font_of_inspiration: {
+            meta: 'feature',
             name: 'Font of Inspiration',
             slug: 'font_of_inspiration',
             text: `<p>Beginning when you reach 5th level, you regain all of your expended uses of Bardic Inspiration when you finish a short or Long Rest.</p>`
         },
         countercharm: {
+            meta: 'feature',
             name: 'Countercharm',
             slug: 'countercharm',
             text: `<p>At 6th level, you gain the ability to use musical notes or words of power to disrupt mind-influencing Effects. As an action, you can start a Performance that lasts until the end of your next turn. During that time, you and any friendly creatures within 30 feet of you have advantage on Saving Throws against being Frightened or Charmed. A creature must be able to hear you to gain this benefit. The Performance ends early if you are Incapacitated or silenced or if you voluntarily end it (no action required).</p>`
         },
         magical_secrets: {
+            meta: 'feature',
             name: 'Magical Secrets',
             slug: 'magical_secrets',
             text: `<p>By 10th level, you have plundered magical knowledge from a wide spectrum of disciplines. Choose two Spells from any class, including this one. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip.</p>
@@ -343,6 +355,7 @@ export default {
             <p>You learn two additional Spells from any class at 14th level and again at 18th level.</p>`
         },
         superior_inspiration: {
+            meta: 'feature',
             name: 'Superior Inspiration',
             slug: 'superior_inspiration',
             text: `<p>At 20th level, when you roll Initiative and have no uses of Bardic Inspiration left, you regain one use.</p>`
