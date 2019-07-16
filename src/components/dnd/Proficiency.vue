@@ -40,7 +40,7 @@ export default {
     },
     computed: {
         ...mapGetters({
-            modifier: 'sheetProficiencyModifier'
+            modifier: 'sheet/proficiency_modifier'
         })
     },
     methods: {

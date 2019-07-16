@@ -74,11 +74,10 @@ export default {
             'sheet'
         ]),
         ...mapGetters({
-            level: 'sheetlevel',
-            character_class: 'sheetClass',
-            spellcasting: 'sheetSpellcasting',
-            proficiency_bonus: 'sheetProficiencyModifier',
-            spells_known: 'sheetSpellsKnown'
+            level: 'sheet/level',
+            character_class: 'sheet/class',
+            spellcasting: 'sheet/spellcasting',
+            proficiency_bonus: 'sheet/proficiency_modifier'
         }),
         spellcasting_ability(){
             let spellcasting = this.spellcasting

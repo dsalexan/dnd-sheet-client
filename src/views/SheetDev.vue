@@ -3,10 +3,10 @@
         {{ sheet }} - 
         <button @click="reset_sheet">Reset</button>
         <form class="charsheet">
-            <!-- <dnd-header /> -->
+            <dnd-header />
             <dnd-main />
-            <!-- <dnd-header type="physical" />
-            <dnd-spellcasting type="spellcasting" /> -->
+            <dnd-header type="physical" />
+            <dnd-spellcasting type="spellcasting" />
         </form>
     </div>
 </template>
@@ -31,9 +31,9 @@ export default {
     ])
   },
   methods: {
-    ...mapMutations([
-      'RESET_SHEET'
-    ]),
+    ...mapMutations({
+      RESET_SHEET: 'sheet/RESET'
+    }),
     reset_sheet: function(){
       this.RESET_SHEET()
     }
@@ -56,14 +56,14 @@ export default {
     .dnd-header + div.dnd-spellcasting
       padding-top: $gutter * 2
 
-  input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
-    color: transparent !important
-    border-color: transparent !important
+  // input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
+  //   color: transparent !important
+  //   border-color: transparent !important
 
-  input, textarea
-    opacity: 0 !important
+  // input, textarea
+  //   opacity: 0 !important
 
-  div.attr-applications
-    background: grey
+  // div.attr-applications
+  //   background: grey
 </style>
 

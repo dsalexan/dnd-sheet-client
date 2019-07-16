@@ -1,8 +1,10 @@
 export default {
     name: 'Bard',
     slug: 'bard',
+
+    subscriptions: ['features', 'proficiencies', 'equipment'],
+
     hit_dice: '1d8',
-    starting_gold: '5d4 * 10',
     proficiencies: {
         armor: ['light_armor'],
         weapons: ['simple', 'hand_crossbow', 'longsword', 'rapier', 'shortsword'],

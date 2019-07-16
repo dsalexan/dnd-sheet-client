@@ -44,7 +44,7 @@ export default {
             'sheet'
         ]),
         ...mapGetters({
-            modifier: 'sheetModifier'
+            modifier: 'sheet/modifier'
         })
     },
     methods: {

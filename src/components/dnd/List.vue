@@ -38,7 +38,7 @@ export default {
         'x-input': XInputVue
     },
     updated: function() {
-        console.log('UPDATED', this)
+        // console.log('UPDATED', this)
     },
     data(){
         return {

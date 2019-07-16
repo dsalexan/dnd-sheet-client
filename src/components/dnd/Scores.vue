@@ -2,7 +2,7 @@
     <ul class="dnd-scores">
         <li v-for="(attr, index) in attributes" :key="index">
             <x-input class="score" :label="attr.name" placeholder="+0" :value="modifier(attr.alias.toLowerCase())" disabled reactive="false"></x-input>
-            <x-input class="modifier" placeholder="10" v-model="sheet.stats.attributes[attr.alias.toLowerCase()]"></x-input>
+            <x-input class="modifier" placeholder="10" v-model="sheet.stats.attributes[attr.alias.toLowerCase()]" @input="$emit('input', sheet.stats.attributes)"></x-input>
         </li>
     </ul>
 </template>
@@ -30,7 +30,7 @@ export default {
             'sheet'
         ]),
         ...mapGetters({
-            modifier: 'sheetModifier'
+            modifier: 'sheet/modifier'
         })
     }
 }
