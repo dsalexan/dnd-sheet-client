@@ -11,7 +11,18 @@ export default {
         tools: ['disguise_kit', 'any musical instrument']
     },
     equipment: [
-        'any musical instrument', '1x favor of an admirer', '1x costume', '1x belt pouch'
+        {
+            meta: 'command',
+            choose: 1,
+            from: '$equipment.musical_instrument.list'
+        }, 
+        'Favor of an Admirer', 
+        {
+            meta: 'equipment',
+            name: 'Costume',
+            slug: 'costume'
+        },
+        'belt_pouch'
     ],
     features: {
         'by_popular_demand': {
