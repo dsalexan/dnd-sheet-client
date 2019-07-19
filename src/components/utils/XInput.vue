@@ -177,7 +177,7 @@ export default {
                 border-radius: $radius
 
                 &:checked
-                        background-color: black
+                    background-color: black
 
             &[type="text"]
                 width: $box-width

@@ -6,7 +6,7 @@
                 v-for="index of Math.max(qtd_lines, value.length)" :key="index"
                 :index="realIndex(index-1, c-1)"
                 :ref="`input${realIndex(index-1, c-1)}`"
-                :value="value[realIndex(index-1, c-1)] || ''"
+                :value="text_value(realIndex(index-1, c-1)) || ''"
                 @input="$emit('input', $event, realIndex(index-1, c-1))"
                 @focus="handleFocus"
                 @keyup.enter="handleEnter($event, realIndex(index-1, c-1))"
@@ -43,6 +43,18 @@ export default {
     data(){
         return {
             qtd_lines: this.lines
+        }
+    },
+    computed: {
+        text_value(){
+            return function(index){
+                let value = this.$props.value[index]
+
+                if(value == undefined) return ''
+                else if(typeof value == 'object') return value.name || value.text || '<Unknown Feature>'
+                else if(typeof value == 'string') return value
+                else throw Error('Unimplemented')
+            }
         }
     },
     watch: {

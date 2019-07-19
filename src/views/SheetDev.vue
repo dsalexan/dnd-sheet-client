@@ -56,14 +56,14 @@ export default {
     .dnd-header + div.dnd-spellcasting
       padding-top: $gutter * 2
 
-  // input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
-  //   color: transparent !important
-  //   border-color: transparent !important
+  input::placeholder, li, div, span, ul, p, label, input, section, th, textarea, textarea::placeholder
+    color: transparent !important
+    border-color: transparent !important
 
-  // input, textarea
-  //   opacity: 0 !important
+  input, textarea
+    opacity: 0 !important
 
-  // div.attr-applications
-  //   background: grey
+  div.attr-applications
+    background: grey
 </style>
 

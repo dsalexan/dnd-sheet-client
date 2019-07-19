@@ -13,7 +13,7 @@ export default {
         },
         name: undefined,
         misc: {
-            class_level: 'Bard 1', // SUBSCRIPTION
+            class_level: undefined, // SUBSCRIPTION
             background: undefined, // SUBSCRIPTION
             player: undefined,
             race: undefined, // SUBSCRIPTION
@@ -162,7 +162,10 @@ export default {
                 }
             ]
         },
-        features: [], // SUBSCRIPTION
+        features: {
+            order: [],
+            created: []
+        }, // SUBSCRIPTION
         spells: {
             by_level: {
                 0: ['cantrip 1'],
@@ -274,21 +277,21 @@ export default {
             return undefined
         },
         features: (state, getters) => {
-            let _features = state.features || []
+            let order = state.features.order || []
+
+            let features = state.features.created || []
             let subs = state.subscriptions.features
 
-            console.log('subs', state.subscriptions.features)
-
-            let features = []
             for(let key in subs){
-                debugger
                 features = features.concat(subs[key])
             }
 
-            features = features.concat(_features)
+            let map_features = {}
+            for(let feature of features){
+                map_features[feature.slug || feature] = feature
+            }
 
-            console.log('FEATURES', features)
-            return features
+            return order.map(slug => map_features[slug])
         },
     },
     mutations: {
@@ -426,12 +429,15 @@ export default {
 
             for(let m of meta.filter(_ => !!_ && !!_.subscriptions)){
                 for(let key of m.subscriptions){
-                    state.subscriptions[key][m.meta] = m[key]
+                    // state.subscriptions[key][m.meta] = m[key]
+                    let obj = {}
+                    obj[m.meta] = m[key]
+                    state.subscriptions[key] = Object.assign({}, state.subscriptions[key], obj)
                 }
             }
 
             // console.log('SUBSCRIPTIONS UPDATED', state.subscriptions)
-            console.log(state.subscriptions.features)
+            // console.log(state.subscriptions)
         }
     }
 }
