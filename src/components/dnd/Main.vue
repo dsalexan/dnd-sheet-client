@@ -129,8 +129,8 @@ export default {
     },
     data(){
         return {
-            attributes: attributes.list,
-            skills: skills.list
+            attributes: attributes.all,
+            skills: skills.all
         }
     },
     computed: {

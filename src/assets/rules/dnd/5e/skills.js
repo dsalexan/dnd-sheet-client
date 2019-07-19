@@ -1,5 +1,6 @@
-export default {
-    list: [
+import resource from '@/assets/rules/resource'
+
+let list = [
         {
             name: "Acrobatics",
             attribute: "dex",
@@ -90,12 +91,9 @@ export default {
             attribute: "wis",
             slug: "survival"
         }
-    ],
-    map: (list) => {
-        let m = {}
-        for(let i of list){
-            m[i.slug] = i
-        }
-        return m
-    }
+    ]
+
+
+export default {
+    ...resource.res(list)
 }

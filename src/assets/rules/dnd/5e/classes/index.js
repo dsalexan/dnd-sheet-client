@@ -1,31 +1,11 @@
+import resource from '@/assets/rules/resource'
 import bard from './bard'
 
 
-let classes = [
+let list = [
     bard
 ]
 
-const slug = (() => {
-
-    let m = {}
-    for(let c of classes){
-        m[c.slug] = c
-    }
-
-    return m
-})()
-
-const name = (() => {
-    let m = {}
-
-    for(let c of classes){
-        m[c.name] = c
-    }
-
-    return m
-})()
-
 export default {
-    bard,
-    slug, name
+    ...resource.res(list)
 }

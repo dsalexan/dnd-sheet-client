@@ -22,7 +22,7 @@ export default {
     },
     data() {
         return {
-            attributes: attributes.list
+            attributes: attributes.all
         }
     },
     computed: {

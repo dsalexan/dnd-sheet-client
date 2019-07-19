@@ -1,36 +1,32 @@
-export default {
-    list: [
+import resource from '@/assets/rules/resource'
+
+let list = [
         {
             name: 'Strength',
-            alias: 'STR'
+            slug: 'str'
         },
         {
             name: 'Dexterity',
-            alias: 'DEX'
+            slug: 'dex'
         },
         {
             name: 'Constitution',
-            alias: 'CON'
+            slug: 'con'
         },
         {
             name: 'Intelligence',
-            alias: 'INT'
+            slug: 'int'
         },
         {
             name: 'Wisdom',
-            alias: 'WIS'
+            slug: 'wis'
         },
         {
             name: 'Charisma',
-            alias: 'CHA'
+            slug: 'cha'
         }
-    ],
-    map: (list) => {
-        let m = {}
-        for(let attr of list){
-            m[attr.alias.toLowerCase()] = attr
-        }
+    ]
 
-        return m
-    }
+export default {
+    ...resource.res(list)
 }

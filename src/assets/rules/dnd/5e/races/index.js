@@ -1,31 +1,15 @@
+
+
+import resource from '@/assets/rules/resource'
 import fairy from './fairy'
 
 
-let races = [
+let list = [
     fairy
 ]
 
-const slug = (() => {
-
-    let m = {}
-    for(let c of races){
-        m[c.slug] = c
-    }
-
-    return m
-})()
-
-const name = (() => {
-    let m = {}
-
-    for(let c of races){
-        m[c.name] = c
-    }
-
-    return m
-})()
 
 export default {
-    fairy,
-    slug, name
+    ...resource.res(list)
 }
+

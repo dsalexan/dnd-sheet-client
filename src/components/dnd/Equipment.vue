@@ -38,7 +38,7 @@ export default {
     },
     data() {
         return {
-            coins: economy.money.coins.list,
+            coins: economy.money.coins.all,
             content: this.value
         }
     }

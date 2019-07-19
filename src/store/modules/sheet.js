@@ -232,7 +232,7 @@ export default {
 
                 let attribute = reference.slug
                 if (reference.type == 'skill') {
-                    attribute = dnd5e.skills.map(dnd5e.skills.list)[reference.slug].attribute
+                    attribute = dnd5e.skills[reference.slug].attribute
                 }
 
                 let proficient = _.get(state.stats.proficiencies, reference.path)
@@ -346,7 +346,7 @@ export default {
                 item.damage_type = undefined
             }
 
-            for (let coin of dnd5e.economy.money.coins.list) {
+            for (let coin of dnd5e.economy.money.coins.all) {
                 state.equipment.treasure.coins[coin.slug] = undefined
             }
             state.equipment.item = []
