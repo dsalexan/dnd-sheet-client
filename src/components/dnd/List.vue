@@ -1,7 +1,7 @@
 <template>
     <div class="dnd-list" :class="`x${cols}-column`">
         <div class="column" v-for="c in cols" :key="c">
-            <x-input 
+            <!-- <x-input 
                 class="input"
                 v-for="index of Math.max(qtd_lines, value.length)" :key="index"
                 :index="realIndex(index-1, c-1)"
@@ -11,13 +11,22 @@
                 @focus="handleFocus"
                 @keyup.enter="handleEnter($event, realIndex(index-1, c-1))"
                 @keyup.delete="handleDelete($event, realIndex(index-1, c-1))"
-                />
+                /> -->
+            <div v-for="item of teste" :key="item.slug || item">
+                {{ item.name || item }}
+            </div>
         </div>
     </div>
 </template>
 
 <script>
 import XInputVue from '../utils/XInput.vue';
+
+import {
+  Quasar,
+  QExpansionItem
+} from 'quasar'
+
 export default {
     name: 'dnd-list',
     props: {
@@ -35,14 +44,36 @@ export default {
         }
     },
     components: {
-        'x-input': XInputVue
+        'x-input': XInputVue,
+        'expansion-item': QExpansionItem
     },
     updated: function() {
         // console.log('UPDATED', this)
     },
     data(){
         return {
-            qtd_lines: this.lines
+            qtd_lines: this.lines,
+            teste: [
+                {
+                    meta: 'feature',
+                    name: 'Feature #1',
+                    slug: 'feature_1',
+                    text: `<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam eu scelerisque lorem. Vestibulum eleifend turpis at est ultricies viverra. Nulla vel magna viverra, luctus ante sed, porttitor elit. Maecenas lectus dui, vulputate eget purus sed, congue auctor ipsum. Sed consequat, massa vel fringilla maximus, libero massa condimentum sem, a fringilla urna ligula non nisi. Curabitur justo diam, viverra vel ligula non, semper luctus sapien. Cras luctus bibendum felis, ut cursus justo molestie quis. In ullamcorper lectus ante, vel mattis turpis molestie at. Mauris et erat auctor purus viverra maximus. Morbi ullamcorper felis non nunc malesuada, vulputate cursus lacus cursus. Nulla egestas at sem in condimentum.</p>
+                    <p>Nam laoreet ultrices ex, sed elementum mi placerat eget. Mauris in diam a metus auctor ullamcorper. Integer ipsum ex, tincidunt in orci vitae, tincidunt vehicula libero. Maecenas accumsan nec enim non fringilla. Phasellus sodales libero at sem mattis, et faucibus nisi egestas. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur ac nisi a velit cursus accumsan ac quis leo. Aenean a ullamcorper nibh. Quisque vel tortor id mauris imperdiet congue vitae sed dolor. Fusce pellentesque feugiat mauris at viverra. Aliquam erat volutpat.</p>`
+                },
+                {
+                    meta: 'feature',
+                    name: 'Feature #2',
+                    slug: 'feature_2',
+                    text: `<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam eu scelerisque lorem. Vestibulum eleifend turpis at est ultricies viverra. Nulla vel magna viverra, luctus ante sed, porttitor elit. Maecenas lectus dui, vulputate eget purus sed, congue auctor ipsum. Sed consequat, massa vel fringilla maximus, libero massa condimentum sem, a fringilla urna ligula non nisi. Curabitur justo diam, viverra vel ligula non, semper luctus sapien. Cras luctus bibendum felis, ut cursus justo molestie quis. In ullamcorper lectus ante, vel mattis turpis molestie at. Mauris et erat auctor purus viverra maximus. Morbi ullamcorper felis non nunc malesuada, vulputate cursus lacus cursus. Nulla egestas at sem in condimentum.</p>`
+                },
+                'Feature #3',
+                {
+                    meta: 'feature',
+                    name: 'Feature #4',
+                    slug: 'feature_4',
+                }
+            ]
         }
     },
     computed: {

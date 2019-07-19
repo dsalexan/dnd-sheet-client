@@ -1,5 +1,5 @@
 <template>
-    <div class="dnd-equipment" :class="{transparent: !!transparent}">
+    <div class="dnd-equipment" :class="{transparent: !!transparent && transparent != 'false'}">
         <label>Equipment</label>
         <div class="money">
             <ul>
@@ -31,7 +31,7 @@ export default {
                 items: []
             })
         },
-        transparent: Boolean
+        transparent: [String, Boolean]
     },
     components: {
         'x-input': XInput

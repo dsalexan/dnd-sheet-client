@@ -65,9 +65,10 @@ export default {
                     stealth: false,
                     survival: false,
                 },
-                others: [
-                    'other #1'
-                ]
+                others: {
+                    order: [],
+                    created: []
+                }
             },
             combat: {
                 ac: undefined,
