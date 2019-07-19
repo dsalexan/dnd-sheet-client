@@ -1,9 +1,9 @@
 import resource from '@/assets/rules/resource'
 
-import musical_instrument from './musical_instrument'
+import musical_instruments from './musical_instruments'
 
 let list = [
-    musical_instrument,
+    musical_instruments,
     {
         meta: 'equipment',
         name: 'Belt Pouch',

@@ -14,7 +14,7 @@ export default {
             {
                 meta: 'command',
                 choose: 3,
-                from: '$equipment.tool.all'
+                from: '$equipment.tools.all'
             }
         ],
         saves: ['dex', 'cha'],
@@ -49,7 +49,7 @@ export default {
             choose: 1,
             from: [
                 'lute',
-                '$equipment.musical_instriment.all'
+                '$equipment.musical_instruments.all'
             ]
         },
         [

@@ -14,7 +14,7 @@ export default {
         {
             meta: 'command',
             choose: 1,
-            from: '$equipment.musical_instrument.all'
+            from: '$equipment.musical_instruments.all'
         }, 
         'Favor of an Admirer', 
         {

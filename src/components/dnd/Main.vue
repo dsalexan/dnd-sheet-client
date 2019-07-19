@@ -6,8 +6,8 @@
                     <dnd-scores></dnd-scores>
                 </div>
                 <div class="attr-applications">
-                    <x-input transparent class="inspiration" name="inspiration" type="checkbox" label="Inspiration" v-model="sheet.stats.inspiration" box reactive="false"  />
-                    <x-input transparent class="proficiencybonus clean" name="proficiencybonus" label="Proficiency Bonus" :value="proficiency_bonus" placeholder="+2" box reactive="false" disabled  />
+                    <x-input transparent="false" class="inspiration" name="inspiration" type="checkbox" label="Inspiration" v-model="sheet.stats.inspiration" box reactive="false"  />
+                    <x-input transparent="false" class="proficiencybonus clean" name="proficiencybonus" label="Proficiency Bonus" :value="proficiency_bonus" placeholder="+2" box reactive="false" disabled  />
 
                     <div class="list-section box">
                         <ul>
@@ -35,7 +35,7 @@
                     </div>
                 </div>
             </section> -->
-            <x-input transparent class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="passive_proficiency('perception')" box reactive="false" disabled/>
+            <x-input transparent="false" class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="passive_proficiency('perception')" box reactive="false" disabled/>
 
             <section class="otherprofs textblock">
                 <label>Other Proficiencies and Languages</label>
@@ -48,25 +48,25 @@
         <!-- <section>
             <section class="combat">
                 <div class="armorclass">
-                    <x-input transparent label="Armor Class" name="ac" placeholder="10" v-model="sheet.stats.combat.ac"/>
+                    <x-input transparent="false" label="Armor Class" name="ac" placeholder="10" v-model="sheet.stats.combat.ac"/>
                 </div>
                 <div class="initiative">
-                    <x-input transparent class="clean" label="Initiative" name="initiative" placeholder="+0" :value="modifier('dex')" disabled/>
+                    <x-input transparent="false" class="clean" label="Initiative" name="initiative" placeholder="+0" :value="modifier('dex')" disabled/>
                 </div>
                 <div class="speed">
-                    <x-input transparent label="Speed" name="speed" placeholder="30" v-model="sheet.stats.combat.speed"/>
+                    <x-input transparent="false" label="Speed" name="speed" placeholder="30" v-model="sheet.stats.combat.speed"/>
                 </div>
                 <div class="hp">
                     <div class="regular">
-                        <x-input transparent class="max" label="Hit Point Maximum" name="maxhp" placeholder="10" v-model="sheet.stats.combat.hp.maximum"/>
-                        <x-input transparent class="current" label="Current Hit Points" name="currenthp" placeholder="10" v-model="sheet.stats.combat.hp.current" reactive="false"/>
+                        <x-input transparent="false" class="max" label="Hit Point Maximum" name="maxhp" placeholder="10" v-model="sheet.stats.combat.hp.maximum"/>
+                        <x-input transparent="false" class="current" label="Current Hit Points" name="currenthp" placeholder="10" v-model="sheet.stats.combat.hp.current" reactive="false"/>
                     </div>
-                    <x-input transparent class="temporary" label="Temporary Hit Points" name="temphp" placeholder="10" v-model="sheet.stats.combat.hp.temporary" reactive="false"/>
+                    <x-input transparent="false" class="temporary" label="Temporary Hit Points" name="temphp" placeholder="10" v-model="sheet.stats.combat.hp.temporary" reactive="false"/>
                 </div>
                 <div class="hitdice">
                     <div>
-                        <x-input transparent class="total" label="Total" name="totalhd" placeholder="1d10" v-model="sheet.stats.combat.hit_dice.total"/>
-                        <x-input transparent class="remaining" label="Hit Dice" name="remaininghd" placeholder="1d10" v-model="sheet.stats.combat.hit_dice.current" reactive="false"/>
+                        <x-input transparent="false" class="total" label="Total" name="totalhd" placeholder="1d10" v-model="sheet.stats.combat.hit_dice.total"/>
+                        <x-input transparent="false" class="remaining" label="Hit Dice" name="remaininghd" placeholder="1d10" v-model="sheet.stats.combat.hit_dice.current" reactive="false"/>
                     </div>
                 </div>
                 <dnd-death-saves v-model="sheet.stats.combat.death_saves" />
@@ -81,15 +81,15 @@
                             <div>Damage</div>
                         </div>
                         <div class="row" v-for="(item, index) of sheet.stats.combat.attacks_spellcasting" :key="index">
-                            <x-input transparent v-model="sheet.stats.combat.attacks_spellcasting[index].name"></x-input>
-                            <x-input transparent v-model="sheet.stats.combat.attacks_spellcasting[index].attack_bonus"></x-input>
-                            <x-input transparent v-model="sheet.stats.combat.attacks_spellcasting[index].damage_type"></x-input>
+                            <x-input transparent="false" v-model="sheet.stats.combat.attacks_spellcasting[index].name"></x-input>
+                            <x-input transparent="false" v-model="sheet.stats.combat.attacks_spellcasting[index].attack_bonus"></x-input>
+                            <x-input transparent="false" v-model="sheet.stats.combat.attacks_spellcasting[index].damage_type"></x-input>
                         </div>
                     </div>
                 </div>
             </section>
             <section class="equipment">
-                <dnd-equipment transparent v-model="sheet.equipment"></dnd-equipment>
+                <dnd-equipment transparent="false" v-model="sheet.equipment"></dnd-equipment>
             </section>
         </section> -->
         <section>
@@ -97,7 +97,7 @@
                 <label>Features & Traits</label>
                 <dnd-list 
                     :lines="32"
-                    :value="sheet.features"
+                    :value="features"
                     @input="(value, index) => set_features({value, index})"/>
             </section>
         </section>
@@ -140,7 +140,8 @@ export default {
         ...mapGetters({
             modifier: 'sheet/modifier',
             proficiency_bonus: 'sheet/proficiency_bonus',
-            passive_proficiency: 'sheet/passive_proficiency'
+            passive_proficiency: 'sheet/passive_proficiency',
+            features: 'sheet/features'
         })
     },
     methods: {

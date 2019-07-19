@@ -272,7 +272,24 @@ export default {
             }
 
             return undefined
-        }
+        },
+        features: (state, getters) => {
+            let _features = state.features || []
+            let subs = state.subscriptions.features
+
+            console.log('subs', state.subscriptions.features)
+
+            let features = []
+            for(let key in subs){
+                debugger
+                features = features.concat(subs[key])
+            }
+
+            features = features.concat(_features)
+
+            console.log('FEATURES', features)
+            return features
+        },
     },
     mutations: {
         RESET: (state) => {
@@ -397,23 +414,24 @@ export default {
             dispatch('UPDATE_SUBSCRIPTIONS', {source: 'state', path: 'features'})
         },
 
-        UPDATE_SUBSCRIPTIONS({ commit, state, getters }, {source, path}){
+        UPDATE_SUBSCRIPTIONS({ state, getters }, { source, path }){
             // state.subscriptions 
 
             let meta
             if(source == 'getters'){
                 meta = [_.get(getters, path)]
             }else if(source == 'state'){
-                meta = [..._get(state, path)]
+                meta = [..._.get(state, path)]
             }
 
             for(let m of meta.filter(_ => !!_ && !!_.subscriptions)){
                 for(let key of m.subscriptions){
-                    state.subscriptions[key][m.meta] = m
+                    state.subscriptions[key][m.meta] = m[key]
                 }
             }
 
-            console.log('SUBSCRIPTIONS UPDATED', state.subscriptions)
+            // console.log('SUBSCRIPTIONS UPDATED', state.subscriptions)
+            console.log(state.subscriptions.features)
         }
     }
 }
