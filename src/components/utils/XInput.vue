@@ -1,6 +1,7 @@
 <template>
     <component 
         :is="tag"
+        class="x-input"
         :class="{active: isReactive ? !(value !== 0 && !value) : false, box: isBox, transparent: isTransparent}">
 
         <template v-if="label != null && label != undefined">

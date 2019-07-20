@@ -7,8 +7,9 @@ import './registerServiceWorker'
 import './assets/css/normalize.css'
 
 
-import { DnD } from './assets/rules'
-Object.defineProperty(Vue.prototype, '$DnD', { value: DnD });
+import { dnd } from './assets/rules'
+import './quasar'
+Object.defineProperty(Vue.prototype, '$dnd', { value: dnd });
 
 
 Vue.config.productionTip = false

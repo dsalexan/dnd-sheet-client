@@ -12,9 +12,46 @@
                 @keyup.enter="handleEnter($event, realIndex(index-1, c-1))"
                 @keyup.delete="handleDelete($event, realIndex(index-1, c-1))"
                 /> -->
-            <div v-for="item of teste" :key="item.slug || item">
-                {{ item.name || item }}
-            </div>
+            <q-list>
+                <q-expansion-item
+                    v-for="item of teste" :key="item.slug || item"
+                    :label="item.name || item"
+                    :group="'teste'"
+                    popup
+                    :class="{'header-only': item.text !== 0 && !item.text}">
+                    <span v-if="item.text" v-html="item.text"></span>
+                </q-expansion-item>
+            </q-list>
+            <q-list >
+                <q-expansion-item
+                    v-for="item of created" :key="item.slug || item"
+                    :label="item.name || item"
+                    :group="'created'"
+                    popup
+                    class="editable">
+
+                    <template v-if="item.slug">
+                        <span v-html="item.slug"></span>
+                    </template>
+                    <template v-else>
+                        <x-input placeholder="Slug"></x-input>
+                    </template>
+
+                    <template v-if="item.text">
+                        <span v-html="item.text"></span>
+                    </template>
+                    <template v-else>
+                        <x-input :placeholder="`${label} Description`" type="textarea"></x-input>
+                    </template>
+
+                </q-expansion-item>
+            </q-list>
+            <q-list>
+                <x-input 
+                    class="input" 
+                    :placeholder="label"
+                    @keyup.enter="createItem($event.target.value)"/>
+            </q-list>
         </div>
     </div>
 </template>
@@ -41,11 +78,15 @@ export default {
         cols: {
             type: Number,
             default: 1
+        },
+        label: {
+            type: String,
+            default: 'Item'
         }
     },
     components: {
         'x-input': XInputVue,
-        'expansion-item': QExpansionItem
+        'q-expansion-item': QExpansionItem
     },
     updated: function() {
         // console.log('UPDATED', this)
@@ -65,7 +106,7 @@ export default {
                     meta: 'feature',
                     name: 'Feature #2',
                     slug: 'feature_2',
-                    text: `<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam eu scelerisque lorem. Vestibulum eleifend turpis at est ultricies viverra. Nulla vel magna viverra, luctus ante sed, porttitor elit. Maecenas lectus dui, vulputate eget purus sed, congue auctor ipsum. Sed consequat, massa vel fringilla maximus, libero massa condimentum sem, a fringilla urna ligula non nisi. Curabitur justo diam, viverra vel ligula non, semper luctus sapien. Cras luctus bibendum felis, ut cursus justo molestie quis. In ullamcorper lectus ante, vel mattis turpis molestie at. Mauris et erat auctor purus viverra maximus. Morbi ullamcorper felis non nunc malesuada, vulputate cursus lacus cursus. Nulla egestas at sem in condimentum.</p>`
+                    text: `<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam eu scelerisque lorem. Vestibulum eleifend turpis at est ultricies viverra. Nulla vel magna viverra, luctus ante sed, porttitor elit. Maecenas lectus dui, vulputate eget purus sed, congue auctor ipsum. Sed consequat, massa vel fringilla maximus, libero massa condimentum sem, a fringilla urna ligula non nisi. Curabitur justo diam, viverra vel ligula non, semper luctus sapien.</p>`
                 },
                 'Feature #3',
                 {
@@ -73,7 +114,8 @@ export default {
                     name: 'Feature #4',
                     slug: 'feature_4',
                 }
-            ]
+            ],
+            created: []
         }
     },
     computed: {
@@ -141,6 +183,10 @@ export default {
         },
         grow(){
             this.qtd_lines++
+        },
+        createItem(value){
+            console.log('CREATE ITEM', value)
+            this.created.push(value)
         }
     }
 }
@@ -152,8 +198,8 @@ export default {
     
     div.dnd-list
         border: 1px solid black
-        width: calc(100% - 2*2*#{$radius})
-        padding: $radius * 2
+        width: 100%
+        padding: $radius * 1.5 0
         border-radius: $radius
 
         display: grid
@@ -166,7 +212,7 @@ export default {
             grid-template-columns: 1fr 1fr
 
         div.input
-            padding-top: 5px
+            padding: 0 15px
 
             &:first-of-type
                 padding-top: 0
@@ -174,11 +220,130 @@ export default {
             & /deep/ input
                 font-size: 0.9em
                 border: 0
-                border-bottom: 1px solid #ddd
-                width: calc(100% - 20px)
                 background-color: #f7f7f7
-                padding: 5px 10px
+                padding: 5px 20px
+                width: 100%
+                border-radius: $radius
+                height: 42px
 
                 &:disabled
                     background-color: white
+
+        div.column
+            .q-list
+                border-radius: $radius
+
+                & + .q-list
+                    & .q-expansion-item, & .input
+                        &:first-of-type
+                            margin-top: $radius * 1.5
+
+                & /deep/ .q-expansion-item                
+                    // arredondar o primeir item
+                    &:first-of-type 
+                        .q-expansion-item__container
+                            border-top-left-radius: $radius
+                            border-top-right-radius: $radius
+                            
+
+                    // arredondar ultimo item
+                    &:last-of-type .q-expansion-item__container
+                        border-bottom-left-radius: $radius
+                        border-bottom-right-radius: $radius
+
+                    // remover padding quando expanded
+                    &.q-expansion-item--expanded 
+                        .q-item
+                            background: rgba(lightgray, 0.4)
+
+                        padding-top: 0
+                        padding-bottom: 0
+                        
+                        // ajustar a subposicao da borda quando ta expanded
+                        .q-expansion-item__container
+                            border-radius: 0
+                            width: calc(100% + 2px)
+                            margin-left: -1px
+
+                    // remover borda quando collapsed
+                    &.q-expansion-item--collapsed
+                        .q-expansion-item__container
+                            border-top-width: 0
+                            border-bottom-width: 0
+
+                        &:first-of-type
+                            .q-expansion-item__container
+                                border-top-width: 1px
+
+                        &:last-of-type
+                            .q-expansion-item__container
+                                border-bottom-width: 1px
+
+                    // container do slot
+                    .q-expansion-item__container
+                        overflow: hidden
+
+                        .q-expansion-item__content
+                            padding: $radius $radius * 2
+
+                    &.header-only
+                        .q-expansion-item__container
+                            .q-item
+                                cursor: initial !important
+
+                                div.q-item__section:last-of-type
+                                    cursor: initial !important
+                                    opacity: 0
+
+                            .q-expansion-item__content
+                                padding: 0
+
+                    &.input
+                        .q-expansion-item__container
+                            .q-item
+                                padding: 0
+
+                                div.input
+                                    padding-top: 0
+                                    width: 100%
+                                    border-radius: $radius
+
+                                    & /deep/ input
+                                        border-radius: $radius
+                                        height: 100%
+                                        width: 100%
+                                        border-bottom: 0
+
+                                div.q-item__section:last-of-type
+                                    display: none
+                                        
+                        &.q-expansion-item--expanded 
+                            .q-expansion-item__container .q-item div.input
+                                &, > input
+                                    border-radius: 0
+                    
+                    &.editable
+                        .q-expansion-item__container
+                            .q-expansion-item__content
+                                & /deep/ div.x-input
+                                    input, textarea
+                                        font-size: 0.9em
+                                        border: 0
+                                        background-color: #f7f7f7
+                                        padding: 5px 20px
+                                        width: 100%
+                                        border-radius: $radius
+                                        min-height: 42px
+
+                                    input
+                                        margin-bottom: 10px
+
+                                    textarea
+                                        padding: 15px 20px
+                                        max-height: 15em
+                                        overflow-y: scroll
+                                        
+
+                                        
+
 </style>
