@@ -12,37 +12,28 @@
                 @keyup.enter="handleEnter($event, realIndex(index-1, c-1))"
                 @keyup.delete="handleDelete($event, realIndex(index-1, c-1))"
                 /> -->
-            <q-list>
+            <q-list
+                v-for="key in Object.keys(autofill)" :key="key">
                 <q-expansion-item
-                    v-for="item of teste" :key="item.slug || item"
+                    v-for="(item, index) of display_autofill[key]" :key="index"
                     :label="item.name || item"
-                    :group="'teste'"
+                    :group="key"
                     popup
                     :class="{'header-only': item.text !== 0 && !item.text}">
                     <span v-if="item.text" v-html="item.text"></span>
                 </q-expansion-item>
             </q-list>
-            <q-list >
+            <q-list v-if="value.length > 0">
                 <q-expansion-item
-                    v-for="item of created" :key="item.slug || item"
+                    v-for="(item, index) of value" :key="index"
                     :label="item.name || item"
                     :group="'created'"
                     popup
                     class="editable">
 
-                    <template v-if="item.slug">
-                        <span v-html="item.slug"></span>
-                    </template>
-                    <template v-else>
-                        <x-input placeholder="Slug"></x-input>
-                    </template>
+                    <x-input placeholder="Slug" v-model="value[index].slug"></x-input>
 
-                    <template v-if="item.text">
-                        <span v-html="item.text"></span>
-                    </template>
-                    <template v-else>
-                        <x-input :placeholder="`${label} Description`" type="textarea"></x-input>
-                    </template>
+                    <x-input :value="value[index].text" @input="wtf($event, index)" :placeholder="`${label} Description`" type="textarea"></x-input>
 
                 </q-expansion-item>
             </q-list>
@@ -69,11 +60,7 @@ export default {
     props: {
         value: {
             type: Array,
-            default: []
-        },
-        lines: {
-            type: Number,
-            default: 10
+            default: () => []
         },
         cols: {
             type: Number,
@@ -82,6 +69,10 @@ export default {
         label: {
             type: String,
             default: 'Item'
+        },
+        autofill: {
+            type: Object,
+            default: () => ({})
         }
     },
     components: {
@@ -93,29 +84,7 @@ export default {
     },
     data(){
         return {
-            qtd_lines: this.lines,
-            teste: [
-                {
-                    meta: 'feature',
-                    name: 'Feature #1',
-                    slug: 'feature_1',
-                    text: `<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam eu scelerisque lorem. Vestibulum eleifend turpis at est ultricies viverra. Nulla vel magna viverra, luctus ante sed, porttitor elit. Maecenas lectus dui, vulputate eget purus sed, congue auctor ipsum. Sed consequat, massa vel fringilla maximus, libero massa condimentum sem, a fringilla urna ligula non nisi. Curabitur justo diam, viverra vel ligula non, semper luctus sapien. Cras luctus bibendum felis, ut cursus justo molestie quis. In ullamcorper lectus ante, vel mattis turpis molestie at. Mauris et erat auctor purus viverra maximus. Morbi ullamcorper felis non nunc malesuada, vulputate cursus lacus cursus. Nulla egestas at sem in condimentum.</p>
-                    <p>Nam laoreet ultrices ex, sed elementum mi placerat eget. Mauris in diam a metus auctor ullamcorper. Integer ipsum ex, tincidunt in orci vitae, tincidunt vehicula libero. Maecenas accumsan nec enim non fringilla. Phasellus sodales libero at sem mattis, et faucibus nisi egestas. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur ac nisi a velit cursus accumsan ac quis leo. Aenean a ullamcorper nibh. Quisque vel tortor id mauris imperdiet congue vitae sed dolor. Fusce pellentesque feugiat mauris at viverra. Aliquam erat volutpat.</p>`
-                },
-                {
-                    meta: 'feature',
-                    name: 'Feature #2',
-                    slug: 'feature_2',
-                    text: `<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam eu scelerisque lorem. Vestibulum eleifend turpis at est ultricies viverra. Nulla vel magna viverra, luctus ante sed, porttitor elit. Maecenas lectus dui, vulputate eget purus sed, congue auctor ipsum. Sed consequat, massa vel fringilla maximus, libero massa condimentum sem, a fringilla urna ligula non nisi. Curabitur justo diam, viverra vel ligula non, semper luctus sapien.</p>`
-                },
-                'Feature #3',
-                {
-                    meta: 'feature',
-                    name: 'Feature #4',
-                    slug: 'feature_4',
-                }
-            ],
-            created: []
+            qtd_lines: this.lines
         }
     },
     computed: {
@@ -128,6 +97,15 @@ export default {
                 else if(typeof value == 'string') return value
                 else throw Error('Unimplemented')
             }
+        },
+        display_autofill(){
+            let obj = this.$props.autofill
+
+            for(let key in obj){
+                obj[key] = obj[key].filter(i => (i.mechanics || {}).display !== false )
+            }
+
+            return obj
         }
     },
     watch: {
@@ -185,8 +163,14 @@ export default {
             this.qtd_lines++
         },
         createItem(value){
-            console.log('CREATE ITEM', value)
-            this.created.push(value)
+            this.$emit('input', {
+                name: value,    
+                slug: undefined,
+                text: undefined
+            }, this.$props.value.length)
+        },
+        wtf(e, index){
+            this.$props.value[index].text = e
         }
     }
 }

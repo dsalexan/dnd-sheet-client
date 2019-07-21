@@ -118,8 +118,8 @@ export default {
     },
     methods: {
         handleInput(e){
-            if(this.$props.type != 'text') return
-            
+            if(this.$props.type != 'text' && this.$props.type != 'textarea') return
+
             this.$emit('input', e.target.value == "" ? undefined : e.target.value)
         },
         handleChange(e){

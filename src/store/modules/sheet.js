@@ -65,10 +65,7 @@ export default {
                     stealth: false,
                     survival: false,
                 },
-                others: {
-                    order: [],
-                    created: []
-                }
+                others: []
             },
             combat: {
                 ac: undefined,
@@ -163,10 +160,7 @@ export default {
                 }
             ]
         },
-        features: {
-            order: [],
-            created: []
-        }, // SUBSCRIPTION
+        features: [], // SUBSCRIPTION
         spells: {
             by_level: {
                 0: ['cantrip 1'],
@@ -276,23 +270,6 @@ export default {
             }
 
             return undefined
-        },
-        features: (state, getters) => {
-            let order = state.features.order || []
-
-            let features = state.features.created || []
-            let subs = state.subscriptions.features
-
-            for(let key in subs){
-                features = features.concat(subs[key])
-            }
-
-            let map_features = {}
-            for(let feature of features){
-                map_features[feature.slug || feature] = feature
-            }
-
-            return order.map(slug => map_features[slug])
         },
     },
     mutations: {

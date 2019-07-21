@@ -96,8 +96,9 @@
             <section class="features textblock">
                 <label>Features & Traits</label>
                 <dnd-list 
-                    :lines="32"
-                    :value="features"
+                    label="Feature"
+                    :autofill="sheet.subscriptions.features"
+                    :value="sheet.features"
                     @input="(value, index) => set_features({value, index})"/>
             </section>
         </section>
@@ -141,7 +142,6 @@ export default {
             modifier: 'sheet/modifier',
             proficiency_bonus: 'sheet/proficiency_bonus',
             passive_proficiency: 'sheet/passive_proficiency',
-            features: 'sheet/features'
         })
     },
     methods: {
