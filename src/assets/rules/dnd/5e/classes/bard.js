@@ -8,8 +8,8 @@ export default {
     hit_dice: '1d8',
     proficiencies: {
         meta: 'proficiencies',
-        armor: ['light_armor'],
-        weapons: ['simple', 'hand_crossbow', 'longsword', 'rapier', 'shortsword'],
+        armor: ['$equipment.armor.light'],
+        weapons: ['$equipment.weapons.simple', '$equipment.weapons.hand_crossbow', '$equipment.weapons.longsword', '$equipment.weapons.rapier', '$equipment.weapons.shortsword'],
         tools: [
             {
                 meta: 'command',
@@ -31,8 +31,8 @@ export default {
             meta: 'command',
             choose: 1,
             from: [
-                'rapier',
-                'longsword',
+                '$equipment.weapons.rapier',
+                '$equipment.weapons.longsword',
                 '$equipment.weapons.simple.all'
             ]
         },
@@ -40,20 +40,20 @@ export default {
             meta: 'command',
             choose: 1,
             from: [
-                'diplomats_pack',
-                'entertrainers_pack'
+                '$equipment.packs.diplomats_pack',
+                '$equipment.packs.entertrainers_pack'
             ]
         },
         {
             meta: 'command',
             choose: 1,
             from: [
-                'lute',
+                '$equipment.musical_instruments.lute',
                 '$equipment.musical_instruments.all'
             ]
         },
         [
-            'lether_armor', 'dagger'
+            '$equipment.armor.light.lether_armor', '$equipment.weapons.simple.dagger'
         ]
     ],
     table: {

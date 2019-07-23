@@ -40,8 +40,10 @@
             <section class="otherprofs textblock">
                 <label>Other Proficiencies and Languages</label>
                 <dnd-list 
-                    :lines="12" 
-                    :value="sheet.stats.proficiencies.others.created"
+                    label="Proficiency"
+                    :autofill="proficiencies"
+                    :value="sheet.stats.proficiencies.others"
+                    :cols="2"
                     @input="(value, index) => set_proficiencies({value, index})"/>
             </section>
         </section>
@@ -96,6 +98,7 @@
             <section class="features textblock">
                 <label>Features & Traits</label>
                 <dnd-list 
+                    :expansion="true"
                     label="Feature"
                     :autofill="sheet.subscriptions.features"
                     :value="sheet.features"
@@ -142,6 +145,7 @@ export default {
             modifier: 'sheet/modifier',
             proficiency_bonus: 'sheet/proficiency_bonus',
             passive_proficiency: 'sheet/passive_proficiency',
+            proficiencies: 'sheet/proficiencies',
         })
     },
     methods: {

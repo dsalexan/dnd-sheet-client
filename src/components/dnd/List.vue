@@ -1,6 +1,6 @@
 <template>
-    <div class="dnd-list" :class="`x${cols}-column`">
-        <div class="column" v-for="c in cols" :key="c">
+    <div class="dnd-list" :class="`x${cols}-column ${expansion ? 'expansion' : ''} ${focused ? 'focused' : ''}`">
+        <div class="column">
             <!-- <x-input 
                 class="input"
                 v-for="index of Math.max(qtd_lines, value.length)" :key="index"
@@ -12,54 +12,76 @@
                 @keyup.enter="handleEnter($event, realIndex(index-1, c-1))"
                 @keyup.delete="handleDelete($event, realIndex(index-1, c-1))"
                 /> -->
-            <q-list
-                v-for="key in Object.keys(autofill)" :key="key">
-                <q-expansion-item
-                    v-for="(item, index) of display_autofill[key]" :key="index"
-                    :label="item.name || item"
-                    :group="key"
-                    popup
-                    :class="{'header-only': item.text !== 0 && !item.text}">
-                    <span v-if="item.text" v-html="item.text"></span>
-                </q-expansion-item>
-            </q-list>
-            <q-list v-if="value.length > 0">
-                <q-expansion-item
-                    v-for="(item, index) of value" :key="index"
-                    :label="item.name || item"
-                    :group="'created'"
-                    popup
-                    class="editable">
 
-                    <x-input placeholder="Slug" v-model="value[index].slug"></x-input>
+            <template v-if="expansion">
+                <q-list
+                    v-for="key in Object.keys(autofill)" :key="key">
+                    <q-expansion-item
+                        v-for="(item, index) of display_autofill[key]" :key="index"
+                        :label="name(item)"
+                        :group="key"
+                        popup
+                        :class="{'header-only': item.text !== 0 && !item.text}">
+                        <span v-if="item.text" v-html="item.text"></span>
+                    </q-expansion-item>
+                </q-list>
 
-                    <x-input :value="value[index].text" @input="wtf($event, index)" :placeholder="`${label} Description`" type="textarea"></x-input>
+                <q-list v-if="value.length > 0">
+                    <q-expansion-item
+                        v-for="(item, index) of value" :key="index"
+                        :label="name(item)"
+                        :group="'created'"
+                        popup
+                        class="editable">
 
-                </q-expansion-item>
-            </q-list>
-            <q-list>
-                <x-input 
-                    class="input" 
-                    :placeholder="label"
-                    @keyup.enter="createItem($event.target.value)"/>
-            </q-list>
+                        <x-input placeholder="Slug" v-model="value[index].slug"></x-input>
+
+                        <x-input :value="value[index].text" @input="wtf($event, index)" :placeholder="`${label} Description`" type="textarea"></x-input>
+
+                    </q-expansion-item>
+                </q-list>
+
+                <q-list>
+                    <x-input 
+                        class="input" 
+                        :placeholder="label"
+                        @keyup.enter="createItem($event.target.value)"/>
+                </q-list>
+            </template>
+            <template v-else>
+                <q-list-item
+                    v-for="key in Object.keys(compiled)" :key="key"
+                    :title="key"
+                    :value="compiled[key]"
+                    class="item"
+                    @click="handleClick">
+                </q-list-item>
+
+            </template>
         </div>
     </div>
 </template>
 
 <script>
 import XInputVue from '../utils/XInput.vue';
+import QListItem from './QListItem.vue'
 
 import {
   Quasar,
-  QExpansionItem
+  QExpansionItem,
+  QList,
+  QItem,
+  QItemSection,
+  QItemLabel,
+  Ripple,
+  QPopupEdit
 } from 'quasar'
 
 export default {
     name: 'dnd-list',
     props: {
         value: {
-            type: Array,
+            type: [Object, Array],
             default: () => []
         },
         cols: {
@@ -73,18 +95,24 @@ export default {
         autofill: {
             type: Object,
             default: () => ({})
+        },
+        expansion: {
+            type: Boolean,
+            default: false
         }
     },
     components: {
         'x-input': XInputVue,
-        'q-expansion-item': QExpansionItem
+        'q-expansion-item': QExpansionItem,
+        'q-list-item': QListItem
     },
     updated: function() {
         // console.log('UPDATED', this)
     },
     data(){
         return {
-            qtd_lines: this.lines
+            qtd_lines: this.lines,
+            focused: false
         }
     },
     computed: {
@@ -103,6 +131,34 @@ export default {
 
             for(let key in obj){
                 obj[key] = obj[key].filter(i => (i.mechanics || {}).display !== false )
+            }
+
+            return obj
+        },
+        compiled(){
+            let _fn = editable => item => {
+                if(typeof item == 'string'){
+                    return{
+                        slug: item,
+                        name: `Unknown Name (${item})`,
+                        text: `Unknown Description (${item})`,
+                        editable
+                    }
+                }else if(typeof item == 'object'){
+                    return item
+                }
+            }
+
+            let autofill = this.display_autofill
+            let value = this.$props.value
+
+            let obj = {}
+            for(let key in autofill){
+                obj[key] = autofill[key].map(_fn(false))
+
+                if(key in value){
+                    obj[key] = obj[key].concat(value[key].map(_fn(true)))
+                }
             }
 
             return obj
@@ -159,6 +215,9 @@ export default {
             // console.log('DELETE', event, index)
             if(this.$props.value[index] == '') this.$emit('input', undefined, index)
         },
+        handleClick: function(event){
+            this.focused = !this.focused
+        },
         grow(){
             this.qtd_lines++
         },
@@ -171,6 +230,20 @@ export default {
         },
         wtf(e, index){
             this.$props.value[index].text = e
+        },
+        name(item){
+            if(typeof item == 'string') return item
+            else if(typeof item == 'object') {
+                if(item.meta == 'command'){
+                    if(item.choose != undefined){
+                        return `Choose ${item.choose} from <${item.from}>`
+                    }else{
+                        return '<Unknown command>'
+                    }
+                }
+
+                return item.name || undefined
+            }
         }
     }
 }
@@ -183,17 +256,31 @@ export default {
     div.dnd-list
         border: 1px solid black
         width: 100%
-        padding: $radius * 1.5 0
+        padding: $radius * 1.5
         border-radius: $radius
 
-        display: grid
-        grid-gap: $radius
+        &.expansion
+            padding: $radius * 1.5 0
 
         &.x1-column
-            grid-template-columns: 1fr
+            > div.column
+                grid-template-columns: 1fr
         
         &.x2-column
-            grid-template-columns: 1fr 1fr
+            > div.column
+                grid-template-columns: 1fr 1fr
+
+        &.focused
+            padding: 0
+            // padding-bottom: $radius * 1.5
+            > div.column
+                grid-template-columns: 1fr
+
+                .item
+                    display: none
+                    
+                    &.focused
+                        display: block
 
         div.input
             padding: 0 15px
@@ -213,7 +300,10 @@ export default {
                 &:disabled
                     background-color: white
 
-        div.column
+        > div.column
+            display: grid
+            grid-gap: $radius
+
             .q-list
                 border-radius: $radius
 
@@ -326,7 +416,7 @@ export default {
                                         padding: 15px 20px
                                         max-height: 15em
                                         overflow-y: scroll
-                                        
+
 
                                         
 

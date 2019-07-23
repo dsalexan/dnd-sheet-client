@@ -65,7 +65,12 @@ export default {
                     stealth: false,
                     survival: false,
                 },
-                others: []
+                others: {
+                    armor: [],
+                    weapons: [],
+                    tools: [],
+                    languages: []
+                }
             },
             combat: {
                 ac: undefined,
@@ -271,9 +276,34 @@ export default {
 
             return undefined
         },
+        proficiencies: (state, getters) => {
+            let subs = state.subscriptions.proficiencies
+
+            let proficiencies = {}
+            for(let type of dnd5e.proficiencies.types){
+                if(type.display !== false)
+                    proficiencies[type.slug] = []
+            }
+
+            for(let source in subs){
+                let proficiencies_from_source = subs[source]
+
+                for(let type in proficiencies){
+                    if(proficiencies_from_source[type] !== undefined)
+                        proficiencies[type] = proficiencies[type].concat(proficiencies_from_source[type])
+                }
+            }
+
+            return proficiencies
+        }
     },
     mutations: {
         RESET: (state) => {
+            state.subscriptions.features = {}
+            state.subscriptions.equipment = {}
+            state.subscriptions.proficiencies = {}
+            state.subscriptions.spells = {}
+            
             state.name = undefined
 
             state.misc.class_level = undefined
@@ -367,8 +397,9 @@ export default {
     },
     actions: {
         // actions as mutations
-        SET_CLASS_LEVEL({ dispatch, state }, value){
+        SET_CLASS_LEVEL({ dispatch, state, getters }, value){
             state.misc.class_level = value
+
             dispatch('UPDATE_SUBSCRIPTIONS', {source: 'getters', path: 'class'})
         },
         SET_BACKGROUND({ dispatch, state }, value){
@@ -395,7 +426,7 @@ export default {
             dispatch('UPDATE_SUBSCRIPTIONS', {source: 'state', path: 'features'})
         },
 
-        UPDATE_SUBSCRIPTIONS({ state, getters }, { source, path }){
+        UPDATE_SUBSCRIPTIONS({ dispatch, state, getters }, { source, path }){
             // state.subscriptions 
 
             let meta
@@ -414,8 +445,18 @@ export default {
                 }
             }
 
-            // console.log('SUBSCRIPTIONS UPDATED', state.subscriptions)
+            console.log('SUBSCRIPTIONS UPDATED', state.subscriptions)
             // console.log(state.subscriptions)
+
+            dispatch('UPDATE_PROFICIENCIES', {source, path})
+        },
+        UPDATE_PROFICIENCIES({state, getters}, {source}){
+            let classe = getters.class
+            if(classe){
+                for(let attr of (classe.proficiencies || {saves: []}).saves){
+                    state.stats.proficiencies.saves[attr] = true
+                }
+            }
         }
     }
 }
