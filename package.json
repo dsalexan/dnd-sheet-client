@@ -17,8 +17,10 @@
     "lodash": "^4.17.14",
     "quasar": "^1.0.5",
     "register-service-worker": "^1.6.2",
+    "tributejs": "^3.7.1",
     "vue": "^2.6.10",
     "vue-router": "^3.0.3",
+    "vue-tribute": "^1.0.3",
     "vuex": "^3.0.1"
   },
   "devDependencies": {

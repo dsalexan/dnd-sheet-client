@@ -26,6 +26,21 @@
 
                 v-on="inputListeners"/>
         </template>
+        <template v-else-if="type == 'mention'">
+            <tribute :options="tributeOptions">
+                <div
+                    class="content-editable"
+                    contenteditable="true"
+                    :placeholder="placeholder"
+                    v-html="value"
+                    :disabled="isDisabled"
+                    :name="name"
+                    ref="input" 
+                    :class="{empty: isEmpty}"
+
+                    v-on="inputListeners"  />
+            </tribute>
+        </template>
         <template v-else>
             <input
                 ref="input"
@@ -42,8 +57,13 @@
 </template>
 
 <script>
+import VueTribute from "vue-tribute";
+
 export default {
     name: 'x-input',
+    components: {
+        'tribute': VueTribute
+    },
     props: {
         tag: {
             type: String,
@@ -81,6 +101,30 @@ export default {
         transparent: {
             type: [String, Boolean],
             default: false
+        },
+        source: {
+            type: [Object, Array],
+            default: () => ([])
+        }
+    },
+    data() {
+        return {
+            tributeOptions: {
+                trigger: "@",
+                positionMenu: false,
+                values: function(text, callback){
+                    callback([
+                        { key: "Collin Henderson", value: "syropian" },
+                        { key: "Sarah Drasner", value: "sarah_edo" },
+                        { key: "Evan You", value: "youyuxi" },
+                        { key: "Adam Wathan", value: "adamwathan" }
+                    ])
+                },
+                selectTemplate: function(item) {
+                    return `<span contenteditable="false" class="mention" onclick="alert('${item.original.key}');">@${item.original.value}</span>`;
+                }
+            },
+            isEmpty: this.value !== 0 && !this.value
         }
     },
     computed: {
@@ -118,9 +162,21 @@ export default {
     },
     methods: {
         handleInput(e){
-            if(this.$props.type != 'text' && this.$props.type != 'textarea') return
+            if(this.$props.type != 'text' && this.$props.type != 'textarea') {
+                if(this.$props.type != 'mention') return 
+                else {
+                    let v = e.target.innerText == "" ? undefined : e.target.innerText
+                    this.isEmpty = !v
 
-            this.$emit('input', e.target.value == "" ? undefined : e.target.value)
+                    this.$emit('input', v)
+                    return
+                }
+            }
+
+            let v =  e.target.value == "" ? undefined : e.target.value
+            this.isEmpty = !v
+
+            this.$emit('input', v)
         },
         handleChange(e){
             if(this.$props.type != 'checkbox') return 
@@ -195,6 +251,19 @@ export default {
     .transparent
         input::placeholder, input, label
             color: transparent !important
+
+    .content-editable
+        border: 1px lightgray solid
+
+        &.empty:not(:focus):before
+            content: attr(placeholder)
+            cursor: text
+            color: darkgray
+
+        .mention
+            background-color: rgba(0, 0, 255, 0.1)
+            font-weight: bold
+            cursor: pointer
 
 </style>
 

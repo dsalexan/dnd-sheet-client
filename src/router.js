@@ -6,6 +6,7 @@ import About from './views/About.vue'
 
 import Sheet from './views/Sheet.vue'
 import SheetDev from './views/SheetDev.vue'
+import Twitter from './views/Twitter.vue'
 
 Vue.use(Router)
 
@@ -39,6 +40,11 @@ export default new Router({
       path: '/sheet-dev',
       name: 'sheet-dev',
       component: SheetDev
+    },
+    {
+      path: '/twitter',
+      name: 'twitter',
+      component: Twitter
     }
   ]
 })

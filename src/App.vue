@@ -4,7 +4,8 @@
       <router-link to="/">Home</router-link>|
       <router-link to="/about">About</router-link>|
       <router-link to="/sheet">Sheet</router-link>|
-      <router-link to="/sheet-dev">Sheet (dev)</router-link>
+      <router-link to="/sheet-dev">Sheet (dev)</router-link>|
+      <router-link to="/twitter">Twitter</router-link>
     </div>
     <router-view />
   </div>
