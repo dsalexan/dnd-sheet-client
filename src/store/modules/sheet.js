@@ -1,4 +1,5 @@
 import _ from 'lodash'
+import axios from 'axios'
 
 import * as dnd5e from '@/assets/rules/dnd/5e'
 
@@ -10,6 +11,11 @@ export default {
             equipment: {},
             proficiencies: {},
             spells: {}
+        },
+        async: {
+            class: undefined,
+            race: undefined,
+            background: undefined
         },
         name: undefined,
         misc: {
@@ -249,22 +255,10 @@ export default {
             if (level == undefined) return undefined
 
             let class_name = state.misc.class_level.replace(level, '').trim()
-            return dnd5e.classes.name[class_name]
-        },
-        race: (state, getters) => {
-            let race = state.race
-            if(race == undefined) return undefined
-
-            return dnd5e.races.name[race]
-        },
-        background: (state, getters) => {
-            let background = state.background
-            if(background == undefined) return undefined
-            
-            return dnd5e.backgrounds.name[background]
+            return class_name
         },
         spellcasting: (state, getters) => {
-            let classe = getters.class
+            let classe = state.async.class
             if (classe == undefined) return undefined
             let spellcasting = classe.spellcasting
 
@@ -396,10 +390,20 @@ export default {
         },
     },
     actions: {
+        async FETCH_CLASS({commit, state, getters}){
+            let name = getters.class
+            if(name == undefined) return undefined
+            let result = await axios.get(`http://localhost:3000/classes?q=${name}`)
+
+            state.async.class = result.data[0]
+            console.log(state.async.class)
+        },
+
         // actions as mutations
         SET_CLASS_LEVEL({ dispatch, state, getters }, value){
             state.misc.class_level = value
-
+            
+            dispatch('FETCH_CLASS')
             dispatch('UPDATE_SUBSCRIPTIONS', {source: 'getters', path: 'class'})
         },
         SET_BACKGROUND({ dispatch, state }, value){

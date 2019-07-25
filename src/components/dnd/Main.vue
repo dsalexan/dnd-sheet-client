@@ -109,6 +109,7 @@
 </template>
 
 <script>
+import axios from 'axios'
 import { mapState, mapGetters, mapActions, mapMutations } from 'vuex'
 
 import { attributes, skills } from '@/assets/rules/dnd/5e'

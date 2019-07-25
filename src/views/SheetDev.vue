@@ -12,6 +12,7 @@
 </template>
 
 <script>
+import axios from 'axios'
 import {mapState, mapMutations, mapGetters} from 'vuex'
 
 import Header from '@/components/dnd/Header.vue'
