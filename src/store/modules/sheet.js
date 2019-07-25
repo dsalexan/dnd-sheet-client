@@ -260,10 +260,10 @@ export default {
         spellcasting: (state, getters) => {
             let classe = state.async.class
             if (classe == undefined) return undefined
-            let spellcasting = classe.spellcasting
+            let spellcasting = classe.mechanics.spellcasting
 
             if (typeof spellcasting == 'string') {
-                return _.get(classe, spellcasting)
+                return _.get(classe.mechanics, spellcasting)
             } else if (typeof spellcasting == 'object') {
                 throw Error('Unimplemented')
             }
@@ -397,14 +397,15 @@ export default {
 
             state.async.class = result.data[0]
             console.log(state.async.class)
+            return
         },
 
         // actions as mutations
-        SET_CLASS_LEVEL({ dispatch, state, getters }, value){
+        async SET_CLASS_LEVEL({ dispatch, state, getters }, value){
             state.misc.class_level = value
             
-            dispatch('FETCH_CLASS')
-            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'getters', path: 'class'})
+            await dispatch('FETCH_CLASS')
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'class'})
         },
         SET_BACKGROUND({ dispatch, state }, value){
             state.misc.background = value
@@ -434,17 +435,15 @@ export default {
             // state.subscriptions 
 
             let meta
-            if(source == 'getters'){
-                meta = [_.get(getters, path)]
-            }else if(source == 'state'){
-                meta = [..._.get(state, path)]
+            if(source == 'class'){
+                meta = [state.async.class]
             }
 
             for(let m of meta.filter(_ => !!_ && !!_.subscriptions)){
                 for(let key of m.subscriptions){
                     // state.subscriptions[key][m.meta] = m[key]
                     let obj = {}
-                    obj[m.meta] = m[key]
+                    obj[m.meta] = key in m.mechanics ? m.mechanics[key] : m[key]
                     state.subscriptions[key] = Object.assign({}, state.subscriptions[key], obj)
                 }
             }
@@ -455,9 +454,9 @@ export default {
             dispatch('UPDATE_PROFICIENCIES', {source, path})
         },
         UPDATE_PROFICIENCIES({state, getters}, {source}){
-            let classe = getters.class
+            let classe = state.async.class
             if(classe){
-                for(let attr of (classe.proficiencies || {saves: []}).saves){
+                for(let attr of (classe.mechanics.proficiencies || {saves: []}).saves){
                     state.stats.proficiencies.saves[attr] = true
                 }
             }

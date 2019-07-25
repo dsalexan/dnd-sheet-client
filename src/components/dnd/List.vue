@@ -121,7 +121,7 @@ export default {
                 let value = this.$props.value[index]
 
                 if(value == undefined) return ''
-                else if(typeof value == 'object') return value.name || value.text || '<Unknown Feature>'
+                else if(typeof value == 'object') return (value.name.en || value.name['pt-BR'] || value.name) || value.text || '<Unknown Feature>'
                 else if(typeof value == 'string') return value
                 else throw Error('Unimplemented')
             }
