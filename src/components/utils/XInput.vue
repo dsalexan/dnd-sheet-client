@@ -102,14 +102,14 @@ export default {
             type: [String, Boolean],
             default: false
         },
-        source: {
-            type: [Object, Array],
-            default: () => ([])
+        mentionOptions: {
+            type: Object,
+            default: () => ({})
         }
     },
     data() {
         return {
-            tributeOptions: {
+            tributeOptions: Object.assign({}, {
                 trigger: "@",
                 positionMenu: false,
                 values: function(text, callback){
@@ -123,7 +123,7 @@ export default {
                 selectTemplate: function(item) {
                     return `<span contenteditable="false" class="mention" onclick="alert('${item.original.key}');">@${item.original.value}</span>`;
                 }
-            },
+            }, this.mentionOptions || {}),
             isEmpty: this.value !== 0 && !this.value
         }
     },
@@ -260,10 +260,11 @@ export default {
             cursor: text
             color: darkgray
 
-        .mention
+        & /deep/ .mention
             background-color: rgba(0, 0, 255, 0.1)
             font-weight: bold
             cursor: pointer
+            padding: 0 3px
 
 </style>
 
