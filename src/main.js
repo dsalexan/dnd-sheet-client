@@ -14,8 +14,11 @@ Object.defineProperty(Vue.prototype, '$dnd', { value: dnd });
 
 Vue.config.productionTip = false
 
-new Vue({
+ new Vue({
   router,
   store,
   render: h => h(App)
 }).$mount('#app')
+
+import bus from './bus'
+window.bus = bus

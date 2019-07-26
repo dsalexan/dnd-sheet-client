@@ -16,39 +16,36 @@
             </template>
         </template>
         
-        <template v-if="type == 'textarea'">
-            <textarea
-                ref="input"
-                :name="name" 
-                :placeholder="placeholder" 
-                :value="value"
-                :disabled="isDisabled"
-
-                v-on="inputListeners"/>
-        </template>
-        <template v-else-if="type == 'mention'">
-            <tribute :options="tributeOptions">
+        <template v-if="type == 'mention'">
+            <tribute :options="tributeOptions" 
+                    :class="{empty: isEmpty}">
                 <div
+                    v-once
+                    ref="input" 
                     class="content-editable"
                     contenteditable="true"
                     :placeholder="placeholder"
-                    v-html="value"
                     :disabled="isDisabled"
                     :name="name"
-                    ref="input" 
-                    :class="{empty: isEmpty}"
+
+                    v-html="valueModel"
+                    @tribute-replaced="handleMention"
 
                     v-on="inputListeners"  />
             </tribute>
         </template>
         <template v-else>
-            <input
+            <component
+                :is="type === 'textarea' ? type : 'input'"
                 ref="input"
+                class="input"
+                :type="type"
+
+                :value.prop="valueModel"
+                :checked.prop="valueModel"
+
                 :name="name" 
                 :placeholder="placeholder" 
-                :value="value"
-                :checked="value"
-                :type="type == 'textarea' ? false : type"
                 :disabled="isDisabled"
 
                 v-on="inputListeners"/>
@@ -57,7 +54,10 @@
 </template>
 
 <script>
-import VueTribute from "vue-tribute";
+import bus from '@/bus'
+import mentions from '@/assets/utils/mentions.js'
+
+import VueTribute from "vue-tribute"
 
 export default {
     name: 'x-input',
@@ -111,18 +111,17 @@ export default {
         return {
             tributeOptions: Object.assign({}, {
                 trigger: "@",
-                positionMenu: false,
+                positionMenu: true,
                 values: function(text, callback){
-                    callback([
-                        { key: "Collin Henderson", value: "syropian" },
-                        { key: "Sarah Drasner", value: "sarah_edo" },
-                        { key: "Evan You", value: "youyuxi" },
-                        { key: "Adam Wathan", value: "adamwathan" }
-                    ])
+                    callback(mentions.test)
                 },
-                selectTemplate: function(item) {
-                    return `<span contenteditable="false" class="mention" onclick="alert('${item.original.key}');">@${item.original.value}</span>`;
-                }
+                selectTemplate: mentions.template,
+                lookup: function(entry, value){
+                    return entry.key + entry.value
+                },
+                menuItemTemplate: function (item) {
+                    return item.original.key;
+                },
             }, this.mentionOptions || {}),
             isEmpty: this.value !== 0 && !this.value
         }
@@ -144,6 +143,21 @@ export default {
             if(typeof this.transparent == 'boolean') return this.transparent
             else if(typeof this.transparent == 'string') return this.transparent.toLowerCase() != 'false'
         },
+        valueModel: {
+            get () { 
+                return mentions.parse(this.value, mentions.test)
+            },
+            set (value) { 
+                if(this.$props.type == 'checkbox'){
+                    this.$emit('change', value)
+                }else if(this.$props.type == 'text' || this.$props.type == 'textarea' || this.$props.type == 'mention'){
+                    let v = value == "" ? undefined : value
+                    this.isEmpty = !v
+
+                    this.$emit('input', v) 
+                }
+            },
+        },
         inputListeners: function () {
             var vm = this
             // `Object.assign` mescla objetos para formar um novo objeto
@@ -154,42 +168,45 @@ export default {
                 // comportamento de algumas escutas.
                 {
                     // Isso garante que o componente funcione com o v-model
-                    input: vm.handleInput,
-                    change: vm.handleChange
+                    input: function (event) {
+                        if(vm.$props.type == 'mention'){
+                            vm.handleContentInput(event)
+                        }else if(vm.$props.type == 'text' || vm.$props.type == 'textarea'){
+                            vm.handleInput(event)
+                        }
+                    },
+                    change: function(event){
+                        if(vm.$props.type == 'checkbox'){
+                            vm.handleChange(event)
+                        }
+                    }
                 }
             )
         }
     },
     methods: {
-        handleInput(e){
-            if(this.$props.type != 'text' && this.$props.type != 'textarea') {
-                if(this.$props.type != 'mention') return 
-                else {
-                    let v = e.target.innerText == "" ? undefined : e.target.innerText
-                    this.isEmpty = !v
-
-                    this.$emit('input', v)
-                    return
-                }
-            }
-
-            let v =  e.target.value == "" ? undefined : e.target.value
-            this.isEmpty = !v
-
-            this.$emit('input', v)
-        },
-        handleChange(e){
-            if(this.$props.type != 'checkbox') return 
-
-            this.$emit('input', e.target.checked)
-        },
         focus(){
             this.$refs.input.focus()
+        },
+        handleInput(event){
+            this.valueModel = event.target.value
+        },
+        handleContentInput(event){
+            this.valueModel = event.target.innerText
+        },
+        handleChange(event){
+            this.valueModel = event.target.checked
+        },
+        handleMention(event){
+            this.valueModel = event.target.innerText
+        },
+        handleMentionClick(event){
+            this.$emit('mention-click', event)
         }
     },
     watch: {
         value: function(val){
-            // console.log('VALUE', val)
+            this.isEmpty = this.value !== 0 && !this.value
         }
     }
 }
@@ -252,19 +269,20 @@ export default {
         input::placeholder, input, label
             color: transparent !important
 
-    .content-editable
-        border: 1px lightgray solid
-
-        &.empty:not(:focus):before
+    .v-tribute
+        &.empty .content-editable:not(:focus):before
             content: attr(placeholder)
             cursor: text
             color: darkgray
 
-        & /deep/ .mention
-            background-color: rgba(0, 0, 255, 0.1)
-            font-weight: bold
-            cursor: pointer
-            padding: 0 3px
+        .content-editable
+            border: 1px lightgray solid
+
+            & /deep/ .mention
+                background-color: rgba(0, 0, 255, 0.1)
+                font-weight: bold
+                cursor: pointer
+                padding: 0 3px
 
 </style>
 
