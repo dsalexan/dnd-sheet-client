@@ -1,6 +1,6 @@
 <template>
     <div class="tweet">
-        <x-input placeholder="XInput" type="mention"></x-input>
+        <x-input placeholder="XInput" type="mention" :value="texto"></x-input>
     </div>
 </template>
 
@@ -28,7 +28,8 @@ export default {
             item.original.key
           }');">@${item.original.value}</span>`;
         }
-      }
+      },
+      texto: '@syropian'
     };
   },
   methods: {
