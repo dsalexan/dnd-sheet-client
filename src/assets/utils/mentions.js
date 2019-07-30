@@ -3,8 +3,12 @@ function template(item){
 }
 
 function parse(text, source=undefined){
-    let rest = text.split(/@\w*/gmi)
-    let mentions = text.match(/@\w*/gmi) || []
+    if(!text) return text
+
+    let rest = String(text).split(/@\w*/gmi)
+    let mentions = String(text).match(/@\w*/gmi) || []
+
+    if(mentions.length == 0) return text
 
     let data = (i) => ({
         original: {
