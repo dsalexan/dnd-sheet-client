@@ -7,7 +7,8 @@
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
     "build-storybook": "build-storybook",
-    "storybook": "start-storybook -p 6006"
+    "storybook": "start-storybook -p 6006",
+    "minify:db": "json-minify .\\db.big.json > db.json"
   },
   "dependencies": {
     "@quasar/extras": "^1.0.0",
