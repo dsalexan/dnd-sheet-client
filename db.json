@@ -1,5 +1,5 @@
 {
-    "server": "https://my-json-server.typicode.com/",
+    "server": "https://my-json-server.typicode.com/dsalexan/dnd-sheet-client",
     "slugs": [
         { 
             "key": "Krakoa Island", 
@@ -21,65 +21,5 @@
             "key": "Brotherhood", 
             "value": "bom" 
         }
-    ],
-    "classes": {
-        "meta": "class",
-        "name": "Bard",
-        "slug": "bard",
-    
-        "subscriptions": ["features", "proficiencies", "equipment"],
-    
-        "hit_dice": "1d8",
-        "proficiencies": {
-            "meta": "proficiencies",
-            "armor": ["$equipment.armor.light"],
-            "weapons": ["$equipment.weapons.simple", "$equipment.weapons.hand_crossbow", "$equipment.weapons.longsword", "$equipment.weapons.rapier", "$equipment.weapons.shortsword"],
-            "tools": [
-                {
-                    "meta": "command",
-                    "choose": 3,
-                    "from": "$equipment.tools.all"
-                }
-            ],
-            "saves": ["dex", "cha"],
-            "skills": [
-                {
-                    "meta": "command",
-                    "choose": 3,
-                    "from": "$skills.all"
-                }
-            ]
-        },
-        "equipment": [
-            {
-                "meta": "command",
-                "choose": 1,
-                "from": [
-                    "$equipment.weapons.rapier",
-                    "$equipment.weapons.longsword",
-                    "$equipment.weapons.simple.all"
-                ]
-            },
-            {
-                "meta": "command",
-                "choose": 1,
-                "from": [
-                    "$equipment.packs.diplomats_pack",
-                    "$equipment.packs.entertrainers_pack"
-                ]
-            },
-            {
-                "meta": "command",
-                "choose": 1,
-                "from": [
-                    "$equipment.musical_instruments.lute",
-                    "$equipment.musical_instruments.all"
-                ]
-            },
-            [
-                "$equipment.armor.light.lether_armor", "$equipment.weapons.simple.dagger"
-            ]
-        ],
-        "spellcasting": "features.spellcasting.mechanics"
-    }
+    ]
 }
