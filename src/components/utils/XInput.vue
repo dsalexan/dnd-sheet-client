@@ -212,6 +212,31 @@ export default {
 }
 </script>
 
+<style lang="sass">
+    body
+        > .tribute-container
+            // padding: 10px 5px
+
+            > ul
+                > li
+                    padding: 7.5px 10px
+                    cursor: pointer
+                    background: rgba(lightgray, 0.25)
+
+                    &:before
+                        content: '@'
+                        opacity: 0.4
+                        margin-right: 1px
+
+                    &.highlight
+                        background: rgba(green, 0.2)
+                        font-weight: bold
+
+                        &:before
+                            font-weight: bold
+</style>
+
+
 <style lang="sass" scoped>
     $box-width: 30px
     $radius: 10px
@@ -279,7 +304,7 @@ export default {
             border: 1px lightgray solid
 
             & /deep/ .mention
-                background-color: rgba(0, 0, 255, 0.1)
+                background: rgba(green, 0.1)
                 font-weight: bold
                 cursor: pointer
                 padding: 0 3px
