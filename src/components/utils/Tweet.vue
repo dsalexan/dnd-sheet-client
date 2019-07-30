@@ -1,10 +1,11 @@
 <template>
     <div class="tweet">
-        <x-input placeholder="XInput" type="mention" :value="texto" @input="handleInput"></x-input>
+        {{ texto }}
+        <x-input placeholder="XInput" type="mention" @input="texto = $event" :value="texto"></x-input>
 
         <q-dialog v-model="dialog.open" seamless>
           <q-card style="width: 200px">
-            <q-linear-progress :value="1" color="darkblue" />
+            <q-linear-progress :value="1" color="green" />
 
             <q-card-section class="row items-center no-wrap">
               <div>

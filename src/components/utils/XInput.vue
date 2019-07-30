@@ -147,14 +147,14 @@ export default {
             get () { 
                 return mentions.parse(this.value, mentions.test)
             },
-            set (value) { 
+            set (value) {
                 if(this.$props.type == 'checkbox'){
                     this.$emit('change', value)
                 }else if(this.$props.type == 'text' || this.$props.type == 'textarea' || this.$props.type == 'mention'){
                     let v = value == "" ? undefined : value
                     this.isEmpty = !v
 
-                    this.$emit('input', v) 
+                    this.$emit('input', v)
                 }
             },
         },
@@ -222,11 +222,6 @@ export default {
                     padding: 7.5px 10px
                     cursor: pointer
                     background: rgba(lightgray, 0.25)
-
-                    &:before
-                        content: '@'
-                        opacity: 0.4
-                        margin-right: 1px
 
                     &.highlight
                         background: rgba(green, 0.2)
