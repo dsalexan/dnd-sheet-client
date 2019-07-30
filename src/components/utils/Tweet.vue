@@ -1,7 +1,7 @@
 <template>
     <div class="tweet">
         {{ texto }}
-        <x-input placeholder="XInput" type="mention" @input="texto = $event" :value="texto"></x-input>
+        <x-input placeholder="XInput" type="mention" @input="texto = $event" :value="texto" :source="source"></x-input>
 
         <q-dialog v-model="dialog.open" seamless>
           <q-card style="width: 200px">
@@ -23,6 +23,7 @@
 </template>
 
 <script>
+import axios from 'axios'
 import bus from '@/bus'
 import XInputVue from './XInput.vue';
 
@@ -55,6 +56,10 @@ export default {
       dialog: {
         open: false,
         data: {}
+      },
+      api: {
+        loading: false,
+        data: []
       }
     };
   },
@@ -62,6 +67,18 @@ export default {
     handleInput(event){
       // console.log('INPUT', event)
       this.texto = event
+    },
+    getDataFromApi(){
+      this.api.loading = true
+      axios.get(`http://github.com/dsalexan/dnd-sheet-client/slugs/`)
+        .then(res => {
+          this.api.loading = false
+          this.api.data = res.data
+        })
+        .catch(err => {
+          this.api.loading = false
+          console.log('ERROR', err)
+        })
     }
   },
   mounted(){
@@ -69,6 +86,9 @@ export default {
       this.dialog.open = true
       this.dialog.data = JSON.parse(event.replace(/\'/gmi, '"'))
     })
+  },
+  created(){
+    this.getDataFromApi()
   }
 };
 </script>

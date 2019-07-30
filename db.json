@@ -1,0 +1,24 @@
+{
+    "slugs": [
+        { 
+            "key": "Krakoa Island", 
+            "value": "krakoa" 
+        },
+        { 
+            "key": "Cuckoo Sisters", 
+            "value": "cuckoo" 
+        },
+        { 
+            "key": "House of X", 
+            "value": "x" 
+        },
+        { 
+            "key": "House of M", 
+            "value": "m" 
+        },
+        { 
+            "key": "Brotherhood", 
+            "value": "bom" 
+        }
+    ]
+}
