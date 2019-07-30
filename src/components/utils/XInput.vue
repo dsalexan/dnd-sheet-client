@@ -105,6 +105,10 @@ export default {
         mentionOptions: {
             type: Object,
             default: () => ({})
+        },
+        source: {
+            type: Array,
+            default: () => ([])
         }
     },
     data() {
@@ -112,8 +116,8 @@ export default {
             tributeOptions: Object.assign({}, {
                 trigger: "@",
                 positionMenu: true,
-                values: function(text, callback){
-                    callback(mentions.test)
+                values: (text, callback) => {
+                    callback(this.source || [])
                 },
                 selectTemplate: mentions.template,
                 lookup: function(entry, value){
@@ -145,7 +149,7 @@ export default {
         },
         valueModel: {
             get () { 
-                return mentions.parse(this.value, mentions.test)
+                return mentions.parse(this.value, this.source)
             },
             set (value) {
                 if(this.$props.type == 'checkbox'){

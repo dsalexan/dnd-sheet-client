@@ -1,7 +1,7 @@
 <template>
     <div class="tweet">
         {{ texto }}
-        <x-input placeholder="XInput" type="mention" @input="texto = $event" :value="texto" :source="source"></x-input>
+        <x-input placeholder="XInput" type="mention" @input="texto = $event" :value="texto" :source="api.data"></x-input>
 
         <q-dialog v-model="dialog.open" seamless>
           <q-card style="width: 200px">
@@ -70,8 +70,9 @@ export default {
     },
     getDataFromApi(){
       this.api.loading = true
-      axios.get(`http://github.com/dsalexan/dnd-sheet-client/slugs/`)
+      axios.get(`http://my-json-server.typicode.com/dsalexan/dnd-sheet-client/slugs/`)
         .then(res => {
+          console.log('FETCH', res)
           this.api.loading = false
           this.api.data = res.data
         })

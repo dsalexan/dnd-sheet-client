@@ -1,4 +1,5 @@
 {
+    "server": "https://my-json-server.typicode.com/",
     "slugs": [
         { 
             "key": "Krakoa Island", 

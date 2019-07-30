@@ -5,8 +5,8 @@ function template(item){
 function parse(text, source=undefined){
     if(!text) return text
 
-    let rest = String(text).split(/@\w*/gmi)
-    let mentions = String(text).match(/@\w*/gmi) || []
+    let rest = String(text).split(/@\w+/gmi)
+    let mentions = String(text).match(/@\w+/gmi) || []
 
     if(mentions.length == 0) return text
 
@@ -18,6 +18,7 @@ function parse(text, source=undefined){
     })
     if(source){
         data = (i) => {
+            if(i.substr(1) == '') return ''
             return lookup(source, i.substr(1))
         }
     }
