@@ -1,18 +1,6 @@
 <template>
     <div class="dnd-list" :class="`x${cols}-column ${expansion ? 'expansion' : ''} ${focused ? 'focused' : ''}`">
         <div class="column">
-            <!-- <x-input 
-                class="input"
-                v-for="index of Math.max(qtd_lines, value.length)" :key="index"
-                :index="realIndex(index-1, c-1)"
-                :ref="`input${realIndex(index-1, c-1)}`"
-                :value="text_value(realIndex(index-1, c-1)) || ''"
-                @input="$emit('input', $event, realIndex(index-1, c-1))"
-                @focus="handleFocus"
-                @keyup.enter="handleEnter($event, realIndex(index-1, c-1))"
-                @keyup.delete="handleDelete($event, realIndex(index-1, c-1))"
-                /> -->
-
             <template v-if="expansion">
                 <q-list
                     v-for="key in Object.keys(autofill)" :key="key">
@@ -65,6 +53,7 @@
 <script>
 import XInputVue from '../utils/XInput.vue';
 import QListItem from './QListItem.vue'
+import axios from 'axios';
 
 import {
   Quasar,
@@ -111,8 +100,8 @@ export default {
     },
     data(){
         return {
-            qtd_lines: this.lines,
-            focused: false
+            focused: false,
+            compiled: {}
         }
     },
     computed: {
@@ -134,45 +123,70 @@ export default {
             }
 
             return obj
+        }
+    },
+    watch: {
+        value: function(val){
+            this.compile(this.$props.autofill, val)
         },
-        compiled(){
-            let _fn = editable => item => {
-                if(typeof item == 'string'){
-                    return{
-                        slug: item,
-                        name: `Unknown Name (${item})`,
-                        text: `Unknown Description (${item})`,
-                        editable
+        autofill: function(val){
+            this.compile(val, this.$props.value)
+        }
+    },
+    methods: {
+        compile: async function(_autofill, _value){
+            // value são os dados da lista
+            // o que a gente tem que fazer aqui é passar esse dado para um data
+            // e loopar pelos items e retornar os slugs
+            // basicamente o compile
+            
+            let _fn = editable => {
+                return async item => {
+                    if(typeof item == 'string'){
+                        let result
+
+                        if(item[0] == `@`)
+                            result = (await axios.get(`http://localhost:3000/?q=${item.substr(1)}`)).data
+                        else
+                            result = []
+
+                        if(result.length > 0){
+                            return Object.assign({}, result[0], {editable})
+                        }else{
+                            return{
+                                slug: item,
+                                name: `Unknown Name (${item})`,
+                                text: `Unknown Description (${item})`,
+                                editable
+                            }
+                        }
+                    }else if(typeof item == 'object'){
+                        return item
                     }
-                }else if(typeof item == 'object'){
-                    return item
                 }
             }
 
-            let autofill = this.display_autofill
-            let value = this.$props.value
+            
+            let autofill = _autofill
+            for(let key in autofill){
+                autofill[key] = autofill[key].filter(i => (i.mechanics || {}).display !== false )
+            }
+
+            let value = _value
 
             let obj = {}
             for(let key in autofill){
                 obj[key] = autofill[key].map(_fn(false))
+                obj[key] = await Promise.all(obj[key])
 
                 if(key in value){
                     obj[key] = obj[key].concat(value[key].map(_fn(true)))
+                    obj[key] = await Promise.all(obj[key])
                 }
             }
 
-            return obj
-        }
-    },
-    watch: {
-        lines: function(val){
-            this.qtd_lines = val
+            this.compiled = obj
         },
-        value: function(val){
-            if(val.length < this.$props.lines) this.qtd_lines = this.$props.lines
-        }
-    },
-    methods: {
         realIndex: function(index, col){
             return col*this.$props.lines + index
         },
@@ -218,9 +232,6 @@ export default {
         handleClick: function(event){
             this.focused = !this.focused
         },
-        grow(){
-            this.qtd_lines++
-        },
         createItem(value){
             this.$emit('input', {
                 name: value,    
@@ -242,7 +253,7 @@ export default {
                     }
                 }
 
-                return item.name || undefined
+                return (item.name || {}).en || item.name || undefined
             }
         }
     }

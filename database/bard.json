@@ -16,20 +16,20 @@
             "hit_dice": "1d8",
             "proficiencies": {
                 "armor": [
-                    "@equipment/armor/light"
+                    "@armor/light"
                 ],
                 "weapons": [
-                    "@equipment/weapons/simple",
-                    "@equipment/weapons/hand_crossbow",
-                    "@equipment/weapons/longsword",
-                    "@equipment/weapons/rapier",
-                    "@equipment/weapons/shortsword"
+                    "@weapon/simple",
+                    "@weapon/hand_crossbow",
+                    "@weapon/longsword",
+                    "@weapon/rapier",
+                    "@weapon/shortsword"
                 ],
                 "tools": [
                     {
                         "meta": "command",
                         "choose": 3,
-                        "from": "@equipment/tools"
+                        "from": "@tools"
                     }
                 ],
                 "saves": [
@@ -40,7 +40,7 @@
                     {
                         "meta": "command",
                         "choose": 3,
-                        "from": "@skills"
+                        "from": "@skill"
                     }
                 ]
             },
@@ -49,30 +49,30 @@
                     "meta": "command",
                     "choose": 1,
                     "from": [
-                        "@equipment/weapons/rapier",
-                        "@equipment/weapons/longsword",
-                        "@equipment/weapons/simple"
+                        "@weapon/rapier",
+                        "@weapon/longsword",
+                        "@weapon/simple"
                     ]
                 },
                 {
                     "meta": "command",
                     "choose": 1,
                     "from": [
-                        "@equipment/packs/diplomats_pack",
-                        "@equipment/packs/entertrainers_pack"
+                        "@pack/diplomats_pack",
+                        "@pack/entertrainers_pack"
                     ]
                 },
                 {
                     "meta": "command",
                     "choose": 1,
                     "from": [
-                        "@equipment/musical_instruments/lute",
-                        "@equipment/musical_instruments/all"
+                        "@musical_instruments/lute",
+                        "@musical_instruments/all"
                     ]
                 },
                 [
-                    "@equipment/armor/lether_armor",
-                    "$equipment/weapons/dagger"
+                    "@armor/lether_armor",
+                    "@weapon/dagger"
                 ]
             ],
             "table": [

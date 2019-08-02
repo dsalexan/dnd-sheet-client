@@ -1,0 +1,30 @@
+[
+    {
+        "_id": "hand_crossbow",
+        "meta": "equipment",
+        "parent": "martial",
+        "name": "Hand Crossbow",
+        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd"
+    },
+    {
+        "_id": "longsword",
+        "meta": "equipment",
+        "parent": "simple",
+        "name": "Longsword",
+        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd"
+    },
+    {
+        "_id": "hand_crossbow",
+        "meta": "equipment",
+        "parent": "simple",
+        "name": "Hand Crossbow",
+        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd"
+    },
+    {
+        "_id": "hand_crossbow",
+        "meta": "equipment",
+        "parent": "simple",
+        "name": "Hand Crossbow",
+        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd"
+    }
+]

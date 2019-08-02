@@ -1,0 +1,21 @@
+[
+    {
+        "_id": "weapon",
+        "meta": "equipment",
+        "name": "Weapon",
+        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd",
+        "mechanics": {
+            
+        }
+    },{
+        "_id": "simple",
+        "meta": "equipment",
+        "parent": "weapon",
+        "name": "Simple Weapons",
+        "slug": "simple",
+        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd",
+        "mechanics": {
+            
+        }
+    }
+]
