@@ -297,6 +297,10 @@ export default {
             state.subscriptions.equipment = {}
             state.subscriptions.proficiencies = {}
             state.subscriptions.spells = {}
+
+            state.async.class = undefined
+            state.async.race = undefined
+            state.async.background = undefined
             
             state.name = undefined
 
@@ -382,11 +386,14 @@ export default {
             }
 
         },
-        SET_PROFICIENCIES(state, { value, index }){
-            if(value == undefined)
-                state.stats.proficiencies.others.splice(index, 1)
-            else
-                state.stats.proficiencies.others.splice(index, 1, value)
+        SET_PROFICIENCIES(state, { value, index, key }){
+            console.log('SET PROFS', value, index, key)
+            console.log('profs', state.stats.proficiencies.others)
+            if(value == undefined){
+                state.stats.proficiencies.others[key].splice(index, 1)
+            }else{
+                state.stats.proficiencies.others[key].splice(index, 1, value)
+            }
         },
     },
     actions: {

@@ -4,27 +4,58 @@
         "meta": "equipment",
         "parent": "martial",
         "name": "Hand Crossbow",
-        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd"
+        "mechanics": {
+            "cost": ["75", "gp"],
+            "damage": ["1d6", "piercing"],
+            "weight": ["3", "lb"],
+            "properties": [
+                "ammunition (range 30/120)", 
+                "light", 
+                "loading"
+            ]
+        }
     },
     {
         "_id": "longsword",
         "meta": "equipment",
-        "parent": "simple",
+        "parent": "martial",
         "name": "Longsword",
-        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd"
+        "mechanics": {
+            "cost": ["15", "gp"],
+            "damage": ["1d8", "slashing"],
+            "weight": ["3", "lb"],
+            "properties": [
+                "versatile (1d10)"
+            ]
+        }
     },
     {
-        "_id": "hand_crossbow",
+        "_id": "rapier",
         "meta": "equipment",
-        "parent": "simple",
-        "name": "Hand Crossbow",
-        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd"
+        "parent": "martial",
+        "name": "Rapier",
+        "mechanics": {
+            "cost": ["25", "gp"],
+            "damage": ["1d8", "piercing"],
+            "weight": ["2", "lb"],
+            "properties": [
+                "finesse"
+            ]
+        }
     },
     {
-        "_id": "hand_crossbow",
+        "_id": "shortsword",
         "meta": "equipment",
-        "parent": "simple",
-        "name": "Hand Crossbow",
-        "text": "TEXTO PARA WEAPONS, provavelmente deveria ir buscar algo no livro do dnd"
+        "parent": "martial",
+        "name": "Shortsword",
+        "mechanics": {
+            "cost": ["10", "gp"],
+            "damage": ["1d6", "piercing"],
+            "weight": ["2", "lb"],
+            "properties": [
+                "finesse",
+                "light"
+            ]
+        }
     }
 ]

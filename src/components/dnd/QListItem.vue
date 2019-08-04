@@ -42,13 +42,22 @@
 
             <x-input 
                 class="input" 
-                placeholder="Input"/>
+                placeholder="Input"
+                type="mention"
+                @input="input_value = $event"
+                @mention="handleMention"
+                :source="remoteSearch"
+                :mentionOptions="mentionOptions"
+                @keypress.enter="handleEnter"/>
         </template>
     </div>
 </template>
 
 
 <script>
+import utils from '@/assets/utils/resources.js'
+import axios from 'axios'
+
 import XInputVue from '../utils/XInput.vue';
 
 import {
@@ -81,13 +90,38 @@ export default {
     },
     data() {
         return {
-            focused: false
+            focused: false,
+            api: [],
+            mentionOptions: {
+                menuItemTemplate: function (item) {
+                    return `<div>${utils.name(item.original)}</div><span>${item.original.path[0] || item.original.path || ''}</span>`
+                }
+            },
+            input_value: ''
         }
     },
     methods: {
         handleClick: function(event){
             this.focused = !this.focused
             this.$emit('click', event)
+        },
+        handleInput: function(event){
+        },
+        remoteSearch: function(text, callback){
+            axios.get(`http://localhost:3000?q=${text}&max=10`)
+                .then(res => {
+                    callback(res.data)
+                })
+                .catch(err => {
+                    console.log('ERROR ON FETCH', err)
+                })
+        },
+        handleMention: function(event){
+            console.log('MENTION', event)
+        },
+        handleEnter: function(event){
+            event.preventDefault()
+            this.$emit('append', this.input_value)
         },
         editItem: function({reset}){
             console.log('EDIT', reset)
@@ -97,20 +131,7 @@ export default {
             console.log('REMOVE', reset)
             reset()
         },
-        name(item){
-            if(typeof item == 'string') return item
-            else if(typeof item == 'object') {
-                if(item.meta == 'command'){
-                    if(item.choose != undefined){
-                        return `Choose ${item.choose} from <${item.from}>`
-                    }else{
-                        return '<Unknown command>'
-                    }
-                }
-
-                return item.name || undefined
-            }
-        }
+        name: utils.name 
     }
 }
 </script>
@@ -143,11 +164,11 @@ export default {
             &:first-of-type
                 padding-top: 0
                 
-            & /deep/ input
+            & /deep/ div[contenteditable="true"]
                 font-size: 0.9em
                 border: 0
                 background-color: #f7f7f7
-                padding: 20px 20px
+                padding: 10px 20px
                 width: 100%
                 border-radius: 0 0 10px 10px
                 text-align: center

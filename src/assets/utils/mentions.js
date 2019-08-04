@@ -1,5 +1,5 @@
 function template(item){
-    return `<span contenteditable="false" class="mention" onclick="eval('window.bus.$emit(\\'mention-click\\', \\'${JSON.stringify(item.original).replace(/\"/gmi, "\\\\\\'")}\\')')">@${item.original.value}</span>`;
+    return `<span contenteditable="false" class="mention" onclick="eval('window.bus.$emit(\\'mention-click\\', \\'${JSON.stringify(item.original).replace(/\"/gmi, "\\\\\\'")}\\')')">@${item.original.path[0] || item.original.path}</span>`;
 }
 
 function parse(text, source=undefined){

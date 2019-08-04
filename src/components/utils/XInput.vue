@@ -1,8 +1,10 @@
 <template>
     <component 
+        ref="root"
         :is="tag"
         class="x-input"
-        :class="{active: isReactive ? !(value !== 0 && !value) : false, box: isBox, transparent: isTransparent}">
+        :class="{active: isReactive ? !(value !== 0 && !value) : false, box: isBox, transparent: isTransparent}"
+        :data-uid="_uid">
 
         <template v-if="label != null && label != undefined">
             <template v-if="isBox">
@@ -106,26 +108,51 @@ export default {
             type: Object,
             default: () => ({})
         },
-        source: {
-            type: Array,
-            default: () => ([])
-        }
+        source: undefined
     },
     data() {
+        class Container{
+            constructor(uid){
+                this.uid = uid
+            }
+
+            get element(){
+                return window.document.querySelector(`[data-uid="${this.uid}"]`)
+            }
+
+            appendChild(node){
+                this.element.appendChild(node)
+                return node
+            }
+
+            getBoundingClientRect(){
+                return this.element.getBoundingClientRect()
+            }
+
+            get offsetHeight(){
+                return this.element.offsetHeight
+            }
+        }
+
+        let container
+        if(this.type == 'mention') {
+            container = new Container(this._uid)
+        }
+
         return {
-            tributeOptions: Object.assign({}, {
+            uid: this._uid,
+            tributeOptions: !this.type == 'mention' ? {} : Object.assign({}, {
                 trigger: "@",
                 positionMenu: true,
                 values: (text, callback) => {
-                    callback(this.source || [])
+                    this.source(text, callback)
                 },
+                fillAttr: 'name',
                 selectTemplate: mentions.template,
                 lookup: function(entry, value){
-                    return entry.key + entry.value
+                    return entry.name + ',' + entry.path.filter(i => i == 0 || !!i).join(',')
                 },
-                menuItemTemplate: function (item) {
-                    return item.original.key;
-                },
+                menuContainer: container
             }, this.mentionOptions || {}),
             isEmpty: this.value !== 0 && !this.value
         }
@@ -203,6 +230,7 @@ export default {
         },
         handleMention(event){
             this.valueModel = event.target.innerText
+            this.$emit('mention', event)
         },
         handleMentionClick(event){
             this.$emit('mention-click', event)
@@ -215,26 +243,6 @@ export default {
     }
 }
 </script>
-
-<style lang="sass">
-    body
-        > .tribute-container
-            // padding: 10px 5px
-
-            > ul
-                > li
-                    padding: 7.5px 10px
-                    cursor: pointer
-                    background: rgba(lightgray, 0.25)
-
-                    &.highlight
-                        background: rgba(green, 0.2)
-                        font-weight: bold
-
-                        &:before
-                            font-weight: bold
-</style>
-
 
 <style lang="sass" scoped>
     $box-width: 30px
@@ -307,6 +315,45 @@ export default {
                 font-weight: bold
                 cursor: pointer
                 padding: 0 3px
+
+    .x-input
+        > /deep/ .tribute-container
+                // position: absolute
+                // top: 0
+                // left: 0
+                // height: auto
+                // max-height: 300px
+                // overflow-y: scroll
+                // display: block
+                // z-index: 999999
+                // text-align: left
+
+                > ul
+                    background: white
+                    text-align: left
+
+                    > li
+                        padding: 7.5px 10px
+                        cursor: pointer
+                        background: rgba(lightgray, 0.25)
+                        text-align: left
+
+                        span
+                            font-size: 0.75em
+                            opacity: 0.75
+
+                            &::before
+                                content: '@'
+
+                        &.highlight
+                            background: rgba(green, 0.2)
+                            font-weight: bold
+
+                            span
+                                font-weight: 300
+
+                            &:before
+                                font-weight: bold
 
 </style>
 

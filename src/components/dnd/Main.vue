@@ -44,7 +44,7 @@
                     :autofill="proficiencies"
                     :value="sheet.stats.proficiencies.others"
                     :cols="2"
-                    @input="(value, index) => set_proficiencies({value, index})"/>
+                    @input="(value, index, key) => set_proficiencies({value, index, key})"/>
             </section>
         </section>
         <section>
@@ -147,7 +147,7 @@ export default {
             proficiency_bonus: 'sheet/proficiency_bonus',
             passive_proficiency: 'sheet/passive_proficiency',
             proficiencies: 'sheet/proficiencies',
-        })
+        }),
     },
     methods: {
         ...mapMutations({

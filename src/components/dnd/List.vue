@@ -42,15 +42,19 @@
                     :title="key"
                     :value="compiled[key]"
                     class="item"
-                    @click="handleClick">
+                    @click="handleClick"
+                    @append="createSubItem($event, key)">
                 </q-list-item>
 
             </template>
-        </div>
+        </div> 
     </div>
 </template>
 
 <script>
+
+import utils from '@/assets/utils/resources.js'
+
 import XInputVue from '../utils/XInput.vue';
 import QListItem from './QListItem.vue'
 import axios from 'axios';
@@ -126,12 +130,22 @@ export default {
         }
     },
     watch: {
-        value: function(val){
-            this.compile(this.$props.autofill, val)
+        value: {
+            handler: function(val){
+                console.log('update val', val)
+                this.compile(this.$props.autofill, val)
+            },
+            deep: true
         },
-        autofill: function(val){
-            this.compile(val, this.$props.value)
+        autofill: {
+            handler: function(val){
+                this.compile(val, this.$props.value)
+            },
+            deep: true
         }
+    },
+    mounted(){
+        this.compile(this.$props.autofill, this.$props.value)
     },
     methods: {
         compile: async function(_autofill, _value){
@@ -139,29 +153,47 @@ export default {
             // o que a gente tem que fazer aqui é passar esse dado para um data
             // e loopar pelos items e retornar os slugs
             // basicamente o compile
+            console.log('called compile', _autofill, _value)
             
             let _fn = editable => {
+                let _fetch = async (item) => {
+                    let result
+
+                    if(item[0] == `@`)
+                        result = (await axios.get(`http://localhost:3000/?q=${item.substr(1)}`)).data
+                    else
+                        result = []
+
+                    result = result.map(o => ({
+                        ...o,
+                        editable
+                    }))
+
+                    if(result.length > 0){
+                        return result.length == 1 ? result[0] : result
+                    }else{
+                        return [{
+                            slug: item,
+                            name: `Unknown Name (${item})`,
+                            text: `Unknown Description (${item})`,
+                            editable
+                        }]
+                    }
+                }
+                
                 return async item => {
                     if(typeof item == 'string'){
-                        let result
-
-                        if(item[0] == `@`)
-                            result = (await axios.get(`http://localhost:3000/?q=${item.substr(1)}`)).data
-                        else
-                            result = []
-
-                        if(result.length > 0){
-                            return Object.assign({}, result[0], {editable})
-                        }else{
-                            return{
-                                slug: item,
-                                name: `Unknown Name (${item})`,
-                                text: `Unknown Description (${item})`,
-                                editable
-                            }
-                        }
+                        return _fetch(item)
                     }else if(typeof item == 'object'){
-                        return item
+                        if(item.meta == 'command'){
+                            let _from = await _fetch(item.from)
+                            return Object.assign({}, item, {
+                                from: _from
+                            })
+                        }
+                        else{
+                            return item
+                        }
                     }
                 }
             }
@@ -185,6 +217,7 @@ export default {
                 }
             }
 
+            console.log('compiled nice', obj)
             this.compiled = obj
         },
         realIndex: function(index, col){
@@ -239,23 +272,17 @@ export default {
                 text: undefined
             }, this.$props.value.length)
         },
+        createSubItem(value, key){
+            this.$emit('input', {
+                name: value,    
+                slug: undefined,
+                text: undefined
+            }, this.$props.value[key].length, key)
+        },
         wtf(e, index){
             this.$props.value[index].text = e
         },
-        name(item){
-            if(typeof item == 'string') return item
-            else if(typeof item == 'object') {
-                if(item.meta == 'command'){
-                    if(item.choose != undefined){
-                        return `Choose ${item.choose} from <${item.from}>`
-                    }else{
-                        return '<Unknown command>'
-                    }
-                }
-
-                return (item.name || {}).en || item.name || undefined
-            }
-        }
+        name: utils.name
     }
 }
 </script>
