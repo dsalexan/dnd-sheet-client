@@ -5,11 +5,11 @@
         </section>
         <section class="misc">
             <ul v-if="type == 'system'">
-                <x-input transparent="false" tag="li" label="Class & Level" placeholder="Unknown 1" :value="sheet.misc.class_level" @input="set_class_level"></x-input>
+                <x-input type="mention" :source="remoteSearch('class')" :mentionOptions="mentionOptions" tag="li" label="Class & Level" placeholder="Unknown 1" :value="sheet.misc.class_level" @input="set_class_level"></x-input>
 
-                <x-input transparent="false" tag="li" label="Background" placeholder="Acolyte" :value="sheet.misc.background" @input="set_background"></x-input>
-                <x-input transparent="false" tag="li" label="Player Name" placeholder="John Doe" v-model="sheet.misc.player"></x-input>
-                <x-input transparent="false" tag="li" label="Race" placeholder="Human" :value="sheet.misc.race" @input="set_race"></x-input>
+                <x-input  tag="li" label="Background" placeholder="Acolyte" :value="sheet.misc.background" @input="set_background"></x-input>
+                <x-input  tag="li" label="Player Name" placeholder="John Doe" v-model="sheet.misc.player"></x-input>
+                <x-input  tag="li" label="Race" placeholder="Human" :value="sheet.misc.race" @input="set_race"></x-input>
                 <x-input transparent="false" tag="li" label="Alignment" placeholder="True Neutral" v-model="sheet.misc.alignment"></x-input>
                 <x-input transparent="false" tag="li" label="Experience Points" placeholder="0" v-model="sheet.misc.experience_points"></x-input>
             </ul>
@@ -32,6 +32,9 @@
 </template>
 
 <script>
+import axios from 'axios'
+import utils from '@/assets/utils/resources'
+
 import {mapState, mapActions} from 'vuex'
 
 import XInput from '@/components/utils/XInput.vue'
@@ -50,12 +53,32 @@ export default {
     computed: mapState([
         'sheet'
     ]),
+    data(){
+        return{
+            mentionOptions: {
+                menuItemTemplate: function (item) {
+                    return `<div>${utils.name(item.original)}</div><span>${item.original.path[0] || item.original.path || ''}</span>`
+                }
+            }
+        }
+    },
     methods: {
         ...mapActions({
             set_class_level: 'sheet/SET_CLASS_LEVEL',
             set_race: 'sheet/SET_RACE',
             set_background: 'sheet/SET_BACKGROUND'
-        })   
+        }),
+        remoteSearch: function(meta, query){
+            return (text, callback) => {
+                axios.get(`http://localhost:3000/${meta}?q=${text}&max=10${query ? '&query=' + query : ''}`)
+                    .then(res => {
+                        callback(res.data)
+                    })
+                    .catch(err => {
+                        console.log('ERROR ON FETCH', err)
+                    })
+            }
+        },
     }
 }
 </script>
@@ -118,16 +141,37 @@ export default {
                     margin-bottom: 5px
                     margin-top: 5px
 
-                input
+                & > input
                     border: 0
                     border-bottom: 1px solid $faded
 
                     &:focus
                         border-bottom: 1px solid $rich
 
+                & > div > div[contenteditable="true"]
+                    border: black
+                    position: relative
+                    padding-bottom: 1px
+                    
+                    &:after
+                        content: ''
+                        width: 100%
+                        background: $faded
+                        height: 1px
+                        position: absolute
+                        bottom: 0
+
+                    &:focus:after
+                        background: $rich
+                        
+
                 &.active
-                    input
+                    & > input
                         border-bottom: 1px solid $faded
+
+                    & > div > div[contenteditable="true"]                        
+                        &:after
+                            background: $faded
         
     
 </style>

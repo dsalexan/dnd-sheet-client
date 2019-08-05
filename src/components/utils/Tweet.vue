@@ -1,7 +1,7 @@
 <template>
     <div class="tweet">
         {{ texto }}
-        <x-input placeholder="XInput" type="mention" @input="texto = $event" :value="texto" :source="api.data"></x-input>
+        <x-input placeholder="XInput" type="mention" @input="texto = $event" :value="texto" :source="remoteSearch" :mentionOptions="mentionOptions"></x-input>
 
         <q-dialog v-model="dialog.open" seamless>
           <q-card style="width: 200px">
@@ -24,6 +24,7 @@
 
 <script>
 import axios from 'axios'
+import utils from '@/assets/utils/resources'
 import bus from '@/bus'
 import XInputVue from './XInput.vue';
 
@@ -60,6 +61,11 @@ export default {
       api: {
         loading: false,
         data: []
+      },
+      mentionOptions: {
+          menuItemTemplate: function (item) {
+              return `<div>${utils.name(item.original)}</div><span>${item.original.path[0] || item.original.path || ''}</span>`
+          }
       }
     };
   },
@@ -80,7 +86,16 @@ export default {
           this.api.loading = false
           console.log('ERROR', err)
         })
-    }
+    },
+      remoteSearch: function(text, callback){
+        axios.get(`http://localhost:3000/?q=${text}&max=10`)
+            .then(res => {
+                callback(res.data)
+            })
+            .catch(err => {
+                console.log('ERROR ON FETCH', err)
+            })
+      },
   },
   mounted(){
     bus.$on('mention-click', (event) => {
@@ -89,7 +104,7 @@ export default {
     })
   },
   created(){
-    this.getDataFromApi()
+    // this.getDataFromApi()
   }
 };
 </script>

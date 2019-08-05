@@ -61,6 +61,38 @@ import mentions from '@/assets/utils/mentions.js'
 
 import VueTribute from "vue-tribute"
 
+function getLastTextNodeIn(node) {
+    while (node) {
+        if (node.nodeType == 3) {
+            return node;
+        } else {
+            node = node.lastChild;
+        }
+    }
+}
+
+function isRangeAfterNode(range, node) {
+    
+    var nodeRange, lastTextNode;
+    if (range.compareBoundaryPoints) {
+        nodeRange = document.createRange();
+        lastTextNode = getLastTextNodeIn(node);
+        if(lastTextNode)
+            nodeRange.selectNodeContents(lastTextNode);
+        nodeRange.collapse(false);
+        return range.compareBoundaryPoints(range.START_TO_END, nodeRange) > -1;
+    } else if (range.compareEndPoints) {
+        if (node.nodeType == 1) {
+            nodeRange = document.body.createTextRange();
+            nodeRange.moveToElementText(node);
+            nodeRange.collapse(false);
+            return range.compareEndPoints("StartToEnd", nodeRange) > -1;
+        } else {
+            return false;
+        }
+    }
+}
+
 export default {
     name: 'x-input',
     components: {
@@ -235,6 +267,71 @@ export default {
         handleMentionClick(event){
             this.$emit('mention-click', event)
         },
+        handleDelete(event){
+            // console.log('DELETE', event)
+
+            var sel, range, node, nodeToDelete, nextNode, nodeRange;
+            if (event.keyCode == 8 || event.keyCode == 46) {
+                event.preventDefault()
+
+                // Get the DOM node containing the start of the selection
+                if (window.getSelection && window.getSelection().getRangeAt) {
+                    range = window.getSelection().getRangeAt(0);
+                } else if (document.selection && document.selection.createRange) {
+                    range = document.selection.createRange();
+                }
+
+                // console.log('RANGE', range)s
+                
+                if (range) {
+                    node = event.target.lastChild;
+
+                    if( node && node.nodeValue == ""){
+                        node = node.previousSibling;
+                    }
+
+                    // console.log('LAST CHILD', event.target, node)
+
+                    if( node && node.nodeType != 3 ){ // se não for um texto, se for uma tag
+                        while (node) {
+                            if ( isRangeAfterNode(range, node) ) { // ?
+                                nodeToDelete = node;
+                                break;
+                            } else {
+                                node = node.previousSibling;
+                            }
+                        }
+                        
+                        if (nodeToDelete) {                            
+                            let sibling = nodeToDelete.previousSibling
+
+                            console.log('DELETAR TAG NODE', nodeToDelete, range)
+                            event.target.removeChild(nodeToDelete)
+
+                            if(sibling.nodeType == 3 && sibling.length == 0)
+                                event.target.removeChild(sibling)
+                        }		 		 	 		         
+                    }
+                    else if(node){
+                        var index = node.length-1;
+                        if(index > 0){
+                            console.log('DELETE CHAR', `[${node.data}] -> [${node.data.substr(0, node.data.length-1)}]`, `[${node.data[index]}]`)
+                            node.deleteData(index,1);
+                        }else if(index == 0){
+                            // para o length == 1, então quer dizer que o texto é só um caractere
+                            console.log('DELETE CHAR/TEXT NODE', node, `[${node.data}] -> [${node.data.substr(0, node.data.length-1)}]`, `[${node.data[index]}]`)
+                            node.deleteData(index, 1)
+                            event.target.removeChild(node);
+                        }else{
+                            console.log('DELETE TEXT NODE', node)
+                            event.target.removeChild(node)
+                        }
+                    }
+                    return false;
+                }
+                
+            }
+        },
         empty(){
             this.isEmpty = true
             if(this.$props.type == 'mention'){
@@ -322,7 +419,7 @@ export default {
                     opacity: 0
 
                 &:focus
-                    padding-top: 15px
+                    // padding-top: 15px
 
         .content-editable
             border: 1px lightgray solid
