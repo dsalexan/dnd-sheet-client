@@ -41,6 +41,7 @@
                 <label>Other Proficiencies and Languages</label>
                 <dnd-list 
                     label="Proficiency"
+                    query="{ 'meta': {'$not': { '$eq': 'feature' }} }"
                     :autofill="proficiencies"
                     :value="sheet.stats.proficiencies.others"
                     :cols="2"
@@ -100,6 +101,7 @@
                 <dnd-list 
                     :expansion="true"
                     label="Feature"
+                    meta="feature"
                     :autofill="sheet.subscriptions.features"
                     :value="sheet.features"
                     @input="(value, index) => set_features({value, index})"/>

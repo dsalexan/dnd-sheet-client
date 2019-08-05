@@ -83,6 +83,14 @@ export default {
         value: {
             type: Array,
             default: () => ([])
+        },
+        meta: {
+            type: String,
+            default: ''
+        },
+        query: {
+            type: String,
+            default: undefined
         }
     },
     components: {
@@ -109,7 +117,7 @@ export default {
         handleInput: function(event){
         },
         remoteSearch: function(text, callback){
-            axios.get(`http://localhost:3000?q=${text}&max=10`)
+            axios.get(`http://localhost:3000/${this.$props.meta}?q=${text}&max=10${this.$props.query ? '&query=' + this.$props.query : ''}`)
                 .then(res => {
                     callback(res.data)
                 })

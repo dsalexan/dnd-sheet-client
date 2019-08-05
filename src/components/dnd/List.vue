@@ -20,11 +20,18 @@
                         :label="name(item)"
                         :group="'created'"
                         popup
-                        class="editable">
+                        :class="{editable: !item._id, 'header-only': !!item._id && item.text !== 0 && !item.text}">
 
-                        <x-input placeholder="Slug" v-model="value[index].slug"></x-input>
+                        <template v-if="!item._id">
+                            <x-input placeholder="Slug" v-model="value[index].slug"></x-input>
 
-                        <x-input v-model="value[index].text" :placeholder="`${label} Description`" type="textarea"></x-input>
+                            <x-input v-model="value[index].text" :placeholder="`${label} Description`" type="textarea"></x-input>
+                        </template>
+                        <template v-else>
+                            <span v-if="item.text" v-html="item.text"></span>
+
+                            <q-btn flat round color="secondary" icon="clear" @click="removeItem(index)"/>   
+                        </template>
 
                     </q-expansion-item>
                 </q-list>
@@ -44,6 +51,8 @@
                 <q-list-item
                     v-for="key in Object.keys(compiled)" :key="key"
                     :title="key"
+                    :meta="meta"
+                    :query="query"
                     :value="compiled[key]"
                     class="item"
                     @click="handleClick"
@@ -98,6 +107,14 @@ export default {
         expansion: {
             type: Boolean,
             default: false
+        },
+        meta: {
+            type: String,
+            default: ''
+        },
+        query: {
+            type: String,
+            default: undefined
         }
     },
     components: {
@@ -159,7 +176,7 @@ export default {
     },
     methods: {
         remoteSearch: function(text, callback){
-            axios.get(`http://localhost:3000?q=${text}&max=10`)
+            axios.get(`http://localhost:3000/${this.$props.meta}?q=${text}&max=10${this.$props.query ? '&query=' + this.$props.query : ''}`)
                 .then(res => {
                     callback(res.data)
                 })
@@ -286,10 +303,6 @@ export default {
             if(target == undefined) return this.grow()
             target.focus()
         },
-        handleDelete: function(event, index){
-            // console.log('DELETE', event, index)
-            if(this.$props.value[index] == '') this.$emit('input', undefined, index)
-        },
         handleClick: function(event){
             this.focused = !this.focused
         },
@@ -318,6 +331,9 @@ export default {
             }
 
             this.$refs.item_creator.empty()
+        },
+        removeItem(index){
+            this.$emit('input', undefined, index)
         },
         createSubItem(value, key){
             this.$emit('input', value, this.$props.value[key].length, key)
