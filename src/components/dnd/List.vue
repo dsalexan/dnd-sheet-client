@@ -24,7 +24,7 @@
 
                         <x-input placeholder="Slug" v-model="value[index].slug"></x-input>
 
-                        <x-input :value="value[index].text" @input="wtf($event, index)" :placeholder="`${label} Description`" type="textarea"></x-input>
+                        <x-input v-model="value[index].text" :placeholder="`${label} Description`" type="textarea"></x-input>
 
                     </q-expansion-item>
                 </q-list>
@@ -32,6 +32,7 @@
                 <q-list>
                     <x-input 
                         class="input" 
+                        ref="item_creator"
                         type="mention"
                         :placeholder="label"
                         :mentionOptions="mentionOptions"
@@ -46,7 +47,8 @@
                     :value="compiled[key]"
                     class="item"
                     @click="handleClick"
-                    @append="createSubItem($event, key)">
+                    @append="createSubItem($event, key)"
+                    @remove="removeSubItem($event, key)">
                 </q-list-item>
 
             </template>
@@ -72,6 +74,7 @@ import {
   Ripple,
   QPopupEdit
 } from 'quasar'
+import { debuglog } from 'util';
 
 export default {
     name: 'dnd-list',
@@ -140,7 +143,6 @@ export default {
     watch: {
         value: {
             handler: function(val){
-                console.log('update val', val)
                 this.compile(this.$props.autofill, val)
             },
             deep: true
@@ -171,7 +173,6 @@ export default {
             // o que a gente tem que fazer aqui é passar esse dado para um data
             // e loopar pelos items e retornar os slugs
             // basicamente o compile
-            console.log('called compile', _autofill, _value)
             
             let _fn = editable => {
                 let _fetch = async (item) => {
@@ -190,12 +191,20 @@ export default {
                     if(result.length > 0){
                         return result.length == 1 ? result[0] : result
                     }else{
-                        return [{
-                            slug: item,
-                            name: `Unknown Name (${item})`,
-                            text: `Unknown Description (${item})`,
-                            editable
-                        }]
+                        if(item[0] == '@')
+                            return {
+                                slug: item,
+                                name: `Unknown Name (${item})`,
+                                text: `Unknown Description (${item})`,
+                                editable
+                            }
+                        else
+                            return {
+                                name: item,
+                                text: `Unknown Description (${item})`,
+                                editable
+                            }
+
                     }
                 }
                 
@@ -235,7 +244,8 @@ export default {
                 }
             }
 
-            console.log('compiled nice', obj)
+            // console.log('COMPILE', 'autofill', _autofill, 'value', _value)
+            // console.log('COMPILED', obj)
             this.compiled = obj
         },
         realIndex: function(index, col){
@@ -284,23 +294,36 @@ export default {
             this.focused = !this.focused
         },
         createItem(value, event){
-            console.log('EVENT', event)
             event.preventDefault()
-            this.$emit('input', {
-                name: value,    
-                slug: undefined,
-                text: undefined
-            }, this.$props.value.length)
+
+            if(value[0] == '@') {
+                let slug = value.trim().replace(/[\n\r]+/gm, '')
+
+                this.remoteSearch(slug.substr(1), data => {
+                    if(data.length > 0)
+                        this.$emit('input', data[0], this.$props.value.length)
+                    else
+                        this.$emit('input', {
+                            name: value,    
+                            slug: undefined,
+                            text: undefined
+                        }, this.$props.value.length)
+                })
+            }else {
+                this.$emit('input', {
+                    name: value,    
+                    slug: undefined,
+                    text: undefined
+                }, this.$props.value.length)
+            }
+
+            this.$refs.item_creator.empty()
         },
         createSubItem(value, key){
-            this.$emit('input', {
-                name: value,    
-                slug: undefined,
-                text: undefined
-            }, this.$props.value[key].length, key)
+            this.$emit('input', value, this.$props.value[key].length, key)
         },
-        wtf(e, index){
-            this.$props.value[index].text = e
+        removeSubItem(index, key){
+            this.$emit('input', undefined, index, key)
         },
         name: utils.name
     }

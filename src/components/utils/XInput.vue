@@ -234,6 +234,15 @@ export default {
         },
         handleMentionClick(event){
             this.$emit('mention-click', event)
+        },
+        empty(){
+            this.isEmpty = true
+            if(this.$props.type == 'mention'){
+                this.$refs.input.innerText = ''
+            }else{
+                this.$refs.input.value = ''
+                this.$refs.input.checked = false
+            }
         }
     },
     watch: {

@@ -388,7 +388,6 @@ export default {
         },
         SET_PROFICIENCIES(state, { value, index, key }){
             console.log('SET PROFS', value, index, key)
-            console.log('profs', state.stats.proficiencies.others)
             if(value == undefined){
                 state.stats.proficiencies.others[key].splice(index, 1)
             }else{
@@ -416,11 +415,11 @@ export default {
         },
         SET_BACKGROUND({ dispatch, state }, value){
             state.misc.background = value
-            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'getters', path: 'background'})
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'background'})
         },
         SET_RACE({ dispatch, state }, value){
             state.misc.race = value
-            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'getters', path: 'race'})
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'race'})
         },
         SET_EQUIPMENT({ dispatch, state }, { value, index }){
             if(value == undefined)
@@ -428,22 +427,25 @@ export default {
             else
                 state.equipment.items.splice(index, 1, value)
 
-            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'state', path: 'equipment.items'})
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'equipment.items'})
         },
         SET_FEATURES({ dispatch, state }, { value, index }){
+            console.log('SET FEATURES', value, index)
             if(value == undefined)
                 state.features.splice(index, 1)
             else
                 state.features.splice(index, 1, value)
-            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'state', path: 'features'})
+            dispatch('UPDATE_SUBSCRIPTIONS', {source: 'features'})
         },
 
-        UPDATE_SUBSCRIPTIONS({ dispatch, state, getters }, { source, path }){
+        UPDATE_SUBSCRIPTIONS({ dispatch, state, getters }, { source }){
             // state.subscriptions 
 
             let meta
             if(source == 'class'){
                 meta = [state.async.class]
+            }else if(source == 'features'){
+                meta = [...Object.values(state.subscriptions.features).reduce((arr, cur) => arr = [...arr, ...cur], []), ...state.features]
             }
 
             for(let m of meta.filter(_ => !!_ && !!_.subscriptions)){
@@ -458,7 +460,7 @@ export default {
             console.log('SUBSCRIPTIONS UPDATED', state.subscriptions)
             // console.log(state.subscriptions)
 
-            dispatch('UPDATE_PROFICIENCIES', {source, path})
+            dispatch('UPDATE_PROFICIENCIES', {source})
         },
         UPDATE_PROFICIENCIES({state, getters}, {source}){
             let classe = state.async.class

@@ -36,12 +36,13 @@
         </q-item>
         <template v-if="focused">
             <div>
-                <q-chip dense square clickable :removable="item.editable"
-                    v-for="(item, index) of value" :key="index">{{ name(item) }}</q-chip>
+                <q-chip dense square clickable :removable="item.editable" @remove="handleRemove(index)"
+                    v-for="(item, index) of value" :key="index">{{ name(item[0] || item) }}</q-chip>
             </div>
 
             <x-input 
-                class="input" 
+                class="input"
+                ref="input"
                 placeholder="Input"
                 type="mention"
                 @input="input_value = $event"
@@ -117,11 +118,18 @@ export default {
                 })
         },
         handleMention: function(event){
-            console.log('MENTION', event)
         },
         handleEnter: function(event){
             event.preventDefault()
-            this.$emit('append', this.input_value)
+
+            this.$emit('append', this.input_value.trim())
+            this.input_value = ''
+            
+            
+            this.$refs.input.empty()
+        },
+        handleRemove: function(index){
+            this.$emit('remove', index)
         },
         editItem: function({reset}){
             console.log('EDIT', reset)
@@ -165,13 +173,15 @@ export default {
                 padding-top: 0
                 
             & /deep/ div[contenteditable="true"]
-                font-size: 0.9em
-                border: 0
-                background-color: #f7f7f7
-                padding: 10px 20px
-                width: 100%
-                border-radius: 0 0 10px 10px
-                text-align: center
+                &.content-editable
+                    font-size: 0.9em
+                    border: 0
+                    background-color: #f7f7f7
+                    padding: 10px 20px
+                    width: 100%
+                    border-radius: 0 0 10px 10px
+                    text-align: center
+                    justify-content: center
 
                 &:disabled
                     background-color: white
