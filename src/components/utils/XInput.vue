@@ -302,13 +302,50 @@ export default {
             color: transparent !important
 
     .v-tribute
-        &.empty .content-editable:not(:focus):before
-            content: attr(placeholder)
-            cursor: text
-            color: darkgray
+        &.empty 
+            .content-editable
+                &:before
+                    content: attr(placeholder)
+                    cursor: text
+                    color: #bbb
+
+                &:focus:before
+                    opacity: 0
+
+                &:focus
+                    padding-top: 15px
 
         .content-editable
             border: 1px lightgray solid
+
+            font: inherit
+            font-style: inherit
+            font-variant-ligatures: inherit
+            font-variant-caps: inherit
+            font-variant-numeric: inherit
+            font-variant-east-asian: inherit
+            font-weight: inherit
+            font-stretch: inherit
+            font-size: inherit
+            line-height: inherit
+            font-family: inherit
+                
+            -webkit-writing-mode: horizontal-tb !important
+            text-rendering: auto
+            color: initial
+            letter-spacing: normal
+            word-spacing: normal
+            text-transform: none
+            text-indent: 0px
+            text-shadow: none
+            display: inline-block
+            text-align: start
+            -webkit-appearance: textfield
+            -webkit-rtl-ordering: logical
+            cursor: text
+
+            display: flex
+            align-items: center
 
             & /deep/ .mention
                 background: rgba(green, 0.1)

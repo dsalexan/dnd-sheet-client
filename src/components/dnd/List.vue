@@ -32,8 +32,11 @@
                 <q-list>
                     <x-input 
                         class="input" 
+                        type="mention"
                         :placeholder="label"
-                        @keyup.enter="createItem($event.target.value)"/>
+                        :mentionOptions="mentionOptions"
+                        :source="remoteSearch"
+                        @keypress.enter="createItem($event.target.innerText, $event)"/>
                 </q-list>
             </template>
             <template v-else>
@@ -105,7 +108,12 @@ export default {
     data(){
         return {
             focused: false,
-            compiled: {}
+            compiled: {},
+            mentionOptions: {
+                menuItemTemplate: function (item) {
+                    return `<div>${utils.name(item.original)}</div><span>${item.original.path[0] || item.original.path || ''}</span>`
+                }
+            },
         }
     },
     computed: {
@@ -148,7 +156,17 @@ export default {
         this.compile(this.$props.autofill, this.$props.value)
     },
     methods: {
+        remoteSearch: function(text, callback){
+            axios.get(`http://localhost:3000?q=${text}&max=10`)
+                .then(res => {
+                    callback(res.data)
+                })
+                .catch(err => {
+                    console.log('ERROR ON FETCH', err)
+                })
+        },
         compile: async function(_autofill, _value){
+            if(this.expansion) return undefined
             // value são os dados da lista
             // o que a gente tem que fazer aqui é passar esse dado para um data
             // e loopar pelos items e retornar os slugs
@@ -265,7 +283,9 @@ export default {
         handleClick: function(event){
             this.focused = !this.focused
         },
-        createItem(value){
+        createItem(value, event){
+            console.log('EVENT', event)
+            event.preventDefault()
             this.$emit('input', {
                 name: value,    
                 slug: undefined,
@@ -326,7 +346,7 @@ export default {
             &:first-of-type
                 padding-top: 0
                 
-            & /deep/ input
+            & /deep/ [contenteditable="true"], & /deep/ input
                 font-size: 0.9em
                 border: 0
                 background-color: #f7f7f7
@@ -334,6 +354,7 @@ export default {
                 width: 100%
                 border-radius: $radius
                 height: 42px
+                text-align: start
 
                 &:disabled
                     background-color: white
