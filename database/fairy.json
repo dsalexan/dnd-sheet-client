@@ -7,40 +7,50 @@
             "features",
             "proficiencies"
         ],
-        "traits": {
-            "ability_score_increase": {
-                "cha": 2,
-                "dex": 1,
-                "str": -1
+        "mechanics": {
+            "traits": {
+                "ability_score_increase": {
+                    "cha": 2,
+                    "dex": 1,
+                    "str": -1
+                },
+                "size": {
+                    "humanoid_form": "medium",
+                    "tiny_form": "tiny"
+                },
+                "speed": {
+                    "humanoid_form": [
+                        "walk 25ft",
+                        "flight 30ft special"
+                    ],
+                    "tiny_form": [
+                        "walk 10ft",
+                        "flight 50ft no-armor "
+                    ]
+                }
             },
-            "size": {
-                "humanoid_form": "medium",
-                "tiny_form": "tiny"
+            "proficiencies": {
+                "languages": {
+                    "common": [
+                        "speak",
+                        "read",
+                        "write"
+                    ],
+                    "sylvan": [
+                        "speak",
+                        "read",
+                        "write"
+                    ]
+                }
             },
-            "speed": {
-                "humanoid_form": [
-                    "walk 25ft",
-                    "flight 30ft special"
-                ],
-                "tiny_form": [
-                    "walk 10ft",
-                    "flight 50ft no-armor "
-                ]
-            }
-        },
-        "proficiencies": {
-            "languages": {
-                "common": [
-                    "speak",
-                    "read",
-                    "write"
-                ],
-                "sylvan": [
-                    "speak",
-                    "read",
-                    "write"
-                ]
-            }
+            "features": [
+                "@fairy/humanoid_fey",
+                "@fairy/faeform",
+                "@fairy/fey_ancestry",
+                "@fairy/gift_of_the_tricky",
+                "@fairy/true_name",
+                "@fairy/feeble"
+            ]
         }
     },
     {
@@ -58,7 +68,7 @@
         "text": "<p>Fae (or fairies) are able to adjust their size in accordance with mood, whim, or environment – a choice between their tiny form or humanoid form. In the tiny form it’s facial traits become much more symmetrical and sharp, butterfly wings burst from the back and the skin color shifts to a aberrant tone (often to a excessively pale white or a dark as night onyx). In the humanoid form a fairy could almostlyr be mistaken for a high elf - if not for their irregular eyes (often entirely black, or with unnaturally large irises in an iridescent rainbow of varying colors) and the wings (not as big proportionally when compared to it’s tiny form) that unfold from their shoulder blades. Fairies can change between Fae form and Humanoid form for a maximum of once between short or long rests. For a extra change before a rest, you gain one point of exhaustion.</p>"
     },
     {
-        "_id": "fey_ancestry",
+        "_id": "fey_ancestry_fairy",
         "meta": "feature",
         "parent": "fairy",
         "name": "Fey Ancestry",
@@ -74,6 +84,7 @@
     {
         "_id": "true_name",
         "meta": "feature",
+        "parent": "fairy",
         "name": "True Name",
         "text": "<p>A fae have advantage in all charisma checks against a creature whose name were freely (not under effect of spells such suggestion) given to the fairy. If a fairy give it’s true name freely to a creature, such creature will have advantage in all charisma checks against the fairy.</p>"
     },

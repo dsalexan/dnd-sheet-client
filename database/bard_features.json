@@ -2,7 +2,7 @@
     {
         "_id": "spellcasting",
         "meta": "feature",
-        "parent": "brd",
+        "parent": "bard",
         "name": "Spellcasting",
         "mechanics": {
             "regain_slots": "on long_rest",

@@ -29,7 +29,7 @@
                     {
                         "meta": "command",
                         "choose": 3,
-                        "from": "@tools"
+                        "from": "@tools/*"
                     }
                 ],
                 "saves": [
