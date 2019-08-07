@@ -5,7 +5,9 @@
         "name": "Entertainer",
         "subscriptions": [
             "features",
-            "proficiencies",
+            "proficiencies"
+        ],
+        "injections": [
             "equipment"
         ],
         "mechanics": {
@@ -23,28 +25,30 @@
                     }
                 ]
             },
-            "equipment": [
-                {
-                    "meta": "command",
-                    "choose": 1,
-                    "from": "@tool/music/*"
-                },
-                "Favor of an Admirer",
-                {
-                    "meta": "equipment",
-                    "name": "Costume",
-                    "slug": "costume"
-                },
-                "@adventuring/belt_pouch",
-                {
-                    "meta": "treasure",
-                    "name": "Gold Coins",
-                    "slug": "gp",
-                    "mechanics": {
-                        "value": 15
+            "equipment": {
+                "items": [
+                    {
+                        "meta": "command",
+                        "choose": 1,
+                        "from": "@tool/music/*"
+                    },
+                    "Favor of an Admirer",
+                    {
+                        "meta": "equipment",
+                        "name": "Costume",
+                        "slug": "costume"
+                    },
+                    "@adventuring/belt_pouch"
+                ],
+                "treasure": [
+                    {
+                        "slug": "@gp",
+                        "mechanics": {
+                            "value": 15
+                        }
                     }
-                }
-            ],
+                ]
+            },
             "features": [
                 "@entertainer/by_popular_demand"
             ]

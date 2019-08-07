@@ -9,8 +9,10 @@
         "subscriptions": [
             "features",
             "proficiencies",
-            "equipment",
             "spells"
+        ],
+        "injections": [
+            "equipment"
         ],
         "mechanics": {
             "hit_dice": "1d8",
