@@ -40,7 +40,7 @@
                     {
                         "meta": "command",
                         "choose": 3,
-                        "from": "@skill"
+                        "from": "@skill/*"
                     }
                 ]
             },
