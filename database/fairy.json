@@ -30,18 +30,24 @@
                 }
             },
             "proficiencies": {
-                "languages": {
-                    "common": [
-                        "speak",
-                        "read",
-                        "write"
-                    ],
-                    "sylvan": [
-                        "speak",
-                        "read",
-                        "write"
-                    ]
-                }
+                "languages": [
+                    {
+                        "slug": "@language/common",
+                        "mechanics": {
+                            "read": true,
+                            "write": true,
+                            "speak": true
+                        }
+                    },
+                    {
+                        "slug": "@language/sylvan",
+                        "mechanics": {
+                            "read": true,
+                            "write": true,
+                            "speak": true
+                        }
+                    }
+                ]
             },
             "features": [
                 "@fairy/humanoid_fey",
