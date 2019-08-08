@@ -39,12 +39,12 @@
 
             <section class="otherprofs textblock">
                 <label>Other Proficiencies and Languages</label>
-                <dnd-list 
+                <dnd-panel 
                     label="Proficiency"
-                    query="{ 'meta': {'$not': { '$eq': 'feature' }} }"
-                    :autofill="proficiencies"
-                    :value="sheet.stats.proficiencies.others"
                     :cols="2"
+                    query="{ 'meta': {'$not': { '$eq': 'feature' }} }"
+                    :base="['armor', 'weapons', 'tools', 'languages']"
+                    :value="sheet.async.proficiencies"
                     @input="(value, index, key) => set_proficiencies({value, index, key})"/>
             </section>
         </section>
@@ -92,7 +92,13 @@
                 </div>
             </section>
             <section class="equipment">
-                <dnd-equipment transparent="false" v-model="sheet.equipment"></dnd-equipment>
+                <dnd-equipment 
+                    transparent="false"
+                    :coins="coins"
+                    :value="items"
+                    @input="(value, index) => set_equipment({value, index})"
+                    @remove="(index, parent, _id) => remove_equipment({index, parent, _id})"
+                    @coin="(value, key) => set_coin({value, key})" />
             </section>
         </section>
         <section>
@@ -101,9 +107,8 @@
                 <dnd-list 
                     :expansion="true"
                     label="Feature"
+                    :value="sheet.async.features"
                     meta="feature"
-                    :autofill="sheet.subscriptions.features"
-                    :value="sheet.features"
                     @input="(value, index) => set_features({value, index})"/>
             </section>
         </section>
@@ -116,11 +121,14 @@ import { mapState, mapGetters, mapActions, mapMutations } from 'vuex'
 
 import { attributes, skills } from '@/assets/rules/dnd/5e'
 
+import { compile } from '@/assets/utils/resources'
+
 import Scores from '@/components/dnd/Scores.vue'
 import Proficiency from '@/components/dnd/Proficiency.vue'
 import DeathSaves from '@/components/dnd/DeathSaves.vue'
 import Equipment from '@/components/dnd/Equipment.vue'
 import List from '@/components/dnd/List.vue'
+import Panel from '@/components/dnd/Panel.vue'
 
 import XInput from '@/components/utils/XInput.vue'
 
@@ -132,6 +140,7 @@ export default {
         'dnd-death-saves': DeathSaves,
         'dnd-equipment': Equipment,
         'dnd-list': List,
+        'dnd-panel': Panel,
         'x-input': XInput
     },
     data(){
@@ -149,15 +158,17 @@ export default {
             proficiency_bonus: 'sheet/proficiency_bonus',
             passive_proficiency: 'sheet/passive_proficiency',
             proficiencies: 'sheet/proficiencies',
+            coins: 'sheet/coins',
+            items: 'sheet/items_with_quantity'
         }),
     },
     methods: {
-        ...mapMutations({
-            set_proficiencies: 'sheet/SET_PROFICIENCIES'
-        }),
         ...mapActions({
             set_equipment: 'sheet/SET_EQUIPMENT',
-            set_features: 'sheet/SET_FEATURES'
+            set_features: 'sheet/SET_FEATURES',
+            set_proficiencies: 'sheet/SET_PROFICIENCIES',
+            set_coin: 'sheet/SET_COIN',
+            remove_equipment: 'sheet/REMOVE_EQUIPMENT'
         })
     }
 }

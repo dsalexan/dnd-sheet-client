@@ -46,37 +46,37 @@
                     }
                 ]
             },
-            "equipment": [
-                {
-                    "meta": "command",
-                    "choose": 1,
-                    "from": [
-                        "@weapon/rapier",
-                        "@weapon/longsword",
-                        "@weapon/simple"
-                    ]
-                },
-                {
-                    "meta": "command",
-                    "choose": 1,
-                    "from": [
-                        "@pack/diplomats_pack",
-                        "@pack/entertrainers_pack"
-                    ]
-                },
-                {
-                    "meta": "command",
-                    "choose": 1,
-                    "from": [
-                        "@musical_instruments/lute",
-                        "@musical_instruments/all"
-                    ]
-                },
-                [
+            "equipment": {
+                "items": [
+                    {
+                        "meta": "command",
+                        "choose": 1,
+                        "from": [
+                            "@weapon/rapier",
+                            "@weapon/longsword",
+                            "@weapon/simple"
+                        ]
+                    },
+                    {
+                        "meta": "command",
+                        "choose": 1,
+                        "from": [
+                            "@pack/diplomats_pack",
+                            "@pack/entertrainers_pack"
+                        ]
+                    },
+                    {
+                        "meta": "command",
+                        "choose": 1,
+                        "from": [
+                            "@musical_instruments/lute",
+                            "@musical_instruments/all"
+                        ]
+                    },
                     "@armor/lether_armor",
                     "@weapon/dagger"
                 ]
-            ],
+            },
             "table": [
                 {
                     "features": [

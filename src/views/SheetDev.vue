@@ -1,6 +1,5 @@
 <template>
     <div class="sheet-dev">
-        {{ sheet }} - 
         <button @click="reset_sheet">Reset</button>
         <form class="charsheet">
             <dnd-header />

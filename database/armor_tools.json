@@ -1,5 +1,11 @@
 [
     {
+        "_id": "adventuring_gear",
+        "meta": "equipment",
+        "name": "Adventuring Gear",
+        "slug": "adventuring"
+    },
+    {
         "_id": "armor",
         "meta": "equipment",
         "name": "Armor",
@@ -16,6 +22,7 @@
     {
         "_id": "tool",
         "meta": "equipment",
+        "parent": "adventuring_gear",
         "name": "Tool",
         "text": "<p>A tool helps you to do something you couldn’t otherwise do, such as craft or repair an item, forge a document, or pick a lock. Your race, class, Background, or feats give you proficiency with certain tools. Proficiency with a tool allows you to add your Proficiency Bonus to any ability check you make using that tool. Tool use is not tied to a single ability, since proficiency with a tool represents broader knowledge of its use. For example, the GM might ask you to make a Dexterity check to carve a fine detail with your woodcarver’s tools, or a Strength check to make something out of particularly hard wood.</p>"
     },
@@ -35,6 +42,28 @@
         "mechanics": {
             "cost": ["50", "gp"],
             "weight": ["8", "lb"]
+        }
+    },
+    {
+        "_id": "disguise_kit",
+        "meta": "equipment",
+        "parent": "artisans_tools",
+        "name": "Disguise Kit",
+        "text": "<p>This pouch of cosmetics, hair dye, and small props lets you create disguises that change your physical appearance. Proficiency with this kit lets you add your Proficiency Bonus to any Ability Checks you make to create a visual disguise.</p>",
+        "mechanics": {
+            "weight": ["3", "lb"],
+            "price": ["25", "gp"]
+        }
+    },
+    {
+        "_id": "belt_pouch",
+        "parent": "adventuring_gear",
+        "meta": "equipment",
+        "name": "Belt Pouch",
+        "text": "<p>A cloth or leather pouch can hold up to 20 Sling bullets or 50 Blowgun Needles, among other things. A compartmentalized pouch for holding spell Components is called a Component pouch. A pouch can hold up to 1/5 cubic foot or 6 pounds of gear.</p>",
+        "mechanics": {
+            "weight": ["0.5", "lb"],
+            "price": ["1", "gp"]
         }
     }
 ]

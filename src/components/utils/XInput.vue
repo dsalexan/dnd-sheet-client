@@ -478,8 +478,9 @@ export default {
                     > li
                         padding: 7.5px 10px
                         cursor: pointer
-                        background: rgba(lightgray, 0.25)
+                        background: rgb(245, 245, 245)
                         text-align: left
+                        width: auto
 
                         span
                             font-size: 0.75em
@@ -489,7 +490,7 @@ export default {
                                 content: '@'
 
                         &.highlight
-                            background: rgba(green, 0.2)
+                            background: rgb(204, 230, 204)
                             font-weight: bold
 
                             span

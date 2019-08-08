@@ -36,8 +36,11 @@
         </q-item>
         <template v-if="focused">
             <div>
-                <q-chip dense square clickable :removable="item.editable" @remove="handleRemove(index)"
-                    v-for="(item, index) of value" :key="index">{{ name(item[0] || item) }}</q-chip>
+                <q-chip dense square clickable
+                    v-for="(item, index) of non_editables" :key="`ne${index}`">{{ name(item[0] || item) }}</q-chip>
+                    
+                <q-chip dense square clickable :removable="true" @remove="handleRemove(index)"
+                    v-for="(item, index) of editables" :key="`e${index}`">{{ name(item[0] || item) }}</q-chip>
             </div>
 
             <x-input 
@@ -100,13 +103,20 @@ export default {
     data() {
         return {
             focused: false,
-            api: [],
             mentionOptions: {
                 menuItemTemplate: function (item) {
                     return `<div>${utils.name(item.original)}</div><span>${item.original.path[0] || item.original.path || ''}</span>`
                 }
             },
             input_value: ''
+        }
+    },
+    computed: {
+        editables(){
+            return this.$props.value.filter(i => i._source == 'custom')
+        },
+        non_editables(){
+            return this.$props.value.filter(i => i._source !== 'custom')
         }
     },
     methods: {
