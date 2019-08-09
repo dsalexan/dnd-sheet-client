@@ -34,7 +34,7 @@
                         <template v-slot:header>
 
                             <q-item-section side>
-                                <q-icon class="remove" name="remove" color="gray" clickable @click="removeItem(index)"/>
+                                <q-icon class="remove" name="remove" color="gray" clickable @click="removeItem(index, undefined, undefined, quantity(item))"/>
                             </q-item-section>
 
                             <q-separator vertical inset />
@@ -47,7 +47,10 @@
                         <q-list dense>
                             <q-item clickable v-for="(subitem, subindex) of composition(item)" :key="subindex">
                                 <q-item-section side>
-                                    <q-icon class="remove" name="remove" color="gray" style="font-size: 1.1rem; width: 1.5rem;" clickable @click="removeItem(subindex, index, subitem._id)"/>
+                                    <q-icon class="remove" name="remove" color="gray" style="font-size: 1.1rem; width: 1.5rem;" 
+                                        clickable 
+                                        @click="removeItem(composition(item).length, index, subitem._id)"
+                                        :disable="quantity(subitem) != undefined"/>
                                 </q-item-section>
 
                                 <q-separator vertical inset />
@@ -84,6 +87,7 @@ import {
   QItemLabel,
   QSeparator
 } from 'quasar'
+import { debuglog } from 'util';
 
 export default {
     name: 'dnd-equipment',
@@ -144,6 +148,10 @@ export default {
             if(item.meta == 'command') return undefined
             return `x${(item.mechanics || {quantity: 1}).quantity}`
         },
+        quantity: function(item){
+            if(item.meta == 'command') return undefined
+            return (item.mechanics || {quantity: 1}).quantity
+        },
         composition: function(item){
             return (item.mechanics || {composition: []}).composition
         },
@@ -154,8 +162,8 @@ export default {
                 return utils.name(item)
             }
         },
-        removeItem: function(index, parent, _id){
-            this.$emit('remove', index, parent, _id)
+        removeItem: function(index, parent, _id, quantity){
+            this.$emit('remove', index, parent, _id, quantity)
         },
         remoteSearch: function(text, callback){
             axios.get(`http://localhost:3000/equipment?q=${text}&max=10${this.$props.query ? '&query=' + this.$props.query : ''}`)

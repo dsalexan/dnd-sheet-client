@@ -502,9 +502,9 @@ export default {
 
                 if(reqRes == undefined) return undefined
                 else{
-                    let _data = Object.assign({}, srcRes instanceof Object ? _.cloneDeep(srcRes) : {})
+                    let _data = srcRes instanceof Object ? _.cloneDeep(srcRes) : {}
                     _.mergeWith(_data, reqRes, (objValue, srcValue) => {
-                        if (_.isArray(objValue)) return objValue.concat(srcValue)
+                        if (_.isArray(srcValue)) return srcValue.concat(objValue)
                     })
 
                     return _data
@@ -513,7 +513,6 @@ export default {
 
             let data = {}
 
-            
             for(let source in obj){
                 data[source] = {}
             
@@ -699,23 +698,23 @@ export default {
                 }
             }
         },
-        async REMOVE_EQUIPMENT({ dispatch, state }, { index, parent, _id }){
-            console.log('REMOVE EQUIPMENT', index, parent)
+        async REMOVE_EQUIPMENT({ dispatch, state }, { index, parent, _id, _q}){
+            console.log('REMOVE EQUIPMENT', index, parent, _id, _q)
 
-            let subtract_quantity = (item) => {  
+            let subtract_quantity = (item, _quantity) => {  
                 if('mechanics' in item){
                     if('quantity' in item.mechanics){
                         item.mechanics.quantity -= 1
                         return item.mechanics.quantity
                     }else{
-                        item.mechanics.quantity = 0
-                        return 0
+                        item.mechanics.quantity = _quantity - 1 
+                        return item.mechanics.quantity
                     }
                 }else{
                     item.mechanics = {
-                        quantity: 0
+                        quantity: _quantity -1
                     }
-                    return 0
+                    return item.mechanics.quantity
                 }
             }
 
@@ -728,7 +727,7 @@ export default {
                     console.log('WTF, PORQUE TEM UM RES (string) AQUI???')
                 }
 
-                let quantity = subtract_quantity(state.equipment.items[index])
+                let quantity = subtract_quantity(state.equipment.items[index], _q)
                 if(quantity == 0) state.equipment.items.splice(index, 1)
             }else{
                 
@@ -744,20 +743,21 @@ export default {
 
                 if('mechanics' in state.equipment.items[parent]){
                     if('composition' in state.equipment.items[parent].mechanics){
+                        // index sempre vai ser o tamanho do array, pra nao arriscar ocupar um lugar real
+                        // sempre adicionar -1, porque na hora de desfragmentar ele vai ajustar tudo
                         if(state.equipment.items[parent].mechanics.composition[index] == undefined && !!_id){
                             state.equipment.items[parent].mechanics.composition[index] = {
                                 _id,
                                 mechanics: {
-                                    quantity: 1
+                                    quantity: -1
                                 }
                             }
                         }else{
-                            debugger
                             console.log('WTF, PORQUE TEM UM COMPOSITION SEM SLUG SENDO ATUALIZADO NUM PAI SEM COMPOSITION????')
                         }
 
-                        let quantity = subtract_quantity(state.equipment.items[parent].mechanics.composition[index])
-                        console.log('SUBTRACTED QUANTITY', state.equipment.items[parent].mechanics.composition[index], 'state.equipment.items', state.equipment.items)
+                        // let quantity = subtract_quantity(state.equipment.items[parent].mechanics.composition[index], _q)
+                        // console.log('SUBTRACTED QUANTITY', state.equipment.items[parent].mechanics.composition[index], 'state.equipment.items', state.equipment.items)
                     }else{
                         debugger
                         console.log('WTF, PORQUE TEM UM COMPOSITION SENDO ATUALIZADO NUM PAI SEM COMPOSITION?????')
@@ -772,11 +772,13 @@ export default {
 
             await dispatch('FETCH_EQUIPMENT') && dispatch('UPDATE_ASYNC', {source: 'equipment'})
         },
-        DEFRAG_STATIC_EQUIPMENT( {state} ){
+        DEFRAG( {state}, {resources}){
             var fn_defrag
             fn_defrag = (items) => {
                 let index = {}, defrag = []
                 for(let res of items){
+                    if(!res) continue
+
                     let name = resources.name(res)
                     let key = res._id || res.slug || name || res
     
@@ -789,98 +791,75 @@ export default {
                     index[key].push(res)
                 }
     
-                for(let key in index){
-                    let list = index[key]
+                for(let _k in index){
+                    let list = index[_k]
                     
                     let res = list[0]
                     for(let i = 1; i < list.length; i++){
                         _.mergeWith(res, list[i], (objValue, srcValue, key, _o, _s) => {
-                            if (_.isArray(objValue)) return objValue.concat(srcValue)
+                            // if (_.isArray(objValue)) return objValue.concat(srcValue)
                             if (key == 'quantity'){
                                 return (_.isNumber(objValue) ? objValue : 1) + (_.isNumber(srcValue) ? 1 : srcValue)
                             }else if(key == '_source' || key == '_type'){
                                 if(objValue !== srcValue && !!objValue && !!srcValue){
                                     return [objValue, srcValue]
                                 }
-                            }else if(key == 'mechanics'){
-                                debugger
+                            }else if(key == 'composition'){
+                                if(_.isArray(objValue) && _.isArray(srcValue))
+                                    return objValue.concat(srcValue)
                             }
                         })
                     }
 
-                    if(res.mechanics !== undefined){
-                        if('composition' in res){
-                            let defrag_composition = fn_defrag(res.mechanics.composition)
-                            console.log('DEFRAGGIN STATIC COMPOSITION', defrag_composition, 'from', res.mechanics.composition)
+                    if(typeof res != 'string'){
+                        if(res.mechanics !== undefined){
+                            
+                            if(list.length != 1)
+                                if(res.mechanics.quantity == undefined) res.mechanics.quantity = list.length
+
+                            if('composition' in res){
+                                let defrag_composition = fn_defrag(res.mechanics.composition)
+                                console.log('DEFRAGGIN STATIC COMPOSITION', defrag_composition, 'from', _.cloneDeep(res.mechanics.composition))
+                                res.mechanics.composition = defrag_composition
+                            }
+                        }else{
+                            if(list.length != 1)
+                                res.mechanics = {
+                                    quantity: list.length
+                                }
                         }
+                    }else{
+                        if(list.length != 1)
+                            res = {
+                                slug: res,
+                                mechanics: {
+                                    quantity: list.length
+                                }
+                            }
                     }
-    
+        
                     defrag.push(res)
                 }
 
                 return defrag
             }
 
-            let defrag = fn_defrag(state.equipment.items)
+            let defrag = fn_defrag(resources)
+
+            return defrag
+        },
+        DEFRAG_STATIC_EQUIPMENT( {dispatch, state} ){
+
+            let defrag = dispatch('DEFRAG', state.equipment.items)
 
 
             console.log('DEFRAGGIN STATIC EQUIPMENT', defrag, 'from', state.equipment.items)
 
             state.equipment.items = defrag
         },
-        DEFRAG_DINAMIC_EQUIPMENT( {state} ){
-            var fn_defrag
-            fn_defrag = (items) => {
-                let index = {}, defrag = []
-                for(let res of items){
-                    let name = resources.name(res)
-                    let key = res._id || res.slug || name || res
-    
-                    if(typeof key !== 'string'){
-                        console.log('ERROR', 'Key is not a string')
-                        throw new Error('Key must be a string')
-                    }
-    
-                    if(!(key in index)) index[key] = []
-                    index[key].push(res)
-                }
-    
-                for(let key in index){
-                    let list = index[key]
-                    
-                    let res = list[0]
-                    for(let i = 1; i < list.length; i++){
-                        _.mergeWith(res, list[i], (objValue, srcValue, key, _o, _s) => {
-                            if (_.isArray(objValue)) return objValue.concat(srcValue)
-                            if (key == 'quantity'){
-                                return (_.isNumber(objValue) ? objValue : 1) + (_.isNumber(srcValue) ? 1 : srcValue)
-                            }else if(key == '_source' || key == '_type'){
-                                if(objValue !== srcValue && !!objValue && !!srcValue){
-                                    return [objValue, srcValue]
-                                }
-                            }else if(key == 'mechanics'){
-                                // debugger
-                            }
-                        })
-                    }
+        DEFRAG_DINAMIC_EQUIPMENT( {dispatch, state} ){
 
-                    if(res.mechanics.quantity == undefined) res.mechanics.quantity = list.length
-
-                    if(res.mechanics !== undefined){
-                        if('composition' in res.mechanics){
-                            let defrag_composition = fn_defrag(res.mechanics.composition)
-                            console.log('DEFRAGGIN DINAMIC COMPOSITION', defrag_composition, 'from', _.cloneDeep(res.mechanics.composition))
-                            res.mechanics.composition = defrag_composition
-                        }
-                    }
-    
-                    defrag.push(res)
-                }
-
-                return defrag
-            }
-
-            let defrag = fn_defrag(state.async.equipment.items)
+            let defrag = dispatch('DEFRAG', state.async.equipment.items)
 
 
             console.log('DEFRAGGIN DINAMIC EQUIPMENT', defrag, 'from', state.async.equipment.items)
