@@ -910,6 +910,7 @@ export default {
 
             let subtract = function(index){
                 // lidar com remover o _parent de um item
+                // se bem que tambem falta terminar o rewind (quando trocar um recurso tipo classe ou background tem que remover os recursos subscritos)
                 let remove = function(_i){
                     let _id = state.equipment.items[index]._id
                     if(_id !== undefined){
