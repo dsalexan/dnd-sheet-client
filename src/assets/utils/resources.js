@@ -175,6 +175,7 @@ function table(resource, level=1){
 
     for(let key of subs){
         for(let lvl = 0; lvl < level; lvl++){
+            if(table[lvl] == undefined) continue
             if(key in table[lvl]){
                 if(!(key in obj)) obj[key] = {}
                 

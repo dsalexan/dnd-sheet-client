@@ -14,27 +14,32 @@
         "slug": "entertainers",
         "parent": "equipment_pack",
         "text": "<p>Includes a Backpack, a Bedroll, 2 costumes, 5 candles, 5 days of Rations, a Waterskin, and a Disguise Kit.</p>",
+        "injections": [
+            "equipment"
+        ],
         "mechanics": {
-            "composition":  [
-                "@adventuring/backpack",
-                "@adventuring/bedroll",
-                "@adventuring/costume",
-                "@adventuring/costume",
-                {
-                    "slug": "@adventuring/candle",
-                    "mechanics": {
-                        "quantity": 5
-                    }
-                },
-                {
-                    "slug": "@adventuring/ration",
-                    "mechanics": {
-                        "quantity": 5
-                    }
-                },
-                "@adventuring/waterskin",
-                "@adventuring/disguise_kit"
-            ],
+            "equipment":  {
+                "items": [
+                    "@adventuring/backpack",
+                    "@adventuring/bedroll",
+                    "@adventuring/costume",
+                    "@adventuring/costume",
+                    {
+                        "slug": "@adventuring/candle",
+                        "mechanics": {
+                            "quantity": 5
+                        }
+                    },
+                    {
+                        "slug": "@adventuring/ration",
+                        "mechanics": {
+                            "quantity": 5
+                        }
+                    },
+                    "@adventuring/waterskin",
+                    "@adventuring/disguise_kit"
+                ]
+            },
             "cost": ["40", "gp"]
         }
     },

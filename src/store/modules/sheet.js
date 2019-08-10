@@ -1,8 +1,147 @@
 import _ from 'lodash'
 import axios from 'axios'
+const uuid = require('uuid/v4')
 
 import * as dnd5e from '@/assets/rules/dnd/5e'
 import resources from '@/assets/utils/resources'
+
+
+function DEFRAG(_res, _static=true){
+    var fn_defrag
+    fn_defrag = (items) => {
+        let index = {}, defrag = []
+        
+        for(let res of items){
+            if(!res) continue
+            
+            let name = resources.name(res)
+            let key = res._id || res.slug || name || res
+            let version  = res._version // para itens vagamente modificados  / AINDA NAO APLICAR
+            let parent = res._parent
+            
+            if(typeof parent !== 'string'){
+                console.log('ERROR', 'Parent is not a string')
+                throw new Error('Parent must be a string')
+            }
+
+            if(typeof key !== 'string'){
+                console.log('ERROR', 'Key is not a string')
+                throw new Error('Key must be a string')
+            }
+
+            // key = key + '___' + version
+            if(_static) key += '___' + parent
+
+            if(!(key in index)) index[key] = []
+            index[key].push(res)
+        }
+        
+        for(let key_parent in index){
+            let list = index[key_parent]
+
+            let _quantity = list.length
+            
+            let res = list[0]
+            if(typeof res == 'string'){
+                res = {
+                    slug: res
+                }
+            }
+
+            if(res.mechanics){
+                if(res.mechanics.quantity == undefined){
+                    res.mechanics.quantity = 1
+                }
+            }else{
+                res.mechanics = {
+                    quantity: 1
+                }
+            }
+
+            for(let _r of list.splice(1)){
+                if(typeof _r == 'string'){
+                    _r = {
+                        slug: _r
+                    }
+                }
+
+                if(_r.mechanics){
+                    if(_r.mechanics.quantity == undefined){
+                        _r.mechanics.quantity = 1
+                    }
+                }else{
+                    _r.mechanics = {
+                        quantity: 1
+                    }
+                }
+
+
+
+                let _equipment = _.cloneDeep((_r.mechanics || {}).equipment);
+                (_r.mechanics || {}).equipment = undefined;
+
+                // if(_r.slug == '@adventuring/costume') console.log('MERGE WITH', JSON.stringify(res, null, 2), JSON.stringify(_r, null, 2))
+                _.mergeWith(res, _r, (objValue, srcValue, key, _o, _s, _stack) => {
+                    // if (_.isArray(objValue)) return objValue.concat(srcValue)
+                    if (key == 'quantity'){
+                        let valor = (_.isNumber(objValue) ? objValue : 1) + (_.isNumber(srcValue) ? srcValue : 1)
+                        return valor
+                    }else if(key == '_source' || key == '_type'){
+                        if(objValue !== srcValue && !!objValue && !!srcValue){
+                            return [objValue, srcValue]
+                        }
+                    }
+                    // MERGE EQUIPMENT EXTERNALLY TO AVOID DEEP SUMMING OF QUANTITIES
+                    // }else if(key == 'equipment'){
+                    //     if(_.isArray(objValue) && _.isArray(srcValue))
+                    //         return objValue.concat(srcValue)
+                    // }
+                })
+
+                if(_equipment){
+                    if(res.mechanics){
+                        if(res.mechanics.equipment){
+                            _.merge(res.mechanics.equipment, _equipment)
+                        }else{
+                            res.mechanics.equipment = _equipment
+                        }
+                    }else{
+                        res.mechanics = {
+                            equipment: _equipment
+                        }
+                    }
+                }
+
+            }
+
+            // if(_quantity == 3 && res.slug == '@adventuring/costume') debugger
+            if(typeof res != 'string'){
+                if(_quantity != 1){
+                    if(res.mechanics && res.mechanics.quantity == undefined){
+                        res.mechanics.quantity = _quantity
+                    }else if(res.mechanics == undefined){
+                        res.mechanics = {
+                            quantity: _quantity
+                        }
+                    }
+                }
+            }else{
+                if(_quantity != 1)
+                    debugger
+            }
+            // if(key_parent == '@adventuring/candle___entertainers_pack2') debugger
+            
+            defrag.push(res)
+        }
+
+        return defrag
+    }
+    
+    
+    let defrag = fn_defrag(_res)
+    
+    return defrag
+}
 
 export default {
     namespaced: true,
@@ -301,20 +440,33 @@ export default {
             return _coins
         },
         items_with_quantity: (state) => {
-            let items = (state.async.equipment || {}).items || []
-
-            items = items.filter(i => (i.mechanics || {quantity: 1}).quantity > 0)
-            items = items.map(i => {
-                let _i = _.cloneDeep(i)
-                if(_i.mechanics != undefined){
-                    if(_i.mechanics.composition != undefined){
-                        _i.mechanics.composition = _i.mechanics.composition.filter(c => (c.mechanics || {quantity: 1}).quantity > 0)
+            function list_to_tree(list) {
+                var map = {}, node, roots = [], i;
+                for (i = 0; i < list.length; i += 1) {
+                    map[list[i]._id] = i; // initialize the map
+                    list[i]._children = []; // initialize the children
+                }
+                for (i = 0; i < list.length; i += 1) {
+                    node = list[i];
+                    if (node._source == 'equipment') { // se o node não é raiz
+                        // if you have dangling branches check that map[node.parentId] exists
+                        list[map[node._parent]]._children.push(node);
+                    } else {
+                        roots.push(node);
                     }
                 }
-                
-                return _i
+                return roots;
+            }
+
+            let items = _.cloneDeep((state.async.equipment || {items: []}).items || [])
+            
+            items = items.filter(i => {
+                let quantity = (i.mechanics || {quantity: 1}).quantity
+                return quantity == undefined ? true : (quantity > 0)
             })
 
+            items = list_to_tree(items)
+            // console.log(items)
             return items
         }
     },
@@ -418,6 +570,20 @@ export default {
             }
 
         },
+        DEFRAG_STATIC_EQUIPMENT( state ){
+            let defrag = DEFRAG(state.equipment.items)
+            
+            console.log('DEFRAGGIN STATIC EQUIPMENT', defrag, 'from', state.equipment.items)
+
+            state.equipment.items = defrag
+        },
+        DEFRAG_DINAMIC_EQUIPMENT( state ){
+            let defrag = DEFRAG(state.async.equipment.items, false)
+            
+            console.log('DEFRAGGIN DINAMIC EQUIPMENT', defrag, 'from', state.async.equipment.items)
+
+            state.async.equipment.items = defrag
+        }
     },
     actions: {
         async FETCH_CLASS({commit, state, getters}){
@@ -426,7 +592,7 @@ export default {
             
             try{
                 let result = await axios.get(`http://localhost:3000/classes?q=${name}`)
-
+                
                 if(result.data.length == 0) return false
 
                 state.async.class = result.data[0]
@@ -477,7 +643,7 @@ export default {
 
         async FETCH_RESOURCES({dispatch}, obj){
             var fetch 
-            fetch = async (srcRes, search=false) => {
+            fetch = async (srcRes, _index, search=false) => {
                 let reqRes = undefined
 
                 if(srcRes.meta == 'command'){
@@ -492,19 +658,22 @@ export default {
                         let result = await axios.get(`http://localhost:3000/${search ? '' : 'resources'}?q=${slug.substr(1)}`)
                         reqRes = result.data[0]
                     }
-
-                    if(((reqRes || {}).mechanics || {}).composition){ // if resource is a composition of other resources
-                        let promises = reqRes.mechanics.composition.map(r => fetch(r))
-                        let composition = await Promise.all(promises)
-                        reqRes.mechanics.composition = composition
-                    }
                 }
 
                 if(reqRes == undefined) return undefined
                 else{
                     let _data = srcRes instanceof Object ? _.cloneDeep(srcRes) : {}
-                    _.mergeWith(_data, reqRes, (objValue, srcValue) => {
-                        if (_.isArray(srcValue)) return srcValue.concat(objValue)
+                    
+                    _.mergeWith(_data, reqRes, (objValue, srcValue, key) => {
+                        // if (_.isArray(srcValue)) return srcValue.concat(objValue)
+                        if(key == 'quantity'){
+                            if(_.isNumber(objValue) && _.isNumber(srcValue)){
+                                return objValue + srcValue
+                            }
+                        }else if(key == 'equipment'){
+                            if(_.isArray(objValue) && _.isArray(srcValue))
+                                return srcValue.concat(objValue)
+                        }
                     })
 
                     return _data
@@ -512,7 +681,7 @@ export default {
             }
 
             let data = {}
-
+            
             for(let source in obj){
                 data[source] = {}
             
@@ -521,17 +690,37 @@ export default {
                 
                 for(let type in objeto){
                     data[source][type] = []
+
+                    let _index = 0
+                    
                     for(let res of objeto[type]){
-                        
                         let _data = await fetch(res)
-                        
-                        if(_data == undefined) data[source][type].push(res)
-                        else
+            
+                        if(_data == undefined) {
+                            if(typeof res == 'string'){
+                                if(res[0] == '@') 
+                                    res = {
+                                        slug: res,
+                                        _index
+                                    }
+                                else
+                                    res = {
+                                        name: res,
+                                        _index
+                                    }
+                            }
+
+                            data[source][type].push(res)
+                        }else{
                             data[source][type].push({
                                 ..._data,
+                                _index,
                                 _source: _data._source || source,
                                 _type: _data._type || type
                             })
+                        }
+
+                        _index++
                     }
                 }
             }
@@ -586,12 +775,12 @@ export default {
                 return false
             }
         },
-        async FETCH_EQUIPMENT({dispatch, state, getters}){
+        async FETCH_EQUIPMENT({dispatch, state, commit}){
             let obj = {'custom': state.equipment}
             
             try{
                 let data = await dispatch('FETCH_RESOURCES', obj)
-
+                
                 let merge_sources = {}
                 for(let source in data){
                     _.mergeWith(merge_sources, data[source], (objValue, srcValue) => {
@@ -626,7 +815,7 @@ export default {
                     }
                     coins[slug] = piece
                 }
-
+                
                 if(merge_sources.treasure){
                     merge_sources.treasure = merge_sources.treasure.filter(t => t.parent != 'coin')
                     merge_sources.treasure = Object.values(coins).concat(merge_sources.treasure)
@@ -635,7 +824,7 @@ export default {
                 state.async.equipment = merge_sources
                 console.log('FETCH EQUIPMENT', state.async.equipment, 'from', state.equipment)
 
-                dispatch('DEFRAG_DINAMIC_EQUIPMENT')
+                commit('DEFRAG_DINAMIC_EQUIPMENT')
 
                 return true
             }catch(err){
@@ -661,19 +850,33 @@ export default {
 
             await dispatch('FETCH_RACE') && dispatch('UPDATE_ASYNC', {source: 'race'})
         },
-        async SET_EQUIPMENT({ dispatch, state }, { value, index }){
+        async SET_EQUIPMENT({ dispatch, state, commit }, { value, index }){
             console.log('SET EQUIPMENT', value, index)
+
 
             if(value == undefined)
                 state.equipment.items.splice(index, 1)
-            else
-                state.equipment.items.splice(index, 1, value)
+            else{
+                if(typeof value == 'string'){
+                    value = {
+                        slug: value,
+                        _uuid: uuid(), 
+                        _parent: "sheet",
+                        _source: "custom",
+                        _type: "items"
+                    }
+                }
 
-            dispatch('DEFRAG_STATIC_EQUIPMENT')
+                if(index == undefined) index = state.equipment.items.length
+                
+                state.equipment.items.splice(index, 1, value)
+            }
+
+            commit('DEFRAG_STATIC_EQUIPMENT')
 
             await dispatch('FETCH_EQUIPMENT') && dispatch('UPDATE_ASYNC', {source: 'equipment'})
         },
-        async SET_COIN({ dispatch, state }, {value, key}){
+        async SET_COIN({ dispatch, state, commit }, {value, key}){
             console.log('SET COIN', value, key)
 
             let index = state.equipment.treasure.map((v, i) => ({...v, index: i})).filter(v => v._id == 'key').index
@@ -685,6 +888,8 @@ export default {
                             quantity: value
                         }
                     })
+
+                    commit('DEFRAG_STATIC_EQUIPMENT')
 
                     await dispatch('FETCH_EQUIPMENT') && dispatch('UPDATE_ASYNC', {source: 'equipment'})
                 }
@@ -698,175 +903,50 @@ export default {
                 }
             }
         },
-        async REMOVE_EQUIPMENT({ dispatch, state }, { index, parent, _id, _q}){
-            console.log('REMOVE EQUIPMENT', index, parent, _id, _q)
+        async REMOVE_EQUIPMENT({ dispatch, state, commit }, { index, _id, _parent}){
+            console.log('REMOVE EQUIPMENT', index, _id, _parent)
 
-            let subtract_quantity = (item, _quantity) => {  
-                if('mechanics' in item){
-                    if('quantity' in item.mechanics){
-                        item.mechanics.quantity -= 1
-                        return item.mechanics.quantity
+            let defrag_needed = false, fetch_needed = true
+
+            let subtract = function(index){
+                // lidar com remover o _parent de um item
+                let remove = function(_i){
+                    let _id = state.equipment.items[index]._id
+                    if(_id !== undefined){
+                        
                     }else{
-                        item.mechanics.quantity = _quantity - 1 
-                        return item.mechanics.quantity
+                        state.equipment.items.splice(_i, 1)                
+                    }
+                }
+
+                if(state.equipment.items[index].mechanics){
+                    if(state.equipment.items[index].mechanics.quantity !== undefined){
+                        state.equipment.items[index].mechanics.quantity--
+
+                        if(state.equipment.items[index].mechanics.quantity == 0){
+                            remove(index)
+                        }
+                    }else{
+                        remove(index)
                     }
                 }else{
-                    item.mechanics = {
-                        quantity: _quantity -1
-                    }
-                    return item.mechanics.quantity
+                    remove(index)
                 }
             }
-
-            if(parent == undefined){
-                if(typeof state.equipment.items[index] == 'string'){
-                    state.equipment.items[index] = {
-                        slug: state.equipment.items[index],
-                        name: state.equipment.items[index]
-                    }
-                    console.log('WTF, PORQUE TEM UM RES (string) AQUI???')
-                }
-
-                let quantity = subtract_quantity(state.equipment.items[index], _q)
-                if(quantity == 0) state.equipment.items.splice(index, 1)
-            }else{
-                
-                if(typeof state.equipment.items[parent] == 'string'){
-                    state.equipment.items[parent] = {
-                        slug: state.equipment.items[parent],
-                        mechanics: {
-                            composition: [],
-                            quantity: 1
-                        }
-                    }
-                }
-
-                if('mechanics' in state.equipment.items[parent]){
-                    if('composition' in state.equipment.items[parent].mechanics){
-                        // index sempre vai ser o tamanho do array, pra nao arriscar ocupar um lugar real
-                        // sempre adicionar -1, porque na hora de desfragmentar ele vai ajustar tudo
-                        if(state.equipment.items[parent].mechanics.composition[index] == undefined && !!_id){
-                            state.equipment.items[parent].mechanics.composition[index] = {
-                                _id,
-                                mechanics: {
-                                    quantity: -1
-                                }
-                            }
-                        }else{
-                            console.log('WTF, PORQUE TEM UM COMPOSITION SEM SLUG SENDO ATUALIZADO NUM PAI SEM COMPOSITION????')
-                        }
-
-                        // let quantity = subtract_quantity(state.equipment.items[parent].mechanics.composition[index], _q)
-                        // console.log('SUBTRACTED QUANTITY', state.equipment.items[parent].mechanics.composition[index], 'state.equipment.items', state.equipment.items)
-                    }else{
-                        debugger
-                        console.log('WTF, PORQUE TEM UM COMPOSITION SENDO ATUALIZADO NUM PAI SEM COMPOSITION?????')
-                    }
-                }else{
-                    debugger
-                    console.log('WTF, PORQUE TEM UM COMPOSITION SENDO ATUALIZADO NUM PAI Q NEM TEM MECHANICS????')
-                }
-            }
-            
-            dispatch('DEFRAG_STATIC_EQUIPMENT')
-
-            await dispatch('FETCH_EQUIPMENT') && dispatch('UPDATE_ASYNC', {source: 'equipment'})
-        },
-        DEFRAG( {state}, {resources}){
-            var fn_defrag
-            fn_defrag = (items) => {
-                let index = {}, defrag = []
-                for(let res of items){
-                    if(!res) continue
-
-                    let name = resources.name(res)
-                    let key = res._id || res.slug || name || res
-    
-                    if(typeof key !== 'string'){
-                        console.log('ERROR', 'Key is not a string')
-                        throw new Error('Key must be a string')
-                    }
-    
-                    if(!(key in index)) index[key] = []
-                    index[key].push(res)
-                }
-    
-                for(let _k in index){
-                    let list = index[_k]
-                    
-                    let res = list[0]
-                    for(let i = 1; i < list.length; i++){
-                        _.mergeWith(res, list[i], (objValue, srcValue, key, _o, _s) => {
-                            // if (_.isArray(objValue)) return objValue.concat(srcValue)
-                            if (key == 'quantity'){
-                                return (_.isNumber(objValue) ? objValue : 1) + (_.isNumber(srcValue) ? 1 : srcValue)
-                            }else if(key == '_source' || key == '_type'){
-                                if(objValue !== srcValue && !!objValue && !!srcValue){
-                                    return [objValue, srcValue]
-                                }
-                            }else if(key == 'composition'){
-                                if(_.isArray(objValue) && _.isArray(srcValue))
-                                    return objValue.concat(srcValue)
-                            }
-                        })
-                    }
-
-                    if(typeof res != 'string'){
-                        if(res.mechanics !== undefined){
-                            
-                            if(list.length != 1)
-                                if(res.mechanics.quantity == undefined) res.mechanics.quantity = list.length
-
-                            if('composition' in res){
-                                let defrag_composition = fn_defrag(res.mechanics.composition)
-                                console.log('DEFRAGGIN STATIC COMPOSITION', defrag_composition, 'from', _.cloneDeep(res.mechanics.composition))
-                                res.mechanics.composition = defrag_composition
-                            }
-                        }else{
-                            if(list.length != 1)
-                                res.mechanics = {
-                                    quantity: list.length
-                                }
-                        }
-                    }else{
-                        if(list.length != 1)
-                            res = {
-                                slug: res,
-                                mechanics: {
-                                    quantity: list.length
-                                }
-                            }
-                    }
         
-                    defrag.push(res)
-                }
-
-                return defrag
+            if(defrag_needed){
+                commit('DEFRAG_STATIC_EQUIPMENT')
             }
 
-            let defrag = fn_defrag(resources)
+            debugger
 
-            return defrag
+            if(fetch_needed){
+                await dispatch('FETCH_EQUIPMENT') && dispatch('UPDATE_ASYNC', {source: 'equipment'})
+            }else{
+                dispatch('UPDATE_ASYNC', {source: 'equipment'})
+            }
         },
-        DEFRAG_STATIC_EQUIPMENT( {dispatch, state} ){
-
-            let defrag = dispatch('DEFRAG', state.equipment.items)
-
-
-            console.log('DEFRAGGIN STATIC EQUIPMENT', defrag, 'from', state.equipment.items)
-
-            state.equipment.items = defrag
-        },
-        DEFRAG_DINAMIC_EQUIPMENT( {dispatch, state} ){
-
-            let defrag = dispatch('DEFRAG', state.async.equipment.items)
-
-
-            console.log('DEFRAGGIN DINAMIC EQUIPMENT', defrag, 'from', state.async.equipment.items)
-
-            state.async.equipment.items = defrag
-        },
-        SET_FEATURES({ dispatch, state }, { value, index }){
+        async SET_FEATURES({ dispatch, state }, { value, index }){
             console.log('SET FEATURES', value, index)
 
             if(value == undefined)
@@ -874,10 +954,9 @@ export default {
             else
                 state.features.splice(index, 1, value)
 
-            dispatch('UPDATE_ASYNC', {source: 'features'})
-                .then(() => dispatch('FETCH_FEATURES'))
+            await dispatch('FETCH_FEATURES') && dispatch('UPDATE_ASYNC', {source: 'features'})
         },
-        SET_PROFICIENCIES({ dispatch, state }, { value, index, key }){
+        async SET_PROFICIENCIES({ dispatch, state }, { value, index, key }){
             console.log('SET PROFS', value, index, key)
 
             if(value == undefined){
@@ -887,9 +966,7 @@ export default {
                 state.stats.proficiencies.others[key].splice(index, 1, value)
             }
             
-            dispatch('UPDATE_ASYNC', {source: 'proficiencies'})
-                .then(() => dispatch('FETCH_PROFICIENCIES'))
-            
+            await dispatch('FETCH_PROFICIENCIES') && dispatch('UPDATE_ASYNC', {source: 'proficiencies'})            
         },
 
         async UPDATE_SUBSCRIPTIONS({ state, getters }, { metas, source }){
@@ -928,10 +1005,16 @@ export default {
                 let table = resources.table(meta, getters.level)
 
                 for(let key of (meta.injections || [])){
-                    let obj = {}
+                    
+                    let obj = {
+                        id: uuid(),
+                        resource: meta._uuid || meta.meta,
+                        meta: meta.meta,
+                        timestamp: new Date(),
+                        parent: meta._injection
+                    }
                     let injection = []
 
-                    obj[meta.meta] = new Date()
                     injection = meta.mechanics[key]
 
                     if(table[key]){
@@ -945,13 +1028,26 @@ export default {
                             }) // else just merge objects
                         }
                     }
-
+                    
                     if(injection instanceof Array){
-                        injection = injection.map(d => ({
-                            ...d,
-                            _source: source,
-                            _type: 'default'
-                        }))
+                        injection = injection.map(d => {
+                            if(typeof d == 'string'){
+                                let _key = 'name'
+                                if(d.charAt(0) == '@') _key = 'slug'
+                                d = {
+                                    [_key]: d
+                                }
+                            }
+
+                            return {
+                                ...d,
+                                _uuid: uuid(), 
+                                _source: meta.meta,
+                                _type: 'default',
+                                _injection: obj.id,
+                                _parent: meta._id
+                            }
+                        })
                     }else{
                         for(let type in injection){
                             injection[type] = injection[type].map(d => {
@@ -960,20 +1056,22 @@ export default {
                                     if(d.charAt(0) == '@') _key = 'slug'
                                     d = {[_key]: d}
                                 }
+
                                 return {
                                     ...d,
-                                    _source: source,
-                                    _type: type
+                                    _uuid: uuid(),
+                                    _source: meta.meta,
+                                    _type: type,
+                                    _injection: obj.id,
+                                    _parent: meta._id
                                 }
                             })
                         }
                     }
 
                     // registering the injection on sheet
-                    _.mergeWith(state.injections, obj, (objValue, srcValue) => {
-                        if (_.isArray(objValue)) return objValue.concat(srcValue)
-                    })
-
+                    state.injections[obj.resource] = obj
+                    
                     // update relevant fields with injection data
                     let target = ({
                         equipment: 'equipment'
@@ -991,37 +1089,79 @@ export default {
                         console.log('ERROR: Data type inconsistency while injecting (field, injection)', field, injection)
                         throw new Error('Data type inconsistency while injecting')
                     }
-
+                    
                     _.set(state, target, field)
                 }
             }
 
+
+
             console.log(`INJECTIONS UPDATED (from ${source})`, state.injections, state)
         },
-        async UPDATE_ASYNC({dispatch, state}, {source}){
-            let meta
-            if(source == 'class'){
-                meta = [state.async.class]
-            }else if(source == 'features'){
-                meta = [...state.async.features]
-            }else if(source == 'background'){
-                meta = [state.async.background]
-            }else if(source == 'race'){
-                meta = [state.async.race]
-            }else if(source == 'equipment'){
-                meta = [state.async.equipment]
+        async UPDATE_ASYNC({dispatch, state, commit}, {source}){
+            let meta = []
+            if(!_.isArray(source)) source = [source]
+
+            if(source.includes('class')){
+                meta = meta.concat([state.async.class])
+            }
+            if(source.includes('features')){
+                let list = state.async.features
+
+                let _meta = []
+                for(let k in list){
+                    _meta = _meta.concat(list[k].map(r => ({
+                        ...r,
+                        _type: k
+                    })))
+                }
+                meta = meta.concat(_meta)
+            }
+            if(source.includes('background')){
+                meta = meta.concat([state.async.background])
+            }
+            if(source.includes('race')){
+                meta = meta.concat([state.async.race])
+            }
+            if(source.includes('equipment')){
+                let list = state.async.equipment
+
+                let _meta = []
+                for(let k in list){
+                    _meta = _meta.concat(list[k].map(r => ({
+                        ...r,
+                        _type: k
+                    })))
+                }
+                meta = meta.concat(_meta)
             }
 
-            if(meta == undefined) return
-            
+            if(meta.length == 0) return
+
             let subscriptions = meta.reduce((arr, cur) => arr.concat(cur.subscriptions || []), [])
             let injections = meta.reduce((arr, cur) => arr.concat(cur.injections || []), [])
+            
+            let fetch = false
+            
+            if(subscriptions.length > 0) {
+                let _m = meta.filter(m => !!m.subscriptions)
+                if(_m.length > 0) {
+                    await dispatch('UPDATE_SUBSCRIPTIONS', {metas: _m, source})
+                    fetch = true
+                }
+            }
+            if(injections.length > 0) {
+                let _m = meta.filter(m => !!m.injections && !(m._uuid in state.injections))
+                if(_m.length > 0){
+                    await dispatch('UPDATE_INJECTIONS', {metas: _m, source})
+                    fetch = true
+                }
+            }
 
-            if(subscriptions.length > 0) await dispatch('UPDATE_SUBSCRIPTIONS', {metas: meta.filter(m => !!m.subscriptions), source})
-            if(injections.length > 0) await dispatch('UPDATE_INJECTIONS', {metas: meta.filter(m => !!m.injections), source})
+            if(!fetch) return
 
             if(injections.includes('equipment')){
-                dispatch('DEFRAG_EQUIPMENT')
+                commit('DEFRAG_STATIC_EQUIPMENT')
             }
 
             let fetches = []
@@ -1032,6 +1172,8 @@ export default {
             }
 
             await Promise.all(fetches)
+            
+            dispatch('UPDATE_ASYNC', {source: clusters})
             dispatch('UPDATE_PROFICIENCIES', {source})
         },
         UPDATE_PROFICIENCIES({state, getters}, {source}){

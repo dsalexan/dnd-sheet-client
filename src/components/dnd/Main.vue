@@ -96,8 +96,8 @@
                     transparent="false"
                     :coins="coins"
                     :value="items"
-                    @input="(value, index) => set_equipment({value, index})"
-                    @remove="(index, parent, _id, quantity) => remove_equipment({index, parent, _id, _q: quantity})"
+                    @input="(value, _id, _parent) => set_equipment({value, _id, _parent})"
+                    @remove="(index, _id, _parent) => remove_equipment({index, _id, _parent})"
                     @coin="(value, key) => set_coin({value, key})" />
             </section>
         </section>

@@ -61,8 +61,8 @@
                         "meta": "command",
                         "choose": 1,
                         "from": [
-                            "@pack/diplomats_pack",
-                            "@pack/entertrainers_pack"
+                            "@pack/diplomat",
+                            "@pack/entertrainer"
                         ]
                     },
                     {

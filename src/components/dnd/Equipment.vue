@@ -29,27 +29,27 @@
                     <q-expansion-item
                         clickable
                         class="tag-item"
-                        :expand-icon-toggle="!!((item.mechanics || {}).composition)"
-                        :class="{'dont-expand': !((item.mechanics || {}).composition)}">
+                        :expand-icon-toggle="item._children.length > 0"
+                        :class="{'dont-expand': item._children.length == 0}">
                         <template v-slot:header>
 
                             <q-item-section side>
-                                <q-icon class="remove" name="remove" color="gray" clickable @click="removeItem(index, undefined, undefined, quantity(item))"/>
+                                <q-icon class="remove" name="remove" color="gray" clickable @click="removeItem(item._index, item._id, item._parent)"/>
                             </q-item-section>
 
                             <q-separator vertical inset />
                             
                             <q-item-section>
                                 <q-item-label style="font-weight: 600">{{nameItem(item, false) || item.slug || item}} <span v-if="quantityItem(item) != undefined">{{quantityItem(item)}}</span> </q-item-label>
-                                <q-item-label v-if="((item.mechanics || {}).composition) || item.meta == 'command'"  caption lines="2">{{captionItem(item)}}</q-item-label>
+                                <q-item-label v-if="captionItem(item) !== undefined" caption lines="2">{{captionItem(item)}}</q-item-label>
                             </q-item-section>
                         </template>
                         <q-list dense>
-                            <q-item clickable v-for="(subitem, subindex) of composition(item)" :key="subindex">
+                            <q-item clickable v-for="(subitem, subindex) of item._children" :key="subindex">
                                 <q-item-section side>
                                     <q-icon class="remove" name="remove" color="gray" style="font-size: 1.1rem; width: 1.5rem;" 
                                         clickable 
-                                        @click="removeItem(composition(item).length, index, subitem._id)"
+                                        @click="removeItem(subitem._index, subitem._id, subitem._parent)"
                                         :disable="quantity(subitem) != undefined"/>
                                 </q-item-section>
 
@@ -135,9 +135,12 @@ export default {
             if(item.meta == 'command'){
                 return `${item.from.map(i => utils.name(i)).join(', ')}`
             }else{
-                return (item.mechanics || {composition: []}).composition.map(r => {
+                if(item._children.length == 0){
+                    return undefined
+                }
+                return item._children.map(r => {
                     let name = utils.name(r) || r.slug || r
-                    let quantity = (r.mechanics || {quantity: 1}).quantity 
+                    let quantity = (r.mechanics || {quantity: 1}).quantity
                     if(quantity < 1) return ''
 
                     return `${name}${quantity != 1 && quantity != undefined ? ` (${quantity})` : ''}`
@@ -146,14 +149,12 @@ export default {
         },
         quantityItem: function(item){
             if(item.meta == 'command') return undefined
-            return `x${(item.mechanics || {quantity: 1}).quantity}`
+            return `x${this.quantity(item)}`
         },
         quantity: function(item){
             if(item.meta == 'command') return undefined
-            return (item.mechanics || {quantity: 1}).quantity
-        },
-        composition: function(item){
-            return (item.mechanics || {composition: []}).composition
+            let quantity = (item.mechanics || {quantity: 1}).quantity
+            return quantity == undefined ? 1 : quantity
         },
         nameItem: function(item){
             if(item.meta == 'command'){
@@ -162,8 +163,8 @@ export default {
                 return utils.name(item)
             }
         },
-        removeItem: function(index, parent, _id, quantity){
-            this.$emit('remove', index, parent, _id, quantity)
+        removeItem: function(index, _id, _parent){
+            this.$emit('remove', index, _id, _parent)
         },
         remoteSearch: function(text, callback){
             axios.get(`http://localhost:3000/equipment?q=${text}&max=10${this.$props.query ? '&query=' + this.$props.query : ''}`)
@@ -177,7 +178,7 @@ export default {
         handleEnter: function(event){
             event.preventDefault()
 
-            this.$emit('input', this.input_value.trim(), (this.$props.value || []).length)
+            this.$emit('input', this.input_value.trim())
             this.input_value = ''
             
             
