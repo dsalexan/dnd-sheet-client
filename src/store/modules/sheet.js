@@ -18,6 +18,8 @@ function DEFRAG(_res, _static=true){
             let key = res._id || res.slug || name || res
             let version  = res._version // para itens vagamente modificados  / AINDA NAO APLICAR
             let parent = res._parent
+            let injection = res._injection || 'custom'
+            let source = res._source
             
             if(typeof parent !== 'string'){
                 console.log('ERROR', 'Parent is not a string')
@@ -30,7 +32,8 @@ function DEFRAG(_res, _static=true){
             }
 
             // key = key + '___' + version
-            if(_static) key += '___' + parent
+            if(_static) key += '___' + injection
+            else if(source == 'equipment') key += '___' + parent
 
             if(!(key in index)) index[key] = []
             index[key].push(res)
@@ -74,7 +77,6 @@ function DEFRAG(_res, _static=true){
                         quantity: 1
                     }
                 }
-
 
 
                 let _equipment = _.cloneDeep((_r.mechanics || {}).equipment);
@@ -465,8 +467,9 @@ export default {
                 return quantity == undefined ? true : (quantity > 0)
             })
 
+            
             items = list_to_tree(items)
-            // console.log(items)
+            console.log('ITEM WITH QUANTITY', JSON.stringify(items, null, 2))
             return items
         }
     },
@@ -908,38 +911,64 @@ export default {
 
             let defrag_needed = false, fetch_needed = true
 
-            let subtract = function(index){
+            var subtract
+            subtract = function(i){
                 // lidar com remover o _parent de um item
                 // se bem que tambem falta terminar o rewind (quando trocar um recurso tipo classe ou background tem que remover os recursos subscritos)
-                let remove = function(_i){
-                    let _id = state.equipment.items[index]._id
+                var remove
+                remove = function(_i){
+                    let _id = state.equipment.items[_i]._uuid
+                    // console.log('REMOVE', _i, _id)
                     if(_id !== undefined){
-                        
+                        // loop trough items searching for _id as _parent
+                        // subtract that shit
+                        let stack = []
+                        let indice = 0
+                        for(let item of state.equipment.items){
+                            if(item._injection == _id){
+                                stack.push(indice)
+                            }else if(item._uuid == _id){
+                                stack.push(indice)
+                            }
+
+                            indice++
+                        }
+
+                        if(stack.length == 1){
+                            state.equipment.items.splice(_i, 1)
+                        }else{
+                            while(stack.length > 0){
+                                let idc = stack.pop()
+                                remove(idc)
+                            }
+                        }
                     }else{
                         state.equipment.items.splice(_i, 1)                
                     }
                 }
 
-                if(state.equipment.items[index].mechanics){
-                    if(state.equipment.items[index].mechanics.quantity !== undefined){
-                        state.equipment.items[index].mechanics.quantity--
+                if(state.equipment.items[i].mechanics){
+                    if(state.equipment.items[i].mechanics.quantity !== undefined){
+                        state.equipment.items[i].mechanics.quantity--
 
-                        if(state.equipment.items[index].mechanics.quantity == 0){
-                            remove(index)
+                        if(state.equipment.items[i].mechanics.quantity == 0){
+                            remove(i)
                         }
                     }else{
-                        remove(index)
+                        remove(i)
                     }
                 }else{
-                    remove(index)
+                    remove(i)
                 }
             }
+
+            subtract(index)
+
+            console.log('SUBTRACT AFTER', JSON.stringify(state.equipment.items, null, 2))
         
             if(defrag_needed){
                 commit('DEFRAG_STATIC_EQUIPMENT')
             }
-
-            debugger
 
             if(fetch_needed){
                 await dispatch('FETCH_EQUIPMENT') && dispatch('UPDATE_ASYNC', {source: 'equipment'})
@@ -1008,7 +1037,6 @@ export default {
                 for(let key of (meta.injections || [])){
                     
                     let obj = {
-                        id: uuid(),
                         resource: meta._uuid || meta.meta,
                         meta: meta.meta,
                         timestamp: new Date(),
@@ -1045,7 +1073,7 @@ export default {
                                 _uuid: uuid(), 
                                 _source: meta.meta,
                                 _type: 'default',
-                                _injection: obj.id,
+                                _injection: obj.resource,
                                 _parent: meta._id
                             }
                         })
@@ -1063,7 +1091,7 @@ export default {
                                     _uuid: uuid(),
                                     _source: meta.meta,
                                     _type: type,
-                                    _injection: obj.id,
+                                    _injection: obj.resource,
                                     _parent: meta._id
                                 }
                             })
