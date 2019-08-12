@@ -4,6 +4,7 @@ const uuid = require('uuid/v4')
 
 import * as dnd5e from '@/assets/rules/dnd/5e'
 import resources from '@/assets/utils/resources'
+import Die from '@/assets/utils/die'
 
 
 function DEFRAG(_res, _static=true){
@@ -151,10 +152,12 @@ export default {
         subscriptions: {
             features: {},
             proficiencies: {},
-            spells: {}
+            spells: {},
+            stats: {}
         },
         injections: {},
         async: {
+            stats: undefined,
             class: undefined,
             race: undefined,
             background: undefined,
@@ -180,65 +183,22 @@ export default {
         },
         stats: {
             attributes: {
-                str: undefined,
-                dex: undefined,
-                con: undefined,
-                int: undefined,
-                wis: undefined,
-                cha: 15
+                str: {value: undefined},
+                dex: {value: undefined},
+                con: {value: undefined},
+                int: {value: undefined},
+                wis: {value: undefined},
+                cha: {value: undefined}
             },
             inspiration: false,
-            proficiencies: {
-                saves: {
-                    str: false,
-                    dex: false,
-                    con: false,
-                    int: false,
-                    wis: false,
-                    cha: false
-                },
-                skills: {
-                    acrobatics: false,
-                    animal_handling: false,
-                    arcana: false,
-                    athletics: false,
-                    deception: false,
-                    history: false,
-                    insight: false,
-                    intimidation: false,
-                    investigation: false,
-                    medicine: false,
-                    nature: false,
-                    perception: false,
-                    performance: false,
-                    persuasion: false,
-                    religion: false,
-                    sleight_of_hand: false,
-                    stealth: false,
-                    survival: false,
-                },
-                others: {
-                    armor: [],
-                    weapons: [],
-                    tools: [],
-                    languages: []
-                }
+            hp: {
+                rolls: [],
+                current: undefined,
+                temporary: undefined
             },
-            combat: {
-                ac: undefined,
-                initiative: undefined,
-                speed: undefined,
-                hp: {
-                    maximum: undefined,
-                    current: undefined,
-                    temporary: undefined
-                },
-                hit_dice: {
-                    total: undefined,
-                    current: undefined
-                },
-                death_saves: undefined,
-                attacks_spellcasting: [
+            hit_dice: undefined,
+            death_saves: undefined,
+            attacks_spellcasting: [
                     {
                         name: undefined,
                         attack_bonus: undefined,
@@ -297,6 +257,41 @@ export default {
                         damage_type: undefined
                     }
                 ]
+        },
+        proficiencies: {
+            saves: {
+                str: false,
+                dex: false,
+                con: false,
+                int: false,
+                wis: false,
+                cha: false
+            },
+            skills: {
+                acrobatics: false,
+                animal_handling: false,
+                arcana: false,
+                athletics: false,
+                deception: false,
+                history: false,
+                insight: false,
+                intimidation: false,
+                investigation: false,
+                medicine: false,
+                nature: false,
+                perception: false,
+                performance: false,
+                persuasion: false,
+                religion: false,
+                sleight_of_hand: false,
+                stealth: false,
+                survival: false,
+            },
+            others: {
+                armor: [],
+                weapons: [],
+                tools: [],
+                languages: []
             }
         },
         equipment: { // INJECTION
@@ -313,7 +308,7 @@ export default {
         features: [], // SUBSCRIPTION
         spells: {
             by_level: {
-                0: ['cantrip 1'],
+                0: [],
                 1: [],
                 2: [],
                 3: [],
@@ -325,7 +320,7 @@ export default {
                 9: []
             },
             slots: {
-                1: 10,
+                1: undefined,
                 2: undefined,
                 3: undefined,
                 4: undefined,
@@ -350,9 +345,19 @@ export default {
             let bonus = dnd5e.proficiency_bonus[level]
             return bonus >= 0 ? '+' + bonus : bonus
         },
-        modifier: state => {
+        attribute: function(state){
             return attr => {
                 let attribute = state.stats.attributes[attr]
+                let async = ((state.async.stats || {}).attributes || {})[attr] || {}
+
+                if(attribute.value == undefined) return undefined
+                
+                return parseInt(attribute.value) + parseInt(async.add || 0)
+            }
+        },
+        modifier: (state, getters) => {
+            return attr => {
+                let attribute = getters.attribute(attr)
 
                 if (attribute !== 0 && !attribute) return undefined
                 let mod = Math.floor((attribute - 10) / 2)
@@ -375,7 +380,8 @@ export default {
         },
         passive_proficiency: (state, getters) => {
             return (slug) => {
-                let reference = dnd5e.proficiencies[slug]
+                let reference = dnd5e.proficiencies.skills[slug]
+                
                 if (reference == undefined) return undefined
 
                 let attribute = reference.slug
@@ -383,12 +389,53 @@ export default {
                     attribute = dnd5e.skills[reference.slug].attribute
                 }
 
-                let proficient = _.get(state.stats.proficiencies, reference.path)
+                let proficient = _.get(state.proficiencies, reference.path)
                 let modifier = getters.proficiency_modifier(attribute, proficient)
                 if (modifier == undefined) return undefined
                 return parseInt(modifier) + 10
             }
         },
+        speed: (state, getters) => {
+            let async = (state.async.stats || {}).speed || []
+
+            let order = ['walk', 'flight']
+
+            let speed = []
+
+            for(let o of order){
+                let s = async.filter(s => s.movement == o)[0]
+                if(s)
+                    speed.push(s)
+            }
+
+            speed = speed.concat(async.filter(s => !order.includes(s.movement)))
+
+            return speed
+        },
+        maximum_hp: (state, getters) => {
+            let level = getters.level
+            let con = getters.modifier('con')
+            let die = (state.async.stats || {hp: {}}).hp.die
+
+            if(level == undefined || con == undefined || die == undefined) return undefined
+
+            let lvl_1 = parseInt(_.last(die.split('d')))
+
+            let rolls_sum = state.stats.hp.rolls.reduce((s, cur) => s + cur, lvl_1)
+            return rolls_sum + (con * level)
+        },
+        maximum_hit_dice: (state, getters) => {
+            let level = getters.level
+            let die = (state.async.stats || {hit_dice: {}}).hit_dice.die
+
+            if(level == undefined || die == undefined) return undefined
+
+            die = new Die(die, 1)
+            die.quantity *= level
+
+            return die.template
+        },
+
         class: (state, getters) => {
             let level = getters.level
             if (level == undefined) return undefined
@@ -478,9 +525,11 @@ export default {
             state.subscriptions.features = {}
             state.subscriptions.proficiencies = {}
             state.subscriptions.spells = {}
+            state.subscriptions.stats = {}
 
             state.injections = {}
 
+            state.async.stats = undefined
             state.async.class = undefined
             state.async.race = undefined
             state.async.background = undefined
@@ -505,64 +554,59 @@ export default {
             state.misc.hair_color = undefined
             state.misc.skin_color = undefined
 
-            state.stats.attributes.str = undefined
-            state.stats.attributes.dex = undefined
-            state.stats.attributes.con = undefined
-            state.stats.attributes.int = undefined
-            state.stats.attributes.wis = undefined
-            state.stats.attributes.cha = undefined
+            state.stats.attributes.str = {value: undefined}
+            state.stats.attributes.dex = {value: undefined}
+            state.stats.attributes.con = {value: undefined}
+            state.stats.attributes.int = {value: undefined}
+            state.stats.attributes.wis = {value: undefined}
+            state.stats.attributes.cha = {value: undefined}
 
             state.stats.inspiration = false
 
-            state.stats.proficiencies.saves.str = undefined
-            state.stats.proficiencies.saves.dex = undefined
-            state.stats.proficiencies.saves.con = undefined
-            state.stats.proficiencies.saves.int = undefined
-            state.stats.proficiencies.saves.wis = undefined
-            state.stats.proficiencies.saves.cha = undefined
+            state.proficiencies.saves.str = undefined
+            state.proficiencies.saves.dex = undefined
+            state.proficiencies.saves.con = undefined
+            state.proficiencies.saves.int = undefined
+            state.proficiencies.saves.wis = undefined
+            state.proficiencies.saves.cha = undefined
 
-            state.stats.proficiencies.skills.acrobatics = undefined
-            state.stats.proficiencies.skills.animal_handling = undefined
-            state.stats.proficiencies.skills.arcana = undefined
-            state.stats.proficiencies.skills.athletics = undefined
-            state.stats.proficiencies.skills.deception = undefined
-            state.stats.proficiencies.skills.history = undefined
-            state.stats.proficiencies.skills.insight = undefined
-            state.stats.proficiencies.skills.intimidation = undefined
-            state.stats.proficiencies.skills.investigation = undefined
-            state.stats.proficiencies.skills.medicine = undefined
-            state.stats.proficiencies.skills.nature = undefined
-            state.stats.proficiencies.skills.perception = undefined
-            state.stats.proficiencies.skills.performance = undefined
-            state.stats.proficiencies.skills.persuasion = undefined
-            state.stats.proficiencies.skills.religion = undefined
-            state.stats.proficiencies.skills.sleight_of_hand = undefined
-            state.stats.proficiencies.skills.stealth = undefined
-            state.stats.proficiencies.skills.survival = undefined
+            state.proficiencies.skills.acrobatics = undefined
+            state.proficiencies.skills.animal_handling = undefined
+            state.proficiencies.skills.arcana = undefined
+            state.proficiencies.skills.athletics = undefined
+            state.proficiencies.skills.deception = undefined
+            state.proficiencies.skills.history = undefined
+            state.proficiencies.skills.insight = undefined
+            state.proficiencies.skills.intimidation = undefined
+            state.proficiencies.skills.investigation = undefined
+            state.proficiencies.skills.medicine = undefined
+            state.proficiencies.skills.nature = undefined
+            state.proficiencies.skills.perception = undefined
+            state.proficiencies.skills.performance = undefined
+            state.proficiencies.skills.persuasion = undefined
+            state.proficiencies.skills.religion = undefined
+            state.proficiencies.skills.sleight_of_hand = undefined
+            state.proficiencies.skills.stealth = undefined
+            state.proficiencies.skills.survival = undefined
 
-            state.stats.proficiencies.others = []
+            state.proficiencies.others = []
 
-            state.stats.combat.ac = undefined
-            state.stats.combat.initiative = undefined
-            state.stats.combat.speed = undefined
-            state.stats.combat.hp.maximum = undefined
-            state.stats.combat.hp.current = undefined
-            state.stats.combat.hp.temporary = undefined
-            state.stats.combat.hit_dice.total = undefined
-            state.stats.combat.hit_dice.current = undefined
+            state.stats.hp.rolls = []
+            state.stats.hp.current = undefined
+            state.stats.hp.temporary = undefined
 
-            state.stats.combat.death_saves = undefined
+            state.stats.hit_dice = undefined
 
-            for (let item of state.stats.combat.attacks_spellcasting) {
+            state.stats.death_saves = undefined
+
+            for (let item of state.stats.attacks_spellcasting) {
                 item.name = undefined
                 item.attack_bonus = undefined
                 item.damage_type = undefined
             }
 
-            for (let coin of dnd5e.economy.money.coins.all) {
-                state.equipment.treasure.coins[coin.slug] = undefined
-            }
             state.equipment.item = []
+            state.equipment.treasure = []
 
             state.features = []
 
@@ -755,7 +799,7 @@ export default {
         },
         async FETCH_PROFICIENCIES({dispatch, state, getters}){
             let subscription = state.subscriptions.proficiencies
-            let custom = {'custom': state.stats.proficiencies.others}
+            let custom = {'custom': state.proficiencies.others}
 
             let obj = Object.assign({}, subscription, custom)
             
@@ -835,6 +879,26 @@ export default {
                 console.error(err)
                 return false
             }
+        },
+        async FETCH_STATS( {dispatch, state} ){
+            let subs = state.subscriptions.stats
+
+            let stats = {}
+            for(let key in subs){
+                _.mergeWith(stats, subs[key], (objValue, srcValue) => {
+                    if (_.isArray(objValue)) return objValue.concat(srcValue)
+                })
+            }
+
+            for(let attr in stats.attributes){
+                if(stats.attributes[attr].add){
+                    stats.attributes[attr].add = stats.attributes[attr].add.reduce((sum, cur) => sum + cur, 0)
+                }
+            }
+
+            console.log('FETCH STATS', stats)
+
+            state.async.stats = stats
         },
 
         // actions as mutations
@@ -990,10 +1054,10 @@ export default {
             console.log('SET PROFS', value, index, key)
 
             if(value == undefined){
-                state.stats.proficiencies.others[key].splice(index, 1)
+                state.proficiencies.others[key].splice(index, 1)
             }else{
-                if(!(key in state.stats.proficiencies.others)) state.stats.proficiencies.others[key] = []
-                state.stats.proficiencies.others[key].splice(index, 1, value)
+                if(!(key in state.proficiencies.others)) state.proficiencies.others[key] = []
+                state.proficiencies.others[key].splice(index, 1, value)
             }
             
             await dispatch('FETCH_PROFICIENCIES') && dispatch('UPDATE_ASYNC', {source: 'proficiencies'})            
@@ -1210,13 +1274,13 @@ export default {
             if(classe){
                 for(let key of ['skills', 'saves']){
                     for(let attr of ((classe.mechanics.proficiencies || {[key]: []}).key || [])){
-                        state.stats.proficiencies[key][attr.replace('@', '')] = true
+                        state.proficiencies[key][attr.replace('@', '')] = true
                     }
                 }
             }else if(background){
                 for(let key of ['skills', 'saves']){
                     for(let attr of ((background.mechanics.proficiencies || {[key]: []}).key || [])){
-                        state.stats.proficiencies[key][attr.replace('@', '')] = true
+                        state.proficiencies[key][attr.replace('@', '')] = true
                     }
                 }
             }

@@ -9,13 +9,21 @@
         "subscriptions": [
             "features",
             "proficiencies",
-            "spells"
+            "spells",
+            "stats"
         ],
         "injections": [
             "equipment"
         ],
         "mechanics": {
-            "hit_dice": "1d8",
+            "stats": {
+                "hp": {
+                    "die": "d8"
+                },
+                "hit_dice": {
+                    "die": "1d8"
+                }
+            },
             "proficiencies": {
                 "armor": [
                     "@armor/light"

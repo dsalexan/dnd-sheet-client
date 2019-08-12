@@ -17,7 +17,7 @@
                                 placeholder="+0" 
                                 :label="attr.name" 
                                 :attribute="attr.slug" 
-                                v-model="sheet.stats.proficiencies.saves[attr.slug]"/>
+                                v-model="sheet.proficiencies.saves[attr.slug]"/>
                         </ul>
                         <div class="label">Saving Throws</div>
                     </div>
@@ -29,7 +29,7 @@
                                 placeholder="+0" 
                                 :label="skill.name" 
                                 :attribute="skill.attribute" 
-                                v-model="sheet.stats.proficiencies.skills[skill.slug]"/>
+                                v-model="sheet.proficiencies.skills[skill.slug]"/>
                         </ul>
                         <div class="label">Skills</div>
                     </div>
@@ -51,28 +51,48 @@
         <section>
             <section class="combat">
                 <div class="armorclass">
-                    <x-input transparent="false" label="Armor Class" name="ac" placeholder="10" v-model="sheet.stats.combat.ac"/>
+                    <x-input transparent="false" label="Armor Class" name="ac" placeholder="10" :value="undefined"/>
                 </div>
                 <div class="initiative">
                     <x-input transparent="false" class="clean" label="Initiative" name="initiative" placeholder="+0" :value="modifier('dex')" disabled/>
                 </div>
-                <div class="speed">
-                    <x-input transparent="false" label="Speed" name="speed" placeholder="30" v-model="sheet.stats.combat.speed"/>
+                <div class="speed" :class="{'has-prev': speed_index > 0, 'has-next': speed_index < speed.length - 1}">
+                    <div class="prev">
+                        <div class="icon" @click="speed_index -= speed_index > 0 ? 1 : 0">
+                            <q-icon name="chevron_left"/>
+                        </div>
+                    </div>
+                    <x-input transparent="false" class="clean" :label="labelSpeed" name="speed" placeholder="30" :value="(speed[speed_index] || {}).speed" disabled/>
+                    <div class="next">
+                        <div class="icon" @click="speed_index += speed_index < speed.length - 1 ? 1 : 0">
+                            <q-icon name="chevron_right"/>
+                        </div>
+                    </div>
                 </div>
                 <div class="hp">
                     <div class="regular">
-                        <x-input transparent="false" class="max" label="Hit Point Maximum" name="maxhp" placeholder="10" v-model="sheet.stats.combat.hp.maximum"/>
-                        <x-input transparent="false" class="current" label="Current Hit Points" name="currenthp" placeholder="10" v-model="sheet.stats.combat.hp.current" reactive="false"/>
+                        <x-input transparent="false" class="max clean" label="Hit Point Maximum" name="maxhp" placeholder="10" :value="maximum_hp" disabled/>
+                        <x-input transparent="false" class="current" label="Current Hit Points" name="currenthp" placeholder="10" 
+                            :value="focus_hp ? sheet.stats.hp.current : (sheet.stats.hp.current == undefined ? maximum_hp : sheet.stats.hp.current)" 
+                            @input="sheet.stats.hp.current = $event" 
+                            @focus="focus_hp=true"
+                            @blur="focus_hp=false"
+                            reactive="false"/>
                     </div>
-                    <x-input transparent="false" class="temporary" label="Temporary Hit Points" name="temphp" placeholder="10" v-model="sheet.stats.combat.hp.temporary" reactive="false"/>
+                    <x-input transparent="false" class="temporary" label="Temporary Hit Points" name="temphp" placeholder="10" v-model="sheet.stats.hp.temporary" reactive="false"/>
                 </div>
                 <div class="hitdice">
                     <div>
-                        <x-input transparent="false" class="total" label="Total" name="totalhd" placeholder="1d10" v-model="sheet.stats.combat.hit_dice.total"/>
-                        <x-input transparent="false" class="remaining" label="Hit Dice" name="remaininghd" placeholder="1d10" v-model="sheet.stats.combat.hit_dice.current" reactive="false"/>
+                        <x-input transparent="false" class="total clean" label="Total" name="totalhd" placeholder="1d10" :value="maximum_hit_dice" disabled/>
+                        <x-input transparent="false" class="remaining" label="Hit Dice" name="remaininghd" placeholder="1d10" 
+                        @input="sheet.stats.hit_dice = $event" 
+                        :value="focus_hit_dice ? sheet.stats.hit_dice : (sheet.stats.hit_dice == undefined ? maximum_hit_dice : sheet.stats.hit_dice)" 
+                        @focus="focus_hit_dice=true"
+                        @blur="focus_hit_dice=false"
+                        reactive="false"/>
                     </div>
                 </div>
-                <dnd-death-saves v-model="sheet.stats.combat.death_saves" />
+                <dnd-death-saves v-model="sheet.stats.death_saves" />
             </section>
             <section class="attacksandspellcasting">
                 <div>
@@ -83,10 +103,10 @@
                             <div>Atk Bonus</div>
                             <div>Damage</div>
                         </div>
-                        <div class="row" v-for="(item, index) of sheet.stats.combat.attacks_spellcasting" :key="index">
-                            <x-input transparent="false" v-model="sheet.stats.combat.attacks_spellcasting[index].name"></x-input>
-                            <x-input transparent="false" v-model="sheet.stats.combat.attacks_spellcasting[index].attack_bonus"></x-input>
-                            <x-input transparent="false" v-model="sheet.stats.combat.attacks_spellcasting[index].damage_type"></x-input>
+                        <div class="row" v-for="(item, index) of sheet.stats.attacks_spellcasting" :key="index">
+                            <x-input transparent="false" v-model="sheet.stats.attacks_spellcasting[index].name"></x-input>
+                            <x-input transparent="false" v-model="sheet.stats.attacks_spellcasting[index].attack_bonus"></x-input>
+                            <x-input transparent="false" v-model="sheet.stats.attacks_spellcasting[index].damage_type"></x-input>
                         </div>
                     </div>
                 </div>
@@ -137,6 +157,12 @@ import Panel from '@/components/dnd/Panel.vue'
 
 import XInput from '@/components/utils/XInput.vue'
 
+
+import {
+  Quasar,
+  QIcon
+} from 'quasar'
+
 export default {
     name: 'dnd-main',
     components: {
@@ -146,12 +172,17 @@ export default {
         'dnd-equipment': Equipment,
         'dnd-list': List,
         'dnd-panel': Panel,
-        'x-input': XInput
+        'x-input': XInput,
+        QIcon
     },
     data(){
         return {
             attributes: attributes.all,
-            skills: skills.all
+            skills: skills.all,
+
+            speed_index: 0,
+            focus_hp: false,
+            focus_hit_dice: false
         }
     },
     computed: {
@@ -164,8 +195,17 @@ export default {
             passive_proficiency: 'sheet/passive_proficiency',
             proficiencies: 'sheet/proficiencies',
             coins: 'sheet/coins',
-            items: 'sheet/items_with_quantity'
+            items: 'sheet/items_with_quantity',
+            speed: 'sheet/speed',
+            maximum_hp: 'sheet/maximum_hp',
+            maximum_hit_dice: 'sheet/maximum_hit_dice'
         }),
+        labelSpeed: function(){
+            if(this.speed.length > 1)
+                return `${this.speed[this.speed_index] ? this.speed[this.speed_index].movement + ' ': ''}Speed`
+            
+            return 'Speed'
+        }
     },
     methods: {
         ...mapActions({
@@ -256,7 +296,7 @@ export default {
 
                             label
                                 text-transform: none
-                                font-size: 8px
+                                font-size: 10px
                                 text-align: left
                                 order: 3
                                 
@@ -281,7 +321,15 @@ export default {
                                     &:checked
                                         background-color: black
 
-            
+            & /deep/ .x-input
+                &.passive-perception, &.proficiencybonus
+                    input
+                        opacity: 1 !important
+                        font-weight: bold
+
+                        &::placeholder
+                            font-weight: 400
+
             section.otherprofs 
                 padding-top: $gutter
 
@@ -297,6 +345,10 @@ export default {
                 
                     &.armorclass, &.initiative, &.speed
                         flex-basis: 33.333%
+                        display: flex
+                        flex-direction: row
+                        justify-content: center
+                        align-items: start
                         
                         > div
                             display: flex
@@ -322,7 +374,53 @@ export default {
                                 border: 1px solid black
                                 text-align: center
                                 font-size: 30px
-                    
+
+                    &.speed
+                        .next, .prev
+                            height: $large-box-width
+                            border-radius: $radius
+
+                            display: flex
+                            flex-direction: row
+                            align-items: center
+
+                            opacity: 0
+                            cursor: auto
+
+                            .icon
+                                height: 65%
+
+                                display: flex
+                                flex-direction: row
+                                align-items: center                    
+
+                                font-size: 16px                            
+                                border: 1px solid black
+                                background-color: $bg
+                                text-align: center
+                                // padding-left: 3px
+                                // padding-right: 3px
+
+                            &.next
+                                .icon
+                                    border-left: 0
+                                    border-radius: 0 $radius $radius 0
+                                    
+                            &.prev
+                                .icon
+                                    border-right: 0
+                                    border-radius: $radius 0 0 $radius
+
+                            &:hover
+                                .icon
+                                    background-color: #dbf8d8
+                                    color: #1fcc00
+
+                        &.has-prev .prev, &.has-next .next
+                            opacity: 1
+                            cursor: pointer
+
+
                     &.hp
                         flex-basis: 100%
                         

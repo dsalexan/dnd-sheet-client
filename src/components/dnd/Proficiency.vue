@@ -1,7 +1,7 @@
 <template>
     <component :is="tag" class="proficiency">
         <input type="checkbox" :checked="checked" @change="$emit('change', $event.target.checked)"/>
-        <x-input :label="label" :placeholder="placeholder" :value="modifier(attribute, checked)" disabled reactive="false"/>
+        <x-input class="clean" :label="label" :placeholder="placeholder" :value="modifier(attribute, checked)" disabled reactive="false"/>
     </component>
 </template>
 

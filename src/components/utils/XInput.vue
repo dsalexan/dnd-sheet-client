@@ -402,6 +402,8 @@ export default {
     .clean
         input:disabled
             background-color: white
+            cursor: auto !important
+            opacity: 1 !important
 
     .transparent
         input::placeholder, input, label
