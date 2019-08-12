@@ -197,66 +197,7 @@ export default {
                 temporary: undefined
             },
             hit_dice: undefined,
-            death_saves: undefined,
-            attacks_spellcasting: [
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    },
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    },
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    }, {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    },
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    },
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    }, {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    },
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    },
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    }, {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    },
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    },
-                    {
-                        name: undefined,
-                        attack_bonus: undefined,
-                        damage_type: undefined
-                    }
-                ]
+            death_saves: undefined
         },
         proficiencies: {
             saves: {
@@ -435,6 +376,15 @@ export default {
 
             return die.template
         },
+        ac: (state) => {
+            let ac = (state.async.stats || {}).ac
+
+            if(ac == undefined) return 10
+
+            let bonus = (ac.add || []).reduce((sum, cur) => sum + cur, 0)
+
+            return ac.base + bonus
+        },
 
         class: (state, getters) => {
             let level = getters.level
@@ -518,7 +468,20 @@ export default {
             items = list_to_tree(items)
             console.log('ITEM WITH QUANTITY', JSON.stringify(items, null, 2))
             return items
-        }
+        },
+        attacks_spellcasting: (state, getters) => {
+            let items = (state.async.equipment || {items: []}).items || []
+
+            let filtered_items = items.filter(i => {
+                let quantity = (i.mechanics || {quantity: 1}).quantity
+                let has_quantity = quantity == undefined ? true : (quantity > 0)
+
+                let damage = (i.mechanics || {}).damage || []
+                return has_quantity && damage.length > 0
+            })
+
+            return filtered_items                        
+        },
     },
     mutations: {
         RESET: (state) => {

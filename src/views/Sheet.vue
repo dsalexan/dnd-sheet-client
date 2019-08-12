@@ -944,31 +944,10 @@ export default {
         
         > div
           margin: $gutter
-          display: flex
-          flex-direction: column
         
           > label
             order: 3
             text-align: center
-
-          > table
-            width: 100%
-            
-            th
-              font-size: 10px
-              color: $faded
-            
-            input
-              width: calc(100% - 4px)
-              border: 0
-              background-color: $faded-light
-              font-size: 10px
-              padding: 3px
-              
-          textarea
-            border: 0
-            width: calc(100% - (2 * #{$radius}))
-            margin-bottom: $radius
 
       section.equipment
         border: 1px solid black

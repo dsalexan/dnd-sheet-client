@@ -20,6 +20,27 @@
         "text": "<p>Made from supple and thin materials, Light Armor favors agile adventurers since it offers some Protection without sacrificing mobility. If you wear Light Armor, you add your Dexterity modifier to the base number from your armor type to determine your Armor Class.</p>"
     },
     {
+        "_id": "leather_armor",
+        "meta": "equipment",
+        "parent": "light_armor",
+        "name": "Leather Armor",
+        "slug": "leather",
+        "text": "<p>The Breastplate and shoulder protectors of this armor are made of leather that has been stiffened by being boiled in oil. The rest of the armor is made of softer and more flexible materials.</p>",
+        "subscriptions": [
+            "stats"
+        ],
+        "mechanics": {
+            "stats": {
+                "ac": {
+                    "base": 11
+                }
+            },
+            "weight": [
+                "10", "lb"
+            ]
+        }
+    },
+    {
         "_id": "tool",
         "meta": "equipment",
         "parent": "adventuring_gear",

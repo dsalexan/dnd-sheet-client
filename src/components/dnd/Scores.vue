@@ -1,7 +1,7 @@
 <template>
     <ul class="dnd-scores">
         <li v-for="(attr, index) in attributes" :key="index">
-            <x-input class="score" :label="attr.name" placeholder="+0" :value="modifier(attr.slug)" disabled reactive="false"></x-input>
+            <x-input class="score half-clean" :label="attr.name" placeholder="+0" :value="modifier(attr.slug)" disabled reactive="false"></x-input>
             <div class="modifier" :class="{'adding': isAdding(attr.slug), 'default': !isAdding(attr.slug)}">
                 <x-input 
                     class="main"

@@ -51,7 +51,7 @@
         <section>
             <section class="combat">
                 <div class="armorclass">
-                    <x-input transparent="false" label="Armor Class" name="ac" placeholder="10" :value="undefined"/>
+                    <x-input transparent="false" class="clean" label="Armor Class" name="ac" placeholder="10" :value="ac" disabled/>
                 </div>
                 <div class="initiative">
                     <x-input transparent="false" class="clean" label="Initiative" name="initiative" placeholder="+0" :value="modifier('dex')" disabled/>
@@ -97,17 +97,23 @@
             <section class="attacksandspellcasting">
                 <div>
                     <label>Attacks & Spellcasting</label>
-                    <div class="table">
-                        <div class="row header">
-                            <div>Name</div>
-                            <div>Atk Bonus</div>
-                            <div>Damage</div>
-                        </div>
-                        <div class="row" v-for="(item, index) of sheet.stats.attacks_spellcasting" :key="index">
-                            <x-input transparent="false" v-model="sheet.stats.attacks_spellcasting[index].name"></x-input>
-                            <x-input transparent="false" v-model="sheet.stats.attacks_spellcasting[index].attack_bonus"></x-input>
-                            <x-input transparent="false" v-model="sheet.stats.attacks_spellcasting[index].damage_type"></x-input>
-                        </div>
+                    <div>
+                        <q-list v-if="attacks_spellcasting.length > 0">
+                            <q-item 
+                                v-for="(item) of attacks_spellcasting" :key="item._id"
+                                clickable>
+                                <q-item-section>
+                                    <!-- <q-item-label overline>OVERLINE</q-item-label> string.charAt(0).toUpperCase() + string.slice(1)-->
+                                    <q-item-label><b style="margin-right: 10px">{{ name(item) }}</b> {{ ((item.mechanics || {}).damage || []).map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ') }}</q-item-label>
+                                    <q-item-label caption>{{ ((item.mechanics || {}).properties || []).map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ') }}</q-item-label>
+                                </q-item-section>
+
+                                <q-item-section side top>
+                                    <q-item-label caption style="font-size: 1.05em; color: rgba(0,0,0, 0.6)">+4</q-item-label>
+                                </q-item-section>
+                            </q-item>
+                        </q-list>
+                        <span v-if="attacks_spellcasting.length == 0" style="color: lightgray; font-style: italic; font-size: 0.9em;">No Attacks/Spellcasting</span>
                     </div>
                 </div>
             </section>
@@ -131,11 +137,6 @@
                     meta="feature"
                     @input="(value, index) => set_features({value, index})"/>
             </section>
-            {{(sheet.equipment || {}).items}}
-            <br/>
-            <br/>
-            <br/>
-            {{(sheet.async.equipment || {}).items}}
         </section>
     </main>
 </template>
@@ -146,7 +147,7 @@ import { mapState, mapGetters, mapActions, mapMutations } from 'vuex'
 
 import { attributes, skills } from '@/assets/rules/dnd/5e'
 
-import { compile } from '@/assets/utils/resources'
+import utils from '@/assets/utils/resources'
 
 import Scores from '@/components/dnd/Scores.vue'
 import Proficiency from '@/components/dnd/Proficiency.vue'
@@ -160,7 +161,11 @@ import XInput from '@/components/utils/XInput.vue'
 
 import {
   Quasar,
-  QIcon
+  QIcon,
+  QList,
+  QItem,
+  QItemSection,
+  QItemLabel
 } from 'quasar'
 
 export default {
@@ -173,7 +178,11 @@ export default {
         'dnd-list': List,
         'dnd-panel': Panel,
         'x-input': XInput,
-        QIcon
+        QIcon,
+        QList,
+        QItem,
+        QItemSection,
+        QItemLabel
     },
     data(){
         return {
@@ -198,7 +207,9 @@ export default {
             items: 'sheet/items_with_quantity',
             speed: 'sheet/speed',
             maximum_hp: 'sheet/maximum_hp',
-            maximum_hit_dice: 'sheet/maximum_hit_dice'
+            maximum_hit_dice: 'sheet/maximum_hit_dice',
+            attacks_spellcasting: 'sheet/attacks_spellcasting',
+            ac: 'sheet/ac'
         }),
         labelSpeed: function(){
             if(this.speed.length > 1)
@@ -208,6 +219,7 @@ export default {
         }
     },
     methods: {
+        name: utils.name, 
         ...mapActions({
             set_equipment: 'sheet/SET_EQUIPMENT',
             set_features: 'sheet/SET_FEATURES',
@@ -569,32 +581,9 @@ export default {
                         text-align: center
                         padding-top: $gutter
 
-                    > div.table
-                        width: 100%
+                .q-item__label
+                    text-align: left
 
-                        div.row
-                            display: grid
-                            grid-template-columns: 2fr 1fr 1fr
-
-                            &.header
-                                font-size: 10px
-                                color: $faded
-
-                            > div
-                                margin: 0 $gutter /2
-
-                                &:first-of-type
-                                    margin-left: 0
-
-                                &:last-of-type
-                                    margin-right: 0
-
-                                input
-                                    width: calc(100% - 4px)
-                                    border: 0
-                                    background-color: $faded-light
-                                    font-size: 10px
-                                    padding: 3px
             
             section.equipment
                 border: 1px solid black
