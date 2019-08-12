@@ -1236,13 +1236,17 @@ export default {
             let classe = state.async.class, background = state.async.background
             if(classe){
                 for(let key of ['skills', 'saves']){
-                    for(let attr of ((classe.mechanics.proficiencies || {[key]: []}).key || [])){
+                    let _profs = ((classe.mechanics.proficiencies || {[key]: []})[key] || [])
+                    for(let attr of _profs){
+                        if(attr.meta == 'command') continue
                         state.proficiencies[key][attr.replace('@', '')] = true
                     }
                 }
             }else if(background){
                 for(let key of ['skills', 'saves']){
-                    for(let attr of ((background.mechanics.proficiencies || {[key]: []}).key || [])){
+                    let _profs = ((background.mechanics.proficiencies || {[key]: []})[key] || [])
+                    for(let attr of _profs){
+                        if(attr.meta == 'command') continue
                         state.proficiencies[key][attr.replace('@', '')] = true
                     }
                 }
