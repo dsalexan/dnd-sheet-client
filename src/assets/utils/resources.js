@@ -151,6 +151,8 @@ function name(item, from=true){
     if(typeof item == 'string') return item
     else if(typeof item == 'object') {
         if(item.meta == 'command'){
+            if(item.text) return item.text
+            
             if(item.choose != undefined){
                 return `Choose ${item.choose} from <${from ? (item.from.map ? item.from.map(i => name(i)) : item.from) : '...'}>`
             }else{
@@ -195,12 +197,17 @@ function table(resource, level=1){
     return obj
 }
 
-function compile(objs){
-    let obj = {}
+function resolve(mention, state){    
+    if(mention.substr(0, 4) == '@me/'){
+        mention = mention.substr(4)
+        mention = mention.replace(/\/+/, '.')
+        
+        let variable = _.get(state, mention)
 
-    return obj
+        return variable
+    }
 }
 
 export default {
-    schema, name, table, compile, key
+    schema, name, table, resolve, key
 }

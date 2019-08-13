@@ -128,12 +128,35 @@
             </section>
         </section>
         <section>
+            <section 
+                v-for="(item) of sheet.plugins" :key="item.name"
+                class="plugin textblock">
+                <label>{{ item.name }}</label>
+
+                <div class="box">
+                    <q-list>
+                        <q-item 
+                            v-for="(content, index) of item.content" :key="index"
+                            clickable="">
+                            <q-item-section>
+                                <!-- <q-item-label overline>OVERLINE</q-item-label> -->
+                                <q-item-label style="font-weight: bold">{{ name(content) }}</q-item-label>
+                                <q-item-label caption>Current: <span style="font-weight:bold">{{ resolve(content.inject, sheet).value }}</span></q-item-label>
+                            </q-item-section>
+
+                            <q-item-section side top>
+                                <q-item-label caption>{{ content.from.join(', ') }}</q-item-label>
+                            </q-item-section>
+                        </q-item>
+                    </q-list>
+                </div>
+            </section>
             <section class="features textblock">
                 <label>Features & Traits</label>
                 <dnd-list 
                     :expansion="true"
                     label="Feature"
-                    :value="sheet.async.features"
+                    :value="features"
                     meta="feature"
                     @input="(value, index) => set_features({value, index})"/>
             </section>
@@ -209,7 +232,8 @@ export default {
             maximum_hp: 'sheet/maximum_hp',
             maximum_hit_dice: 'sheet/maximum_hit_dice',
             attacks_spellcasting: 'sheet/attacks_spellcasting',
-            ac: 'sheet/ac'
+            ac: 'sheet/ac',
+            features: 'sheet/tree_features'
         }),
         labelSpeed: function(){
             if(this.speed.length > 1)
@@ -220,6 +244,7 @@ export default {
     },
     methods: {
         name: utils.name, 
+        resolve: utils.resolve,
         ...mapActions({
             set_equipment: 'sheet/SET_EQUIPMENT',
             set_features: 'sheet/SET_FEATURES',
@@ -592,6 +617,30 @@ export default {
                 
                 > div
                     padding: $gutter
+
+            section.plugin
+                padding: 0 $gutter
+                display: flex
+                flex-direction: column-reverse
+
+                > label
+                    text-align: center
+
+                > .box    
+                    border: 1px solid black
+                    width: 100%
+                    padding: 15px
+                    border-radius: 10px
+                    padding: 15px 0
+
+                    & /deep/ .q-list
+                        > .q-item
+                            > .q-item__section
+                                > .q-item__label
+                                    text-align: left
+
+                & + section
+                    margin-top: 15px
 
             section.features     
                 padding: 0 $gutter

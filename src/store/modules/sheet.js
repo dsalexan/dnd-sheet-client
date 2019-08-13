@@ -19,7 +19,7 @@ function DEFRAG(_res, _static=true){
             let key = res._id || res.slug || name || res
             let version  = res._version // para itens vagamente modificados  / AINDA NAO APLICAR
             let parent = res._parent
-            let injection = res._injection || 'custom'
+            let injection = res._origin || 'custom'
             let source = res._source
             
             if(typeof parent !== 'string'){
@@ -146,9 +146,44 @@ function DEFRAG(_res, _static=true){
     return defrag
 }
 
+
+function METADATA(dispatch, value, path, origin, parent, source, type='default', key='slug'){
+    let d = {}
+    if(typeof value == 'string'){
+        d = {
+            [key]: value
+        }
+    }else{
+        d = value
+    }
+
+    let _uuid = uuid()
+
+    if(dispatch)
+        dispatch('SET_RESOURCE', {value: {
+            _uuid,
+            _path: path,
+            _origin: origin, 
+            _parent: parent,
+            _source: source,
+            _type: type
+        }})
+
+    return {
+        ...d,
+        _uuid,
+        _path: path,
+        _origin: origin, 
+        _parent: parent,
+        _source: source,
+        _type: type
+    }
+}
+
 export default {
     namespaced: true,
     state: {
+        subscribed_at: {},
         subscriptions: {
             features: {},
             proficiencies: {},
@@ -156,6 +191,12 @@ export default {
             stats: {}
         },
         injections: {},
+        plugins: {},
+        resources: {
+            index: {},
+            tree: {}
+        },
+
         async: {
             stats: undefined,
             class: undefined,
@@ -166,6 +207,7 @@ export default {
             equipment: undefined,
             spells: undefined
         },
+
         name: undefined,
         misc: {
             class_level: undefined, // SUBSCRIPTION
@@ -356,7 +398,7 @@ export default {
         maximum_hp: (state, getters) => {
             let level = getters.level
             let con = getters.modifier('con')
-            let die = (state.async.stats || {hp: {}}).hp.die
+            let die = ((state.async.stats || {}).hp || {}).die
 
             if(level == undefined || con == undefined || die == undefined) return undefined
 
@@ -367,7 +409,7 @@ export default {
         },
         maximum_hit_dice: (state, getters) => {
             let level = getters.level
-            let die = (state.async.stats || {hit_dice: {}}).hit_dice.die
+            let die = ((state.async.stats || {}).hit_dice || {}).die
 
             if(level == undefined || die == undefined) return undefined
 
@@ -466,7 +508,6 @@ export default {
 
             
             items = list_to_tree(items)
-            console.log('ITEM WITH QUANTITY', JSON.stringify(items, null, 2))
             return items
         },
         attacks_spellcasting: (state, getters) => {
@@ -482,6 +523,47 @@ export default {
 
             return filtered_items                        
         },
+
+        tree_features: (state) => {
+            function list_to_tree(list) {
+                var map = {}, node, roots = [], i;
+                for (i = 0; i < list.length; i += 1) {
+                    map[list[i]._id] = i; // initialize the map
+                    list[i]._children = []; // initialize the children
+                }
+                for (i = 0; i < list.length; i += 1) {
+                    node = list[i];
+                    if (node._source == 'feature') { // se o node não é raiz
+                        // if you have dangling branches check that map[node.parentId] exists
+                        if(map[node._parent] !== undefined)
+                            list[map[node._parent]]._children.push(node);
+                    } else {
+                        roots.push(node);
+                    }
+                }
+                return roots;
+            }
+
+            let features = _.cloneDeep(state.async.features || {})
+
+            let obj = {}
+            if(features.feature){
+                let from_features = features.feature
+                for(let source in features){
+                    if(source == 'feature') continue
+                    if(features[source].length == 0) continue
+
+                    let tree = list_to_tree([...features[source], ...from_features])
+                    obj[source] = tree
+                }
+            }else{
+                obj = features
+            }
+
+            // console.log('TREEFY FEATURES', obj, features)
+
+            return obj
+        }
     },
     mutations: {
         RESET: (state) => {
@@ -491,6 +573,13 @@ export default {
             state.subscriptions.stats = {}
 
             state.injections = {}
+
+            state.plugins = {}
+
+            state.resources = {
+                index: {},
+                tree: {}
+            }
 
             state.async.stats = undefined
             state.async.class = undefined
@@ -651,7 +740,46 @@ export default {
             }
         },
 
-        async FETCH_RESOURCES({dispatch}, obj){
+        async FETCH_RESOURCES({dispatch, state}, obj){
+            var evaluate_active = (resource_active) => {
+                let active = true
+                if(resource_active){
+                    if(typeof resource_active == 'boolean') active = resource_active
+                    else{
+                        let result = false
+
+                        if(resource_active.condition){
+                            if(resource_active.condition.equals){
+                                let eq = resource_active.condition.equals
+
+                                let data = eq[0]
+                                let value = eq[1]
+                                if(data.substr(0, 4) == '@me/'){
+                                    data = data.substr(4)
+                                    data = data.replace(/\/+/, '.')
+                                }else{
+                                    throw new Error('Comparassion not implemented for any other mention type (other than @me)')
+                                }
+
+                                let state_data = _.get(state, data)
+                                if(state_data == undefined) state_data = undefined
+                                else if(typeof state_data != 'string') state_data = state_data.value
+
+                                result = state_data == value
+                            }else{
+                                throw new Error('Comparassion not implemented for conditional property')
+                            }
+                        }else{
+                            throw new Error('Directive not implemented')
+                        }
+
+                        active = result
+                    }
+                }
+
+                return active
+            }
+
             var fetch 
             fetch = async (srcRes, _index, search=false) => {
                 let reqRes = undefined
@@ -685,6 +813,10 @@ export default {
                                 return srcValue.concat(objValue)
                         }
                     })
+
+                    if(_data.mechanics){
+                        _data.mechanics.active = _data.mechanics.active == undefined ? true : evaluate_active(_data.mechanics.active)
+                    }
 
                     return _data
                 }
@@ -865,6 +997,102 @@ export default {
         },
 
         // actions as mutations
+        SET_RESOURCE({dispatch, state, getters}, {value}){
+            state.resources.index[value._uuid] = value
+            
+            if(!(value._origin in state.resources.tree)) state.resources.tree[value._origin] = []
+            if(!state.resources.tree[value._origin].includes(value._uuid))
+                state.resources.tree[value._origin].push(value._uuid)
+
+            console.log('SET RESOURCE', state.resources.tree, state.resources.index)
+        },
+        REMOVE_RESOURCE({dispatch, state, getters}, {resource}){
+            console.log('REMOVE RESOURCE', resource)
+
+            function children(root){
+                let _children = state.resources.tree[root]
+                
+                if(_children == undefined){
+                    return []
+                }
+
+                let _grandchildren = _children.map(c => children(c)).reduce((arr, cur) => [...arr, ...cur], [])
+
+                return [..._children, ..._grandchildren]
+            }
+
+            let stack = [resource._uuid, ...children(resource._uuid)]
+            let paths = stack.map(r => _.toPath(state.resources.index[r]._path))
+
+            for(let y = stack.length-1; y >= 0; y--){
+                let ref = state
+                let path = paths[y]
+                let uuid = stack[y]
+
+                let i
+                for(i = 0; i < path.length-1; i++){
+                    ref = ref[path[i]]
+                }
+                
+                delete ref[path[i]]
+                delete state.resources.index[uuid]
+                if(uuid in state.resources.tree)
+                    delete state.resources.tree[uuid]
+            }
+
+            // REFACTOR ARRAYS (remove empty slots and reorganize outdated paths)
+            let fromPath = (arr) => {
+                return arr.map(a => {
+                    if(!_.isNaN(parseInt(a))){
+                        return `[${a}]`
+                    }
+                    return `.${a}`
+                }).join('').substr(1)
+            }
+
+            // console.log('REMOVED PATHS', JSON.stringify(paths, null, 2))
+            for(let path of paths){
+                let p = path.pop()
+                while(p){
+                    if(!_.isNaN(parseInt(p))){ // se é um numero
+                        let array = _.get(state, path)
+                        for(let i = array.length-1; i >= 0; i--){
+                            if(array[i] == undefined)
+                                array.splice(i, 1)
+                        }
+
+                        for(let i = 0; i < array.length; i++){
+                            let item = array[i]
+                            let old_path = item._path
+
+                            item._path = fromPath([...path, i])
+                            state.resources.index[item._uuid]._path = item._path
+
+                            console.log('REFACTOR PATH', `${old_path} -> ${item._path}`)
+                        }
+
+                    }
+
+                    p = path.pop()
+                }
+            }
+
+            // RE-FETCH what was subscribed by the gone ones
+            let fetches = []
+            let sub_at = stack.map(r => state.subscribed_at[r]).filter(s => s !== undefined)
+            let clusters = _.uniqBy(sub_at.map(r => r.meta).reduce((arr, cur) => [...arr, ...cur], []))
+            
+            for(let key of clusters){
+                fetches.push(dispatch('FETCH_' + key.toUpperCase()))
+            }
+            Promise.all(fetches)
+
+            for(let r of stack){
+                delete state.subscribed_at[r]
+            }
+
+            // console.log('STATE', state)
+        },
         async SET_CLASS_LEVEL({ dispatch, state, getters }, value){
             state.misc.class_level = value && value.trim()
             
@@ -887,17 +1115,8 @@ export default {
             if(value == undefined)
                 state.equipment.items.splice(index, 1)
             else{
-                if(typeof value == 'string'){
-                    value = {
-                        slug: value,
-                        _uuid: uuid(), 
-                        _parent: "sheet",
-                        _source: "custom",
-                        _type: "items"
-                    }
-                }
-
                 if(index == undefined) index = state.equipment.items.length
+                value = METADATA(dispatch, value, `equipment.items[${index}]`, 'input', 'sheet', 'custom', 'items')
                 
                 state.equipment.items.splice(index, 1, value)
             }
@@ -944,34 +1163,7 @@ export default {
                 // se bem que tambem falta terminar o rewind (quando trocar um recurso tipo classe ou background tem que remover os recursos subscritos)
                 var remove
                 remove = function(_i){
-                    let _id = state.equipment.items[_i]._uuid
-                    // console.log('REMOVE', _i, _id)
-                    if(_id !== undefined){
-                        // loop trough items searching for _id as _parent
-                        // subtract that shit
-                        let stack = []
-                        let indice = 0
-                        for(let item of state.equipment.items){
-                            if(item._injection == _id){
-                                stack.push(indice)
-                            }else if(item._uuid == _id){
-                                stack.push(indice)
-                            }
-
-                            indice++
-                        }
-
-                        if(stack.length == 1){
-                            state.equipment.items.splice(_i, 1)
-                        }else{
-                            while(stack.length > 0){
-                                let idc = stack.pop()
-                                remove(idc)
-                            }
-                        }
-                    }else{
-                        state.equipment.items.splice(_i, 1)                
-                    }
+                    dispatch('REMOVE_RESOURCE', {resource: state.equipment.items[_i]})
                 }
 
                 if(state.equipment.items[i].mechanics){
@@ -991,7 +1183,6 @@ export default {
 
             subtract(index)
 
-            console.log('SUBTRACT AFTER', JSON.stringify(state.equipment.items, null, 2))
         
             if(defrag_needed){
                 commit('DEFRAG_STATIC_EQUIPMENT')
@@ -1006,10 +1197,13 @@ export default {
         async SET_FEATURES({ dispatch, state }, { value, index }){
             console.log('SET FEATURES', value, index)
 
-            if(value == undefined)
-                state.features.splice(index, 1)
-            else
+            if(value == undefined){
+                dispatch('REMOVE_RESOURCE', {resource: state.features[index]})
+            }else{
+                value = METADATA(dispatch, value, `features[${index}]`, 'input', 'sheet', 'custom')
+
                 state.features.splice(index, 1, value)
+            }
 
             await dispatch('FETCH_FEATURES') && dispatch('UPDATE_ASYNC', {source: 'features'})
         },
@@ -1017,16 +1211,20 @@ export default {
             console.log('SET PROFS', value, index, key)
 
             if(value == undefined){
-                state.proficiencies.others[key].splice(index, 1)
+                dispatch('REMOVE_RESOURCE', {resource: state.proficiencies.others[key][index]})
             }else{
                 if(!(key in state.proficiencies.others)) state.proficiencies.others[key] = []
+
+                value = METADATA(dispatch, value, `proficiencies.others.${key}[${index}]`, 'input', key, 'custom')
+
                 state.proficiencies.others[key].splice(index, 1, value)
             }
             
             await dispatch('FETCH_PROFICIENCIES') && dispatch('UPDATE_ASYNC', {source: 'proficiencies'})            
         },
 
-        async UPDATE_SUBSCRIPTIONS({ state, getters }, { metas, source }){
+        async UPDATE_SUBSCRIPTIONS({ dispatch, state, getters }, { metas, source }){
+            
             for(let meta of metas){
                 let table = resources.table(meta, getters.level)
 
@@ -1048,6 +1246,50 @@ export default {
                             }) // else just merge objects
                         }
                     }
+                    
+                    let origin = meta._uuid || meta.meta
+
+                    if(obj[meta.meta] instanceof Array){
+                        obj[meta.meta] = obj[meta.meta].map((d, index) => {
+                            if(typeof d == 'string'){
+                                let _key = 'name'
+                                if(d.charAt(0) == '@') _key = 'slug'
+                                d = {
+                                    [_key]: d
+                                }
+                            }
+                            
+                            return METADATA(dispatch, d, `subscriptions.${key}.${meta.meta}[${index}]`, origin, meta._id, meta.meta)
+                        })
+                    }else{
+                        for(let type in obj[meta.meta]){
+                            if(_.isArray(obj[meta.meta][type])){
+                                obj[meta.meta][type] = obj[meta.meta][type].map((d, index) => {
+                                    if(typeof d == 'string'){
+                                        let _key = 'name'
+                                        if(d.charAt(0) == '@') _key = 'slug'
+                                        d = {[_key]: d}
+                                    }
+
+                                    return METADATA(dispatch, d, `subscriptions.${key}.${meta.meta}.${type}[${index}]`, origin, meta._id, meta.meta, type)
+                                })
+                            }else{
+                                let d = obj[meta.meta][type]
+
+                                if(typeof d == 'string'){
+                                    let _key = 'value'
+                                    if(d.charAt(0) == '@') _key = 'slug'
+                                    d = {[_key]: d}
+                                }
+
+                                obj[meta.meta][type] = METADATA(dispatch, d, `subscriptions.${key}.${meta.meta}.${type}`, origin, meta._id, meta.meta, type)
+                            }
+                        }
+                    }
+
+                    if(!(origin in state.subscribed_at)) state.subscribed_at[origin] = {meta: []}
+                    state.subscribed_at[origin].date = new Date()
+                    state.subscribed_at[origin].meta.push(key)
 
                     _.mergeWith(state.subscriptions[key], obj, (objValue, srcValue) => {
                         if (_.isArray(objValue)) return objValue.concat(srcValue)
@@ -1055,9 +1297,9 @@ export default {
                 }
             }
 
-            console.log(`SUBSCRIPTIONS UPDATED (from ${source})`, state.subscriptions)
+            console.log(`SUBSCRIPTIONS UPDATED (from ${source})`, state.subscriptions, state)
         },
-        async UPDATE_INJECTIONS({ state, getters }, { metas, source }){
+        async UPDATE_INJECTIONS({ dispatch, state, getters }, { metas, source }){
             for(let meta of metas){
                 let table = resources.table(meta, getters.level)
 
@@ -1067,7 +1309,7 @@ export default {
                         resource: meta._uuid || meta.meta,
                         meta: meta.meta,
                         timestamp: new Date(),
-                        parent: meta._injection
+                        parent: meta._origin
                     }
                     let injection = []
 
@@ -1086,7 +1328,7 @@ export default {
                     }
                     
                     if(injection instanceof Array){
-                        injection = injection.map(d => {
+                        injection = injection.map((d, index) => {
                             if(typeof d == 'string'){
                                 let _key = 'name'
                                 if(d.charAt(0) == '@') _key = 'slug'
@@ -1095,33 +1337,31 @@ export default {
                                 }
                             }
 
-                            return {
-                                ...d,
-                                _uuid: uuid(), 
-                                _source: meta.meta,
-                                _type: 'default',
-                                _injection: obj.resource,
-                                _parent: meta._id
-                            }
+                            return METADATA(dispatch, d, `${key}[${index}]`, obj.resource, meta._id, meta.meta)
                         })
                     }else{
                         for(let type in injection){
-                            injection[type] = injection[type].map(d => {
+                            if(_.isArray(injection[type])){
+                                injection[type] = injection[type].map((d, index) => {
+                                    if(typeof d == 'string'){
+                                        let _key = 'name'
+                                        if(d.charAt(0) == '@') _key = 'slug'
+                                        d = {[_key]: d}
+                                    }
+
+                                    return METADATA(dispatch, d, `${key}.${type}[${index}]`, obj.resource, meta._id, meta.meta, type)
+                                })
+                            }else{
+                                let d = injection[type]
+
                                 if(typeof d == 'string'){
-                                    let _key = 'name'
+                                    let _key = 'value'
                                     if(d.charAt(0) == '@') _key = 'slug'
                                     d = {[_key]: d}
                                 }
 
-                                return {
-                                    ...d,
-                                    _uuid: uuid(),
-                                    _source: meta.meta,
-                                    _type: type,
-                                    _injection: obj.resource,
-                                    _parent: meta._id
-                                }
-                            })
+                                injection[type] =  METADATA(dispatch, d, `${key}.${type}`, obj.resource, meta._id, meta.meta, type)
+                            }
                         }
                     }
 
@@ -1130,7 +1370,8 @@ export default {
                     
                     // update relevant fields with injection data
                     let target = ({
-                        equipment: 'equipment'
+                        equipment: 'equipment',
+                        stats: 'stats'
                     })[key]
 
                     let field = _.get(state, target)
@@ -1153,6 +1394,17 @@ export default {
 
 
             console.log(`INJECTIONS UPDATED (from ${source})`, state.injections, state)
+        },
+        UPDATE_PLUGINS({dispatch, state, getters}, {metas, source}){
+            for(let meta of metas){
+                for(let plugin of meta.mechanics.plugins){
+                    if(plugin.name in state.plugins) continue
+
+                    state.plugins[plugin.name] = METADATA(dispatch, plugin, `plugins.${plugin.name}`, meta._uuid || meta.meta, meta._id, meta.meta)
+                }
+            }
+
+            console.log(`PLUGINS UPDATED (from ${source})`, state.plugins, state)
         },
         async UPDATE_ASYNC({dispatch, state, commit}, {source}){
             let meta = []
@@ -1196,21 +1448,58 @@ export default {
 
             let subscriptions = meta.reduce((arr, cur) => arr.concat(cur.subscriptions || []), [])
             let injections = meta.reduce((arr, cur) => arr.concat(cur.injections || []), [])
+            let plugins = meta.reduce((bool, cur) => bool || !!cur.plugins, false)
             
             let fetch = false
             
+            if(injections.length > 0) {
+                let _m = meta.filter(m => {
+                    let origin = m._uuid || m.meta
+
+                    let active = (m.mechanics || {active: true}).active
+                    if(active === undefined) active = true
+                    
+                    let should_inject = !(origin in state.injections)
+                    let has_injections = !!m.injections
+                    
+                    return active && has_injections && should_inject
+                })
+
+                if(_m.length > 0){
+                    await dispatch('UPDATE_INJECTIONS', {metas: _m, source})
+                    fetch = true
+                }
+            }
             if(subscriptions.length > 0) {
-                let _m = meta.filter(m => !!m.subscriptions)
+                let _m = meta.filter(m => {
+                    let origin = m._uuid || m.meta
+                    let subscribed_at = state.subscribed_at[origin]
+
+                    let active = (m.mechanics || {active: true}).active
+                    if(active === undefined) active = true
+                    
+                    let should_update = (subscribed_at ? subscribed_at.date < new Date(m._modified_at) : true)
+                    let has_subscriptions = !!m.subscriptions
+
+                    return active && has_subscriptions && should_update
+                })
+                
                 if(_m.length > 0) {
                     await dispatch('UPDATE_SUBSCRIPTIONS', {metas: _m, source})
                     fetch = true
                 }
             }
-            if(injections.length > 0) {
-                let _m = meta.filter(m => !!m.injections && !(m._uuid in state.injections))
+            if(plugins){
+                let _m = meta.filter(m => {
+
+                    let has_plugins = !!m.plugins
+                    let should_update = has_plugins && (m.plugins.filter(p => !(p in state.plugins))).length > 0
+
+                    return has_plugins && should_update
+                })
+
                 if(_m.length > 0){
-                    await dispatch('UPDATE_INJECTIONS', {metas: _m, source})
-                    fetch = true
+                    dispatch('UPDATE_PLUGINS', {metas: _m, source})
                 }
             }
 
@@ -1239,7 +1528,8 @@ export default {
                     let _profs = ((classe.mechanics.proficiencies || {[key]: []})[key] || [])
                     for(let attr of _profs){
                         if(attr.meta == 'command') continue
-                        state.proficiencies[key][attr.replace('@', '')] = true
+
+                        state.proficiencies[key][(attr.slug || attr).replace('@', '')] = true
                     }
                 }
             }else if(background){
@@ -1247,7 +1537,7 @@ export default {
                     let _profs = ((background.mechanics.proficiencies || {[key]: []})[key] || [])
                     for(let attr of _profs){
                         if(attr.meta == 'command') continue
-                        state.proficiencies[key][attr.replace('@', '')] = true
+                        state.proficiencies[key][(attr.slug || attr).replace('@', '')] = true
                     }
                 }
             }

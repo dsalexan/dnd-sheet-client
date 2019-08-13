@@ -1,66 +1,6 @@
 <template>
-    <div class="dnd-list">
-        <q-list
-            v-for="key in Object.keys(value_with_length)" :key="key">
-            <q-expansion-item
-                v-for="(item, index) of value[key]" :key="index"
-                :group="key"
-                popup
-                expand-icon-toggle
-                :class="{editable: !item._id, 'header-only': !!item._id && item.text !== 0 && !item.text}"
-                @input="expanded = $event && index">
-                <template v-slot:header>          
-                    <q-item-section avatar>
-                        <q-btn v-if="key == 'custom'" flat round color="red" icon="clear" @click="removeItem(index, key)"/>   
-                    </q-item-section>
-
-                    <q-item-section>
-                        {{ name(item) }}
-                    </q-item-section>      
-
-                </template>
-
-                <template v-if="!item._id">
-                    <x-input placeholder="Slug" v-model="value[key][index].slug"></x-input>
-
-                    <x-input v-model="value[key][index].text" :placeholder="`${label} Description`" type="textarea"></x-input>
-                </template>
-                <template v-else>
-                    <span v-if="item.text" v-html="item.text"></span>
-                </template>
-
-                
-                <q-expansion-item
-                    :header-inset-level="1"
-                    v-for="(subitem, index) of (item._children || [])" :key="`s${index}`"
-                    @input="expanded = $event && index">
-
-                    <template v-slot:header>
-
-                        <q-item-section>
-                            {{ name(subitem) }}
-                        </q-item-section>      
-
-                    </template>
-
-                    <span v-if="subitem.text" v-html="subitem.text"></span>
-                    <p v-if="subitem.text == undefined" style="color: lightgray; font-style: italic; font-size: 0.9em;">No Description</p>
-                </q-expansion-item>
-
-
-            </q-expansion-item>
-        </q-list>
-
-        <q-list>
-            <x-input 
-                class="input" 
-                ref="item_creator"
-                type="mention"
-                :placeholder="label"
-                :mentionOptions="mentionOptions"
-                :source="remoteSearch"
-                @keypress.enter="createItem($event.target.innerText, 'custom', $event)"/>
-        </q-list>
+    <div class="dnd-plugin">
+        PLUGIN
     </div>
 </template>
 
