@@ -3,7 +3,7 @@
         ref="root"
         :is="tag"
         class="x-input"
-        :class="{active: isReactive ? !(value !== 0 && !value) : false, box: isBox, transparent: isTransparent}"
+        :class="{active: isReactive ? !(value !== 0 && !value) : false, box: isBox, transparent: isTransparent, disabled: isDisabled}"
         :data-uid="_uid">
 
         <template v-if="label != null && label != undefined">
@@ -27,13 +27,13 @@
                     class="content-editable"
                     contenteditable="true"
                     :placeholder="placeholder"
-                    :disabled="isDisabled"
                     :name="name"
 
                     v-html="valueModel"
                     @tribute-replaced="handleMention"
 
                     v-on="inputListeners"  />
+                <div class="content-editable when-disabled"></div>
             </tribute>
         </template>
         <template v-else>
@@ -184,7 +184,7 @@ export default {
                 lookup: function(entry, value){
                     return entry.name + ',' + entry.path.filter(i => i == 0 || !!i).join(',')
                 },
-                menuContainer: container
+                menuContainer: false
             }, this.mentionOptions || {}),
             isEmpty: this.value !== 0 && !this.value
         }
@@ -350,6 +350,47 @@ export default {
 }
 </script>
 
+<style lang="sass">
+    .tribute-container
+        // position: absolute
+        // top: 0
+        // left: 0
+        // height: auto
+        // max-height: 300px
+        // overflow-y: scroll
+        // display: block
+        // z-index: 999999
+        // text-align: left
+
+        > ul
+            background: white
+            text-align: left
+
+            > li
+                padding: 7.5px 10px
+                cursor: pointer
+                background: rgb(245, 245, 245)
+                text-align: left
+                width: auto
+
+                span
+                    font-size: 0.75em
+                    opacity: 0.75
+
+                    &::before
+                        content: '@'
+
+                &.highlight
+                    background: rgb(204, 230, 204)
+                    font-weight: bold
+
+                    span
+                        font-weight: 300
+
+                    &:before
+                        font-weight: bold
+</style>
+
 <style lang="sass" scoped>
     $box-width: 30px
     $radius: 10px
@@ -467,6 +508,10 @@ export default {
                 cursor: pointer
                 padding: 0 3px
 
+            
+            &.when-disabled
+                display: none
+
     .x-input
         > /deep/ .tribute-container
                 // position: absolute
@@ -507,5 +552,14 @@ export default {
                             &:before
                                 font-weight: bold
 
+        &.disabled
+            .v-tribute
+                .content-editable
+                    display: none 
+                    height: 0
+
+                    &.when-disabled
+                        display: block
+                        min-height: 35.4px
 </style>
 

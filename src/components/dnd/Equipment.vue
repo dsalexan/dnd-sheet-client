@@ -113,7 +113,8 @@ export default {
             mentionOptions: {
                 menuItemTemplate: function (item) {
                     return `<div>${utils.name(item.original)}</div><span>${item.original.path[0] || item.original.path || ''}</span>`
-                }
+                },
+                menuContainer: false
             },
             input_value: ''
         }

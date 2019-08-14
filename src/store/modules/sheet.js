@@ -117,7 +117,6 @@ function DEFRAG(_res, _static=true){
 
             }
 
-            // if(_quantity == 3 && res.slug == '@adventuring/costume') debugger
             if(typeof res != 'string'){
                 if(_quantity != 1){
                     if(res.mechanics && res.mechanics.quantity == undefined){
@@ -132,7 +131,6 @@ function DEFRAG(_res, _static=true){
                 if(_quantity != 1)
                     debugger
             }
-            // if(key_parent == '@adventuring/candle___entertainers_pack2') debugger
             
             defrag.push(res)
         }
@@ -205,7 +203,8 @@ export default {
             features: undefined,
             proficiencies: undefined,
             equipment: undefined,
-            spells: undefined
+            spells: undefined,
+            spellcasting: undefined
         },
 
         name: undefined,
@@ -303,15 +302,15 @@ export default {
                 9: []
             },
             slots: {
-                1: undefined,
-                2: undefined,
-                3: undefined,
-                4: undefined,
-                5: undefined,
-                6: undefined,
-                7: undefined,
-                8: undefined,
-                9: undefined
+                1: 0,
+                2: 0,
+                3: 0,
+                4: 0,
+                5: 0,
+                6: 0,
+                7: 0,
+                8: 0,
+                9: 0
             }
         }
     },
@@ -438,11 +437,22 @@ export default {
         },
         spellcasting: (state, getters) => {
             let classe = state.async.class
-            if (classe == undefined) return undefined
+            let features = state.async.features
+            if (classe == undefined || features == undefined) return undefined
             let spellcasting = classe.mechanics.spellcasting
 
             if (typeof spellcasting == 'string') {
-                return _.get(classe.mechanics, spellcasting)
+                if(spellcasting[0] == '@'){
+                    for(let key in features){
+                        for(let feature of features[key]){
+                            if(feature.slug == spellcasting){
+                                return feature
+                            }
+                        }
+                    }
+                }else{
+                    throw Error('Unimplemented')    
+                }
             } else if (typeof spellcasting == 'object') {
                 throw Error('Unimplemented')
             }
@@ -589,6 +599,7 @@ export default {
             state.async.proficiencies = undefined
             state.async.equipment = undefined
             state.async.spells = undefined
+            state.async.spellcasting = undefined
             
             state.name = undefined
 
@@ -664,7 +675,7 @@ export default {
 
             state.spells.list = []
             for (let i = 0; i <= 9; i++) {
-                state.spells.slots[i] = undefined
+                state.spells.slots[i] = 0
                 state.spells.by_level[i] = []
             }
 
@@ -711,7 +722,7 @@ export default {
                 let result = await axios.get(`http://localhost:3000/backgrounds?q=${name}`)
 
                 if(result.data.length == 0) return false
-
+                
                 state.async.background = result.data[0]
                 // console.log(state.async.background)
                 return true
@@ -829,15 +840,19 @@ export default {
             
                 let objeto = obj[source]
                 if(obj[source] instanceof Array) objeto = {'default': objeto}
-                
+                else if(obj[source].slug !== undefined) objeto = {'default': objeto}
+
                 for(let type in objeto){
                     data[source][type] = []
-
+                    
                     let _index = 0
                     
+                    if(!_.isArray(objeto[type])) objeto[type] = [objeto[type]]
+
                     for(let res of objeto[type]){
+                        
                         let _data = await fetch(res)
-            
+                        
                         if(_data == undefined) {
                             if(typeof res == 'string'){
                                 if(res[0] == '@') 
@@ -994,6 +1009,34 @@ export default {
             console.log('FETCH STATS', stats)
 
             state.async.stats = stats
+        },
+        async FETCH_SPELLS({dispatch, state, getters}){
+            console.trace('FETCH SPELLS')
+            let subscription = state.subscriptions.spells
+            let custom = state.spells.by_level
+
+            let obj = Object.assign({}, subscription)
+            _.mergeWith(obj, custom, (obj, src) => {
+                if(_.isArray(src)){
+                    return [...(obj || []), ...src]
+                }
+            })
+
+            try{
+                let data = await dispatch('FETCH_RESOURCES', obj)
+
+                for(let level in data){
+                    data[level] = data[level].default
+                }
+
+                state.async.spells = data
+                console.log('FETCH SPELLS', state.async.spells)
+                return true
+            }catch(err){
+                console.log('ERROR ON FETCH SPELLS', obj)
+                console.error(err)
+                return false
+            }
         },
 
         // actions as mutations
@@ -1222,6 +1265,19 @@ export default {
             
             await dispatch('FETCH_PROFICIENCIES') && dispatch('UPDATE_ASYNC', {source: 'proficiencies'})            
         },
+        async SET_SPELLS({ dispatch, state }, {value, index, level}){            
+            console.log('SET SPELLS', value, index, level)    
+            
+            if(value == undefined){
+                dispatch('REMOVE_RESOURCE', {resource: state.spells.by_level[level][index]})
+            }else{
+                value = METADATA(dispatch, value, `state.spells.by_level[${level}][${index}]`, 'input', level, 'custom')
+
+                state.spells.by_level[level].splice(index, 1, value)
+            }
+            
+            await dispatch('FETCH_SPELLS') && dispatch('UPDATE_ASYNC', {source: 'spells'})    
+        },
 
         async UPDATE_SUBSCRIPTIONS({ dispatch, state, getters }, { metas, source }){
             
@@ -1248,8 +1304,17 @@ export default {
                     }
                     
                     let origin = meta._uuid || meta.meta
+                    if(_.isString(obj[meta.meta])){                        
+                        let d = obj[meta.meta]
 
-                    if(obj[meta.meta] instanceof Array){
+                        if(typeof d == 'string'){
+                            let _key = 'value'
+                            if(d.charAt(0) == '@') _key = 'slug'
+                            d = {[_key]: d}
+                        }
+
+                        obj[meta.meta] = METADATA(dispatch, d, `subscriptions.${key}.${meta.meta}`, origin, meta._id, meta.meta)
+                    }else if(obj[meta.meta] instanceof Array){
                         obj[meta.meta] = obj[meta.meta].map((d, index) => {
                             if(typeof d == 'string'){
                                 let _key = 'name'

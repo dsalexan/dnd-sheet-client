@@ -160,6 +160,9 @@
                     meta="feature"
                     @input="(value, index) => set_features({value, index})"/>
             </section>
+            <div>
+                FEATURES - {{ JSON.stringify(sheet.async.features, null, 2)}}
+            </div>
         </section>
     </main>
 </template>

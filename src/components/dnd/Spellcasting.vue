@@ -17,18 +17,22 @@
                     :lines="10" 
                     :entries="cantrips_known" 
                     :disabled="cantrips_known <= 0" 
-                    :spells="sheet.spells.by_level[0]"
-                    @spell="(index, value) => value ? sheet.spells.by_level[0].splice(index, 1, value) : sheet.spells.by_level[0].splice(index, 1) "></dnd-spell-slot>
+                    :spells="spells_by_level(0)"
+                    :input="cantrips_left_to_know > 0"
+                    @input="(index, value) => set_spells({index, value, level: 0}) "></dnd-spell-slot>
+
                 <dnd-spell-slot 
                     v-for="(lvl, index) in [1,2]" :key="lvl"
                     :level="lvl" 
                     :lines="[13,13][index]" 
                     :total="spell_slots(lvl)" 
-                    :entries="spells_left_to_know" :disabled="spell_slots(lvl) <= 0"
+                    :spells="spells_by_level(lvl)" 
+                    :entries="spells_left_to_know" 
+                    :disabled="spell_slots(lvl) <= 0"
+                    :input="spells_left_to_know > 0"
                     :expended="sheet.spells.slots[lvl]"
-                    @expended="sheet.spells.slots[lvl] = parseInt($event)"
-                    :spells="sheet.spells.by_level[lvl]"
-                    @spell="(index, value) => value ? sheet.spells.by_level[lvl].splice(index, 1, value) : sheet.spells.by_level[lvl].splice(index, 1) "></dnd-spell-slot>
+                    @expended="(event, force) => expendSlot(event, lvl, force)"
+                    @input="(index, value) => set_spells({index, value, level: lvl}) "></dnd-spell-slot>
             </div>
             <div> 
                 <dnd-spell-slot 
@@ -36,46 +40,112 @@
                     :level="lvl" 
                     :lines="[13,13,10][index]" 
                     :total="spell_slots(lvl)" 
-                    :entries="spells_left_to_know" :disabled="spell_slots(lvl) <= 0"
+                    :disabled="spell_slots(lvl) <= 0"
+                    :input="spells_left_to_know > 0"
                     :expended="sheet.spells.slots[lvl]"
-                    @expended="sheet.spells.slots[lvl] = parseInt($event)"
-                    :spells="sheet.spells.by_level[lvl]"
-                    @spell="(index, value) => value ? sheet.spells.by_level[lvl].splice(index, 1, value) : sheet.spells.by_level[lvl].splice(index, 1) "></dnd-spell-slot>
+                    @expended="(event, force) => expendSlot(event, lvl, force)"
+                    :spells="spells_by_level(lvl)"
+                    @input="(index, value) => set_spells({index, value, level: lvl})"></dnd-spell-slot>
             </div><div>
                 <dnd-spell-slot 
                     v-for="(lvl, index) in [6,7,8,9]" :key="lvl"
                     :level="lvl" 
                     :lines="[9,9,7,7][index]" 
                     :total="spell_slots(lvl)" 
-                    :entries="spells_left_to_know" :disabled="spell_slots(lvl) <= 0"
+                    :disabled="spell_slots(lvl) <= 0"
+                    :input="spells_left_to_know > 0"
                     :expended="sheet.spells.slots[lvl]"
-                    @expended="sheet.spells.slots[lvl] = parseInt($event)"
-                    :spells="sheet.spells.by_level[lvl]"
-                    @spell="(index, value) => value ? sheet.spells.by_level[lvl].splice(index, 1, value) : sheet.spells.by_level[lvl].splice(index, 1) "></dnd-spell-slot>
+                    @expended="(event, force) => expendSlot(event, lvl, force)"
+                    :spells="spells_by_level(lvl)"
+                    @input="(index, value) => set_spells({index, value, level: lvl})"></dnd-spell-slot>
             </div>
         </main>
+        
+        <q-dialog v-model="spell_dialog">
+            <q-card>
+                <q-card-section>
+
+                    <div class="row no-wrap items-center">
+                        <div class="col text-h6 ellipsis">{{ spell_dialog_data.name.en || spell_dialog_data.name }}</div>
+                        <div class="col-auto text-grey q-pt-md">
+                        <q-icon name="place" /> 250 ft
+                        </div>
+                    </div>
+                </q-card-section>
+
+                <q-card-section>
+                    <div class="text-subtitle1">$・Italian, Cafe</div>
+                    <div class="text-subtitle2 text-grey">Small plates, salads & sandwiches in an intimate setting.</div>
+                </q-card-section>
+
+                <q-separator />
+
+                <q-card-actions style="justify-content: center">
+                    <q-btn flat round icon="flash_on" color="green" v-close-popup>
+                        <q-tooltip>Cast Spell</q-tooltip>
+                    </q-btn>
+                    <!-- <q-btn flat v-close-popup>5:30PM</q-btn>
+                    <q-btn flat v-close-popup>7:30PM</q-btn>
+                    <q-btn flat v-close-popup>9:00PM</q-btn>
+                    <q-btn flat color="primary" v-close-popup>Reserve</q-btn> -->
+                </q-card-actions>
+            </q-card>
+        </q-dialog>
     </div>
 </template>
 
 <script>
-import {mapState, mapMutations, mapGetters} from 'vuex'
+import {mapState, mapMutations, mapGetters, mapActions} from 'vuex'
+
+import bus from '@/bus'
+import utils from '@/assets/utils/resources'
 
 import XInput from '@/components/utils/XInput.vue'
 import SpellSlot from '@/components/dnd/SpellSlot.vue'
+
+import {
+  Quasar,
+  QDialog,
+  ClosePopup,
+  QCard,
+  QCardSection,
+  QRating,
+  QSeparator,
+  QIcon,
+  QCardActions,
+  QTooltip
+} from 'quasar'
 
 export default {
     name: 'dnd-spellcasting',
     components: {
         'x-input': XInput,
-        'dnd-spell-slot': SpellSlot
+        'dnd-spell-slot': SpellSlot,
+        QDialog,
+        QCard,
+        QCardSection,
+        QRating,
+        QSeparator,
+        QIcon,
+        QCardActions,
+        QTooltip
+    },
+    directives: {
+        ClosePopup
+    },
+    data(){
+        return {
+            spell_dialog: false,
+            spell_dialog_data: {"slug":"@cantrip/mage_hand","_uuid":"cdf8ecb0-79b8-45cb-bfed-957f50ff9652","_path":"state.spells.by_level[0][0]","_origin":"input","_parent":0,"_source":"custom","_type":"default","_id":"cantrip_mage_hand","meta":"spell","parent":"cantrip","name":{"en":"Mage Hand","pt-BR":"Mão Mágica"},"text":"<p>A spectral, floating hand appears at a point you choose within range. The hand lasts for the Duration or until you dismiss it as an action. The hand vanishes if it is ever more than 30 feet away from you or if you cast this spell again.</p><p>You can use your action to control the hand. You can use the hand to manipulate an object, open an unlocked door or container, stow or retrieve an item from an open container, or pour the contents out of a vial. You can move the hand up to 30 feet each time you use it.</p><p>The hand can't Attack, activate magical items, or carry more than 10 pounds.</p>","mechanics":{"school":"conjuration","casting_time":["1","action"],"range":["30","ft"],"components":["V","S"],"duration":["1","minute"],"classes":["@bard","@sorcerer","@warlock","@wizard"],"active":true},"_modified_at":"2019-08-14T00:44:28.194Z","path":"cantrip/mage_hand","_index":0}
+        }
     },
     computed: {
+        name: utils.name,
         ...mapState([
             'sheet'
         ]),
         ...mapGetters({
             level: 'sheet/level',
-            character_class: 'sheet/class',
             spellcasting: 'sheet/spellcasting',
             proficiency_bonus: 'sheet/proficiency_modifier'
         }),
@@ -83,54 +153,89 @@ export default {
             let spellcasting = this.spellcasting
             if(spellcasting == undefined) return undefined
 
-            return spellcasting.ability.toUpperCase()
+            return spellcasting.mechanics.ability.replace('@', '').toUpperCase()
         },
         spell_attack_bonus(){
             let spellcasting = this.spellcasting
             if(spellcasting == undefined) return undefined
 
-            return this.proficiency_bonus(spellcasting.ability, true)
+            return this.proficiency_bonus(spellcasting.mechanics.ability.replace('@', ''), true)
         },
         spell_save_dc(){
             let bonus = this.spell_attack_bonus
             if(bonus == undefined) return undefined
             return parseInt(bonus) + 8
         },
+        character_class(){
+            let classe = this.sheet.async.class
+            return classe
+        },
         spellcasting_class(){
-            let classe = this.character_class
+            let classe = this.sheet.async.class
             if(classe == undefined) return undefined
 
-            return classe.spellcasting ? classe.name : undefined
+            return classe.mechanics.spellcasting ? utils.name(classe) : undefined
         },
         cantrips_known(){
-            let classe = this.character_class
-            if(classe == undefined) return 0
+            let spellcasting = this.spellcasting
+            if(spellcasting == undefined) return 0
 
-            let level = this.level
-            if(level == undefined) return 0
-
-            return classe.spellcasting ? (classe.table[level].cantrips_known || 0) : 0
+            return spellcasting.mechanics.cantrips_known || 0
         },
         spell_slots(){
             return function(spell_level){
-                let classe = this.character_class
-                if(classe == undefined) return 0
+                let spellcasting = this.spellcasting
+                if(spellcasting == undefined) return 0
 
-                let level = this.level
-                if(level == undefined) return 0
-
-                return classe.spellcasting ? (classe.table[level].spell_slots[spell_level] || 0) : 0
+                let total = spellcasting.mechanics.spell_slots[spell_level-1] || 0
+                return total
             }
         },
+        cantrips_left_to_know(){
+            let total = this.cantrips_known
+            if(total == 0) return 0
+
+            return total - this.spells_by_level(0).length
+        },
         spells_left_to_know(){
-            let classe = this.character_class
-            if(classe == undefined) return undefined
+            let spellcasting = this.spellcasting
+            if(spellcasting == undefined) return 0
 
-            let level = this.level
-            if(level == undefined) return undefined
+            let total = spellcasting.mechanics.spells_known || 0
+            if(total == 0) return 0
 
-            return classe.spellcasting ? (classe.table[level].spells_known || 0) : 0
+            let current = 0
+            for(let level in this.sheet.async.spells){
+                current += this.spells_by_level(level).filter(s => (s.mechanics || {}).count_as_spell !== false).length
+            }
+
+            return total - current
         }
+    },
+    methods: {
+        ...mapActions({
+            set_spells: 'sheet/SET_SPELLS',
+        }),
+        spells_by_level(level){
+            if(this.sheet.async.spells == undefined) return []
+            
+            return this.sheet.async.spells[level]            
+        },
+        expendSlot(event, level, force_number=false){
+            if(force_number){
+                this.sheet.spells.slots[level] = parseInt(event || 0)
+                return 
+            }
+            console.log('CAST SPELL', event)
+            this.sheet.spells.slots[level]++
+        }
+    },
+    mounted(){
+        bus.$on('spell-description', function(spell){
+            console.log('OPENDIALOG', spell)
+
+            this.spell_dialog = true
+        }.bind(this))
     }
 }
 </script>

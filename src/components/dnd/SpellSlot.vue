@@ -9,25 +9,51 @@
                 <template v-else>
                     <div class="inputs">
                         <x-input class="total clean" label="Slots Total" :value="total" disabled reactive="false"/>
-                        <x-input class="expended" label="Slots Expended" :value="expended" @input="$emit('expended', $event)" reactive="false" :disabled="isDisabled"/>
+                        <x-input class="expended clean" label="Slots Expended" :value="expended" @input="handleCast($event, true)" reactive="false"/>
                     </div>
                 </template>
             </div>
         </div>
-        <div class="body">
-            <x-input 
-                v-for="index in lines" :key="index" 
-                class="input" 
-                :disabled="isDisabled || (entries == -1 ? false : index > entries)"
-                :value="spells[index-1]"
-                @input="$emit('spell', index-1, $event)"></x-input>
-        </div>
+        <q-list 
+            class="body" :style="`height: ${30 * lines + 20 + 20 - 35}px;`"
+            bordered >
+            
+            <div
+                v-for="(spell, index) in spells" :key="index">
+                <q-separator v-if="index == 0"></q-separator>
+                <dnd-spell-slot-item
+                    :value="spell"
+                    @cast="handleCast"
+                    :cast="expended < total">
+                </dnd-spell-slot-item>
+                <q-separator></q-separator>
+            </div>
+        </q-list>
+
+        <x-input
+            type="mention"
+            class="input"
+            ref="input"
+            :disabled="disabled || !input"
+            @input="input_value = $event"
+            :source="remoteSearch"
+            :mentionOptions="mentionOptions"
+            @keypress.enter="handleEnter"/>
     </div>
 </template>
 
 
 <script>
+import utils from '@/assets/utils/resources'
+import axios from 'axios'
+
 import XInputVue from '../utils/XInput.vue';
+import SpellSlotItemVue from '../SpellSlotItem.vue';
+
+import {
+  Quasar,
+  QSeparator
+} from 'quasar'
 
 export default {
     name: 'dnd-spell-slot',
@@ -56,17 +82,54 @@ export default {
             type: [String, Boolean],
             default: false
         },
+        input: {
+            type: [Boolean],
+            default: false
+        },
         entries: {
             type: Number,
             default: -1
         }
     },
+    data(){
+        return {
+            mentionOptions: {
+                menuItemTemplate: function (item) {
+                    return `<div>${utils.name(item.original)}</div><span>${item.original.path[0] || item.original.path || ''}</span>`
+                },
+                menuContainer: false
+            },
+            input_value: ''
+        }
+    },
     components: {
-        'x-input': XInputVue
+        'x-input': XInputVue,
+        'dnd-spell-slot-item': SpellSlotItemVue,
+        QSeparator
     },
     computed: {
-        isDisabled() {
-            if(typeof this.disabled == 'boolean') return this.disabled
+    },
+    methods: {
+        remoteSearch: function(text, callback){
+            axios.get(`http://localhost:3000/spell?q=${text}&max=10${this.$props.query ? '&query=' + this.$props.query : ''}`)
+                .then(res => {
+                    callback(res.data)
+                })
+                .catch(err => {
+                    console.log('ERROR ON FETCH', err)
+                })
+        },
+        handleEnter: function(event){
+            event.preventDefault()
+
+            this.$emit('input', this.$props.spells.length, this.input_value.trim())
+            this.input_value = ''
+            
+            
+            this.$refs.input.empty()
+        },
+        handleCast: function(event, force=false){
+            this.$emit('expended', event, force)
         }
     },
     watch: {
@@ -162,32 +225,54 @@ export default {
                             margin-bottom: 2px
 
         .body
+            position: relative
+            border: 1px solid #000
+            border-top: 0
+            border-bottom: 0
+            width: calc(95% - #{$gutter} *4)
+            margin-top: -10px
+            padding: #{$gutter} 0
+            margin-right: 2%
+            margin-left: auto
+
+            overflow-y: auto
+
+            &::-webkit-scrollbar-track
+                background-color: rgb(235, 235, 235)
+
+            &::-webkit-scrollbar
+                width: 6px
+                background-color: #F5F5F5
+                opacity: 0.75
+
+            &::-webkit-scrollbar-thumb
+                background-color: #1fcc00
+                background-image: -webkit-linear-gradient(45deg, rgba(255, 255, 255, .2) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .2) 50%, rgba(255, 255, 255, .2) 75%, transparent 75%, transparent)
+                opacity: 0.75
+
+        > div.input
+            width: 100%
             border: 1px solid #000
             border-top: 0
             border-radius:  0  0 $radius $radius
             width: calc(95% - #{$gutter} *4)
-            margin-top: -10px
-            padding: #{$gutter + 10px} $gutter*2
             margin-right: 2%
             margin-left: auto
+            // padding: 0 $gutter
+            // padding-top: $gutter/2
+            
+            > /deep/ div div.content-editable
+                font-size: 0.9em
+                border: 0
+                width: 100%
+                background-color: #f7f7f7
+                border-bottom: 1px solid #ddd
+                padding: 10px 20px
+                border-radius: 0 0 $gutter $gutter
 
-            > div.input
-                padding: 0 $gutter
-                padding-top: $gutter/2
-
-                &:first-of-type
-                    padding-top: 0
-                
-                > /deep/ input
-                    font-size: 0.9em
-                    border: 0
-                    border-bottom: 1px solid #ddd
-                    width: calc(100% - 20px)
-                    background-color: #f7f7f7
-                    padding: 5px 10px
-
-                    &:disabled
-                        background-color: white
+                &:disabled
+                    background-color: white
 
 </style>
+
 
