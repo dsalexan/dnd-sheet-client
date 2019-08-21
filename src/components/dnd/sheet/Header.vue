@@ -1,0 +1,177 @@
+<template>
+    <header class="dnd-header">
+        <section class="charname">
+            <x-input transparent="false" name="charname" label="Name" placeholder="John Jones" v-model="sheet.name"></x-input>
+        </section>
+        <section class="misc">
+            <ul v-if="type == 'system'">
+                <x-input type="mention" :source="remoteSearch('class')" :mentionOptions="mentionOptions" tag="li" label="Class & Level" placeholder="Unknown 1" :value="sheet.misc.class_level" @input="set_class_level"></x-input>
+
+                <x-input type="mention" :source="remoteSearch('background')" :mentionOptions="mentionOptions" tag="li" label="Background" placeholder="Acolyte" :value="sheet.misc.background" @input="set_background"></x-input>
+                <x-input  tag="li" label="Player Name" placeholder="John Doe" v-model="sheet.misc.player"></x-input>
+                <x-input type="mention" :source="remoteSearch('race')" :mentionOptions="mentionOptions" tag="li" label="Race" placeholder="Human" :value="sheet.misc.race" @input="set_race"></x-input>
+                <x-input transparent="false" tag="li" label="Alignment" placeholder="True Neutral" v-model="sheet.misc.alignment"></x-input>
+                <x-input transparent="false" tag="li" label="Experience Points" placeholder="0" v-model="sheet.misc.experience_points"></x-input>
+            </ul>
+            <ul v-else-if="type == 'physical'">
+                <x-input transparent="false" tag="li" label="Age" v-model="sheet.misc.age"></x-input>
+                <x-input transparent="false" tag="li" label="Height" v-model="sheet.misc.height"></x-input>
+                <x-input transparent="false" tag="li" label="Weight" v-model="sheet.misc.weight"></x-input>
+
+                <x-input transparent="false" tag="li" label="Eyes" v-model="sheet.misc.eye_color"></x-input>
+                <x-input transparent="false" tag="li" label="Hair" v-model="sheet.misc.hair_color"></x-input>
+                <x-input transparent="false" tag="li" label="Skin" v-model="sheet.misc.skin_color"></x-input>
+            </ul>
+            <ul v-else-if="type == 'spellcasting'">
+                <x-input transparent="false" tag="li" label="Spellcasting Ability" placeholder="INT" v-model="sheet.misc.class_level"></x-input>
+                <x-input transparent="false" tag="li" label="Attack Bonus" placeholder="+0" v-model="sheet.misc.background"></x-input>
+                <x-input transparent="false" tag="li" label="Saving Throw" placeholder="9" v-model="sheet.misc.player"></x-input>
+            </ul>
+        </section>
+    </header>
+</template>
+
+<script>
+import axios from 'axios'
+import utils from '@/assets/utils/resources'
+
+import {mapState, mapActions} from 'vuex'
+
+import XInput from '@/components/utils/XInput.vue'
+
+export default {
+    name: 'dnd-header',
+    props: {
+        type: {
+            type: String,
+            default: 'system'
+        }
+    },
+    components: {
+        'x-input': XInput
+    },
+    data(){
+        return{
+            mentionOptions: {
+                menuItemTemplate: function (item) {
+                    return `<div>${utils.name(item.original)}</div><span>${item.original.path[0] || item.original.path || ''}</span>`
+                },
+                selectTemplate: function(item){
+                    return `<span class="mention" data-value="${JSON.stringify(item.original).replace(/\"/gmi, "'")}">${item.original.name.en || item.original.name['pt-BR'] || item.original.name}</span>`
+                },
+                requireLeadingSpace: false
+            }
+        }
+    },
+    methods: {
+        // ...mapActions({
+        //     set_class_level: 'sheet/SET_CLASS_LEVEL',
+        //     set_race: 'sheet/SET_RACE',
+        //     set_background: 'sheet/SET_BACKGROUND'
+        // }),
+        remoteSearch: function(meta, query){
+            return (text, callback) => {
+                axios.get(`http://localhost:3000/${meta}?q=${text}&max=10${query ? '&query=' + query : ''}`)
+                    .then(res => {
+                        callback(res.data)
+                    })
+                    .catch(err => {
+                        console.log('ERROR ON FETCH', err)
+                    })
+            }
+        }
+    }
+}
+</script>
+
+<style lang="sass" scoped>
+    header.dnd-header
+        display: flex !important
+        align-contents: stretch
+        align-items: stretch
+        
+        section.charname
+            border: 1px solid black
+            border-right: 0
+            border-radius: $radius 0 0 $radius
+            padding: 5px 0
+            background-color: $faded-light
+            width: 30%
+            bottom: 0
+            top: 0
+            display: flex
+            margin: auto
+            
+            div
+                display: flex
+                flex-direction: column-reverse
+                margin: auto
+                width: 100%
+                margin: 0 $radius
+
+                input
+                    padding: 0.5em
+                    margin: 5px
+                    border: 0
+                
+                label
+                    padding-left: 1em
+        
+        section.misc
+            width: 70%
+            border: 1px solid black
+            border-radius: $radius
+            padding-left: 1em
+            padding-right: 1em
+            
+            ul
+                padding: 15px 0px 5px 0px
+                display: flex
+                flex-wrap: wrap
+            
+            li
+                margin-right: 5px
+                margin-left: 5px
+                width: calc(33.33333% - 10px)
+                display: flex
+                flex-direction: column-reverse
+                
+                label
+                    margin-bottom: 5px
+                    margin-top: 5px
+
+                & > input
+                    border: 0
+                    border-bottom: 1px solid $faded
+
+                    &:focus
+                        border-bottom: 1px solid $rich
+
+                & > div > div[contenteditable="true"]
+                    border: black
+                    position: relative
+                    padding-bottom: 1px
+                    
+                    &:after
+                        content: ''
+                        width: 100%
+                        background: $faded
+                        height: 1px
+                        position: absolute
+                        bottom: 0
+
+                    &:focus:after
+                        background: $rich
+                        
+
+                &.active
+                    & > input
+                        border-bottom: 1px solid $faded
+
+                    & > div > div[contenteditable="true"]                        
+                        &:after
+                            background: $faded
+        
+    
+</style>
+
