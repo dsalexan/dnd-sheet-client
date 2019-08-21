@@ -552,7 +552,9 @@ export default {
                             &:before
                                 font-weight: bold
 
-        &.disabled
+        &.disabled, [disabled]
+            opacity: 1 !important
+
             .v-tribute
                 .content-editable
                     display: none 

@@ -18,20 +18,22 @@
                     :entries="cantrips_known" 
                     :disabled="cantrips_known <= 0" 
                     :spells="spells_by_level(0)"
-                    :input="cantrips_left_to_know > 0"
+                    :input="cantrips_left_to_know"
+                    @expended="(event) => expendSlot(event, 0)"
                     @input="(index, value) => set_spells({index, value, level: 0}) "></dnd-spell-slot>
 
                 <dnd-spell-slot 
                     v-for="(lvl, index) in [1,2]" :key="lvl"
                     :level="lvl" 
                     :lines="[13,13][index]" 
-                    :total="spell_slots(lvl)" 
+                    :total="spell_slots(lvl)"
+                    :otherslots="other_spell_slots(lvl)"
                     :spells="spells_by_level(lvl)" 
                     :entries="spells_left_to_know" 
                     :disabled="spell_slots(lvl) <= 0"
-                    :input="spells_left_to_know > 0"
+                    :input="spells_left_to_know"
                     :expended="sheet.spells.slots[lvl]"
-                    @expended="(event, force) => expendSlot(event, lvl, force)"
+                    @expended="(event, level, force) => expendSlot(event, level || lvl, force)"
                     @input="(index, value) => set_spells({index, value, level: lvl}) "></dnd-spell-slot>
             </div>
             <div> 
@@ -40,10 +42,11 @@
                     :level="lvl" 
                     :lines="[13,13,10][index]" 
                     :total="spell_slots(lvl)" 
+                    :otherslots="other_spell_slots(lvl)"
                     :disabled="spell_slots(lvl) <= 0"
-                    :input="spells_left_to_know > 0"
+                    :input="spells_left_to_know"
                     :expended="sheet.spells.slots[lvl]"
-                    @expended="(event, force) => expendSlot(event, lvl, force)"
+                    @expended="(event, level, force) => expendSlot(event, level || lvl, force)"
                     :spells="spells_by_level(lvl)"
                     @input="(index, value) => set_spells({index, value, level: lvl})"></dnd-spell-slot>
             </div><div>
@@ -52,43 +55,38 @@
                     :level="lvl" 
                     :lines="[9,9,7,7][index]" 
                     :total="spell_slots(lvl)" 
+                    :otherslots="other_spell_slots(lvl)"
                     :disabled="spell_slots(lvl) <= 0"
-                    :input="spells_left_to_know > 0"
+                    :input="spells_left_to_know"
                     :expended="sheet.spells.slots[lvl]"
-                    @expended="(event, force) => expendSlot(event, lvl, force)"
+                    @expended="(event, level, force) => expendSlot(event, level || lvl, force)"
                     :spells="spells_by_level(lvl)"
                     @input="(index, value) => set_spells({index, value, level: lvl})"></dnd-spell-slot>
             </div>
         </main>
-        
-        <q-dialog v-model="spell_dialog">
-            <q-card>
-                <q-card-section>
 
-                    <div class="row no-wrap items-center">
-                        <div class="col text-h6 ellipsis">{{ spell_dialog_data.name.en || spell_dialog_data.name }}</div>
-                        <div class="col-auto text-grey q-pt-md">
-                        <q-icon name="place" /> 250 ft
-                        </div>
+        <q-dialog v-model="choose_spell_level" position="bottom" @hide="handleCloseChoiceSpell">
+            <q-card style="max-width: auto; min-width: 400px;" v-if="choose_spell_level">
+                <q-linear-progress :value="higher_level_percentage" color="amber" />
+
+                <q-card-section class="row items-center no-wrap" style="">
+                    <div>
+                        <q-chip
+                            style="border-radius: 16px;"
+                            round
+                            v-for="level of higher_levels" :key="level"
+                            clickable
+                            @click="choosen_level = choosen_level == level ? undefined : level">
+                            <q-avatar icon="flash_on" :color="choosen_level == level ? 'amber' : 'grey-5'" :text-color="choosen_level == level ? 'black' : 'white'" />
+                            <span :style="{fontWeight: choosen_level == level ? 500 : 400}">Level</span> <span style="padding-left: 5px; opacity: 0.5">#</span><span :style="{fontWeight: choosen_level == level ? 500 : 400}">{{ level }}</span>
+                        </q-chip>
                     </div>
+
+                    <q-space />
+
+                    <q-btn flat round color="black" icon="check" :disable="choosen_level == undefined" @click="handleChoiceSpell" v-close-popup/>
                 </q-card-section>
-
-                <q-card-section>
-                    <div class="text-subtitle1">$・Italian, Cafe</div>
-                    <div class="text-subtitle2 text-grey">Small plates, salads & sandwiches in an intimate setting.</div>
-                </q-card-section>
-
-                <q-separator />
-
-                <q-card-actions style="justify-content: center">
-                    <q-btn flat round icon="flash_on" color="green" v-close-popup>
-                        <q-tooltip>Cast Spell</q-tooltip>
-                    </q-btn>
-                    <!-- <q-btn flat v-close-popup>5:30PM</q-btn>
-                    <q-btn flat v-close-popup>7:30PM</q-btn>
-                    <q-btn flat v-close-popup>9:00PM</q-btn>
-                    <q-btn flat color="primary" v-close-popup>Reserve</q-btn> -->
-                </q-card-actions>
+                
             </q-card>
         </q-dialog>
     </div>
@@ -97,6 +95,7 @@
 <script>
 import {mapState, mapMutations, mapGetters, mapActions} from 'vuex'
 
+import _ from 'lodash'
 import bus from '@/bus'
 import utils from '@/assets/utils/resources'
 
@@ -135,11 +134,40 @@ export default {
     },
     data(){
         return {
-            spell_dialog: false,
-            spell_dialog_data: {"slug":"@cantrip/mage_hand","_uuid":"cdf8ecb0-79b8-45cb-bfed-957f50ff9652","_path":"state.spells.by_level[0][0]","_origin":"input","_parent":0,"_source":"custom","_type":"default","_id":"cantrip_mage_hand","meta":"spell","parent":"cantrip","name":{"en":"Mage Hand","pt-BR":"Mão Mágica"},"text":"<p>A spectral, floating hand appears at a point you choose within range. The hand lasts for the Duration or until you dismiss it as an action. The hand vanishes if it is ever more than 30 feet away from you or if you cast this spell again.</p><p>You can use your action to control the hand. You can use the hand to manipulate an object, open an unlocked door or container, stow or retrieve an item from an open container, or pour the contents out of a vial. You can move the hand up to 30 feet each time you use it.</p><p>The hand can't Attack, activate magical items, or carry more than 10 pounds.</p>","mechanics":{"school":"conjuration","casting_time":["1","action"],"range":["30","ft"],"components":["V","S"],"duration":["1","minute"],"classes":["@bard","@sorcerer","@warlock","@wizard"],"active":true},"_modified_at":"2019-08-14T00:44:28.194Z","path":"cantrip/mage_hand","_index":0}
+            base_spell_level: 1,
+            choose_spell_level: false,
+            choose_spell_level_callback: undefined,
+            choosen_level: undefined
         }
     },
     computed: {
+        higher_levels(){
+            let minimum = this.base_spell_level+1
+            
+            let arr = []
+            for(let level = minimum; level <= 9; level++){
+                let slots = this.spell_slots(level)
+                if(slots > 0){
+                    if(slots > this.sheet.spells.slots[level]){
+                        arr.push(level)
+                    }
+                }else{
+                    break
+                }
+            }
+
+            return arr
+        },
+        higher_level_percentage(){
+            let level = this.choosen_level
+            if(level == undefined) return 0
+            
+            let minimum = this.base_spell_level-1
+            let maximum = this.higher_levels[this.higher_levels.length-1]
+
+            let m = maximum - minimum
+            return (level * 1.0) / parseFloat(m)
+        },
         name: utils.name,
         ...mapState([
             'sheet'
@@ -187,15 +215,32 @@ export default {
                 let spellcasting = this.spellcasting
                 if(spellcasting == undefined) return 0
 
-                let total = spellcasting.mechanics.spell_slots[spell_level-1] || 0
+                let total = spellcasting.mechanics.spell_slots[spell_level] || 0
                 return total
+            }
+        },
+        other_spell_slots(){
+            return function(spell_level){
+                let spellcasting = this.spellcasting
+                if(spellcasting == undefined) return 0
+
+                let others = _.pickBy(spellcasting.mechanics.spell_slots, (value, key) => key != spell_level)
+                let total_others = _.reduce(others, (sum, val, key) => sum + val, 0)
+
+                let expent_others = 0
+                for(let i in [1, 2, 3, 4, 5, 6, 7, 8, 9]){
+                    if(i > spell_level)
+                        expent_others += (this.sheet.spells.slots[i] || 0)
+                }
+
+                return total_others - expent_others
             }
         },
         cantrips_left_to_know(){
             let total = this.cantrips_known
             if(total == 0) return 0
 
-            return total - this.spells_by_level(0).length
+            return total - this.spells_by_level(0, true).length
         },
         spells_left_to_know(){
             let spellcasting = this.spellcasting
@@ -206,7 +251,8 @@ export default {
 
             let current = 0
             for(let level in this.sheet.async.spells){
-                current += this.spells_by_level(level).filter(s => (s.mechanics || {}).count_as_spell !== false).length
+                if(level > 0)
+                    current += this.spells_by_level(level, true).length
             }
 
             return total - current
@@ -216,10 +262,13 @@ export default {
         ...mapActions({
             set_spells: 'sheet/SET_SPELLS',
         }),
-        spells_by_level(level){
+        spells_by_level(level, countable=false){
             if(this.sheet.async.spells == undefined) return []
             
-            return this.sheet.async.spells[level]            
+            if(countable)
+                return this.sheet.async.spells[level].filter(s => (s.mechanics || {}).count_as_spell !== false)            
+            else 
+                return this.sheet.async.spells[level]
         },
         expendSlot(event, level, force_number=false){
             if(force_number){
@@ -227,14 +276,34 @@ export default {
                 return 
             }
             console.log('CAST SPELL', event)
-            this.sheet.spells.slots[level]++
+
+            if(level > 0)
+                this.sheet.spells.slots[level]++
+        },
+        handleChoiceSpell(){
+            this.choose_spell_level = false
+            if(this.choose_spell_level_callback)
+                this.choose_spell_level_callback(this.choosen_level)
+            
+            this.choosen_level = undefined
+            this.base_spell_level = 1
+            this.choose_spell_level_callback = undefined
+        },
+        handleCloseChoiceSpell(){
+            this.choose_spell_level = false
+            this.choosen_level = undefined
+            this.base_spell_level = 1
+            
+            if(this.choose_spell_level_callback)
+                this.choose_spell_level_callback(this.choosen_level)
+            this.choose_spell_level_callback = undefined
         }
     },
     mounted(){
-        bus.$on('spell-description', function(spell){
-            console.log('OPENDIALOG', spell)
-
-            this.spell_dialog = true
+        bus.$on('choose-spell-level', function(base, callback){
+            this.base_spell_level = base
+            this.choose_spell_level = true
+            this.choose_spell_level_callback = callback
         }.bind(this))
     }
 }

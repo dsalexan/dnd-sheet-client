@@ -1,4 +1,7 @@
-import _ from 'lodash'
+import lodash from 'lodash'
+import deepdash from 'deepdash-es'
+const _ = deepdash(lodash)
+
 import axios from 'axios'
 const uuid = require('uuid/v4')
 
@@ -6,11 +9,12 @@ import * as dnd5e from '@/assets/rules/dnd/5e'
 import resources from '@/assets/utils/resources'
 import Die from '@/assets/utils/die'
 
+import bus from '@/bus'
 
 function DEFRAG(_res, _static=true){
     var fn_defrag
     fn_defrag = (items) => {
-        let index = {}, defrag = []
+        let index = {}, defrag = [], to_remove = []
         
         for(let res of items){
             if(!res) continue
@@ -62,7 +66,13 @@ function DEFRAG(_res, _static=true){
                 }
             }
 
-            for(let _r of list.splice(1)){
+            list = list.splice(1)
+            
+            for(let _r of list){
+                // if got here there is shit to be removed
+                // actually all res in list should go down in flames by the end
+                to_remove = [...to_remove, ...list]
+
                 if(typeof _r == 'string'){
                     _r = {
                         slug: _r
@@ -93,6 +103,8 @@ function DEFRAG(_res, _static=true){
                         if(objValue !== srcValue && !!objValue && !!srcValue){
                             return [objValue, srcValue]
                         }
+                    }else if(key == '_path' || key == '_uuid'){
+                        return objValue
                     }
                     // MERGE EQUIPMENT EXTERNALLY TO AVOID DEEP SUMMING OF QUANTITIES
                     // }else if(key == 'equipment'){
@@ -135,19 +147,94 @@ function DEFRAG(_res, _static=true){
             defrag.push(res)
         }
 
-        return defrag
+        return [defrag, to_remove]
     }
     
     
-    let defrag = fn_defrag(_res)
-    
-    return defrag
+    return fn_defrag(_res)
 }
 
 
-function METADATA(dispatch, value, path, origin, parent, source, type='default', key='slug'){
+function DEFINE_ACTIVE(object){
+    var evaluate_active = (store, resource_active) => {
+        let active = true
+        if(resource_active){
+            if(typeof resource_active == 'boolean') active = resource_active
+            else{
+                let result = false
+
+                if(resource_active.condition){
+                    if(resource_active.condition.equals){
+                        let eq = resource_active.condition.equals
+
+                        let data = eq[0]
+                        let value = eq[1]
+                        if(data.substr(0, 4) == '@me/'){
+                            data = data.substr(4)
+                            data = data.replace(/\/+/, '.')
+                        }else{
+                            throw new Error('Comparassion not implemented for any other mention type (other than @me)')
+                        }
+
+                        let state_data = resources.get(store.state, data)
+
+                        window.store.watch(state => {
+                            return resources.get(state, data)
+                        }, function(arg1, arg2, arg3){
+                            console.log('WATCHER VUEX FUNCIONOU???', arg1, arg2, arg3)
+                        })
+
+                        let _value = undefined
+                        if(typeof state_data != 'string') _value = state_data.value
+
+                        result = _value == value
+                    }else{
+                        throw new Error('Comparassion not implemented for conditional property')
+                    }
+                }else{
+                    throw new Error('Directive not implemented')
+                }
+
+                active = result
+            }
+        }
+
+        return active
+    }   
+
+    // Object.defineProperty(object, '_active', {
+    //     get: function(){
+    //         if(this.mechanics){
+    //             return this.mechanics.active == undefined ? true : evaluate_active(this.mechanics.active)
+    //         }else{
+    //             return true
+    //         }
+    //     },
+    //     configurable: true,
+    //     enumerable: true
+    // })    
+
+    object._active = function(store){
+        if(this.mechanics){
+            return this.mechanics.active == undefined ? true : evaluate_active(store, this.mechanics.active)
+        }else{
+            return true
+        }
+    }
+
+    return object
+}
+
+function METADATA(dispatch, value, path, origin, parent, source, type='default', {key=undefined, answer=false} = {}){
     let d = {}
     if(typeof value == 'string'){
+        if(key == undefined){
+            key = 'name'
+            if(value[0] == '@'){
+                key = 'slug'
+            }
+        }
+
         d = {
             [key]: value
         }
@@ -156,26 +243,64 @@ function METADATA(dispatch, value, path, origin, parent, source, type='default',
     }
 
     let _uuid = uuid()
+    let _id = d._id
+    let meta = d.meta
+
+    var _root = function(state, _path){
+        let root_path = _.toPath(_path)
+        let _meta = root_path[0] == 'subscriptions' ? root_path[1] : root_path[0]
+
+        return _meta
+    }
+
+    let _async_path = function(state, {_path, meta}){
+        if(meta == undefined){
+            meta = _root(state, _path)
+        }
+
+        let root = _.get(state.async, meta)
+
+        var async_path = undefined
+        _.eachDeep(root, (value, key, parent, meta) => {
+            if(async_path == undefined && key == '_uuid' && value == _uuid){
+                async_path = meta.parent.path
+            }
+        }, {
+            leavesOnly: true
+        })
+
+        return meta + '.' + async_path
+    }
 
     if(dispatch)
         dispatch('SET_RESOURCE', {value: {
+            meta,
+            _id,
             _uuid,
             _path: path,
+            _async_path,
+            _root,
             _origin: origin, 
             _parent: parent,
             _source: source,
-            _type: type
+            _type: type,
+            _answer: answer
         }})
 
-    return {
+    let ret_d = {
         ...d,
         _uuid,
         _path: path,
+        _async_path,
+        _root,
         _origin: origin, 
         _parent: parent,
         _source: source,
-        _type: type
+        _type: type,
+        _answer: answer
     }
+
+    return DEFINE_ACTIVE(ret_d)
 }
 
 export default {
@@ -189,10 +314,13 @@ export default {
             stats: {}
         },
         injections: {},
+        answers: {},
+
         plugins: {},
         resources: {
             index: {},
-            tree: {}
+            tree: {},
+            commands: {}
         },
 
         async: {
@@ -204,7 +332,8 @@ export default {
             proficiencies: undefined,
             equipment: undefined,
             spells: undefined,
-            spellcasting: undefined
+            spellcasting: undefined,
+            answers: undefined
         },
 
         name: undefined,
@@ -584,12 +713,13 @@ export default {
 
             state.injections = {}
 
+            state.answers = {}
+
             state.plugins = {}
 
-            state.resources = {
-                index: {},
-                tree: {}
-            }
+            state.resources.index = {}
+            state.resources.tree = {}
+            state.resources.commands = {}
 
             state.async.stats = undefined
             state.async.class = undefined
@@ -600,6 +730,7 @@ export default {
             state.async.equipment = undefined
             state.async.spells = undefined
             state.async.spellcasting = undefined
+            state.async.answers = undefined
             
             state.name = undefined
 
@@ -679,23 +810,32 @@ export default {
                 state.spells.by_level[i] = []
             }
 
-        },
-        DEFRAG_STATIC_EQUIPMENT( state ){
-            let defrag = DEFRAG(state.equipment.items)
-            
-            console.log('DEFRAGGIN STATIC EQUIPMENT', defrag, 'from', state.equipment.items)
-
-            state.equipment.items = defrag
-        },
-        DEFRAG_DINAMIC_EQUIPMENT( state ){
-            let defrag = DEFRAG(state.async.equipment.items, false)
-            
-            console.log('DEFRAGGIN DINAMIC EQUIPMENT', defrag, 'from', state.async.equipment.items)
-
-            state.async.equipment.items = defrag
         }
     },
     actions: {
+        async DEFRAG_STATIC_EQUIPMENT( {dispatch, state} ){
+            let [defrag, removals] = DEFRAG(state.equipment.items)
+            
+            console.log('DEFRAGGIN STATIC EQUIPMENT', defrag, 'from', state.equipment.items, 'removing', removals)
+
+            for(let resource of removals){
+                dispatch('REMOVE_RESOURCE', {resource})
+            }
+            
+            state.equipment.items = defrag
+        },
+        async DEFRAG_DINAMIC_EQUIPMENT( {dispatch, state} ){
+            let [defrag, removals] = DEFRAG(state.async.equipment.items, false)
+            
+            console.log('DEFRAGGIN DINAMIC EQUIPMENT', defrag, 'from', state.async.equipment.items)
+
+            for(let resource of removals){
+                dispatch('REMOVE_RESOURCE', {resource})
+            }
+
+            state.async.equipment.items = defrag
+        },
+
         async FETCH_CLASS({commit, state, getters}){
             let name = getters.class
             if(name == undefined) return undefined
@@ -752,47 +892,8 @@ export default {
         },
 
         async FETCH_RESOURCES({dispatch, state}, obj){
-            var evaluate_active = (resource_active) => {
-                let active = true
-                if(resource_active){
-                    if(typeof resource_active == 'boolean') active = resource_active
-                    else{
-                        let result = false
-
-                        if(resource_active.condition){
-                            if(resource_active.condition.equals){
-                                let eq = resource_active.condition.equals
-
-                                let data = eq[0]
-                                let value = eq[1]
-                                if(data.substr(0, 4) == '@me/'){
-                                    data = data.substr(4)
-                                    data = data.replace(/\/+/, '.')
-                                }else{
-                                    throw new Error('Comparassion not implemented for any other mention type (other than @me)')
-                                }
-
-                                let state_data = _.get(state, data)
-                                if(state_data == undefined) state_data = undefined
-                                else if(typeof state_data != 'string') state_data = state_data.value
-
-                                result = state_data == value
-                            }else{
-                                throw new Error('Comparassion not implemented for conditional property')
-                            }
-                        }else{
-                            throw new Error('Directive not implemented')
-                        }
-
-                        active = result
-                    }
-                }
-
-                return active
-            }
-
             var fetch 
-            fetch = async (srcRes, _index, search=false) => {
+            fetch = async (srcRes, search=false) => {
                 let reqRes = undefined
 
                 if(srcRes.meta == 'command'){
@@ -825,9 +926,9 @@ export default {
                         }
                     })
 
-                    if(_data.mechanics){
-                        _data.mechanics.active = _data.mechanics.active == undefined ? true : evaluate_active(_data.mechanics.active)
-                    }
+                    // if(_data.mechanics){
+                    //     _data.mechanics.active = _data.mechanics.active == undefined ? true : evaluate_active(_data.mechanics.active)
+                    // }
 
                     return _data
                 }
@@ -853,6 +954,7 @@ export default {
                         
                         let _data = await fetch(res)
                         
+                        let block = [res]
                         if(_data == undefined) {
                             if(typeof res == 'string'){
                                 if(res[0] == '@') 
@@ -869,15 +971,32 @@ export default {
 
                             data[source][type].push(res)
                         }else{
-                            data[source][type].push({
+                            block = [{
                                 ..._data,
                                 _index,
                                 _source: _data._source || source,
                                 _type: _data._type || type
-                            })
+                            }]
+                            
+                            if(_data.meta == `command`){
+                                let _id = _data._id
+                                let answers = (state.async.answers || {})[_id]
+                                
+                                if(answers){
+                                    block = answers.map((a, i) => ({
+                                        ...a,
+                                        _index: _index + i,
+                                        _source: _data._source || source,
+                                        _type: _data._type || type
+                                    }))
+                                    debugger               
+                                }
+                            }
+
+                            data[source][type] = [...data[source][type], ...block]
                         }
 
-                        _index++
+                        _index += block.length
                     }
                 }
             }
@@ -981,7 +1100,7 @@ export default {
                 state.async.equipment = merge_sources
                 console.log('FETCH EQUIPMENT', state.async.equipment, 'from', state.equipment)
 
-                commit('DEFRAG_DINAMIC_EQUIPMENT')
+                await dispatch('DEFRAG_DINAMIC_EQUIPMENT')
 
                 return true
             }catch(err){
@@ -1011,11 +1130,12 @@ export default {
             state.async.stats = stats
         },
         async FETCH_SPELLS({dispatch, state, getters}){
-            console.trace('FETCH SPELLS')
+            
             let subscription = state.subscriptions.spells
-            let custom = state.spells.by_level
+            let custom = {'custom': state.spells.by_level}
 
             let obj = Object.assign({}, subscription)
+
             _.mergeWith(obj, custom, (obj, src) => {
                 if(_.isArray(src)){
                     return [...(obj || []), ...src]
@@ -1025,11 +1145,28 @@ export default {
             try{
                 let data = await dispatch('FETCH_RESOURCES', obj)
 
-                for(let level in data){
-                    data[level] = data[level].default
+                for(let source in data){
+                    if('default' in data[source]){
+                        for(let spell of data[source].default){
+                            let level = spell.mechanics.level
+                            if(!(level in data[source])) data[source][level] = []
+                            data[source][level].push(spell)
+                        }
+                    }
+
+                    delete data[source].default
                 }
 
-                state.async.spells = data
+                let merged_levels = {}
+                for(let level of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]){
+                    merged_levels[level] = []
+
+                    for(let source in data){
+                        merged_levels[level] = merged_levels[level].concat(data[source][level] || [])
+                    }
+                }
+
+                state.async.spells = merged_levels
                 console.log('FETCH SPELLS', state.async.spells)
                 return true
             }catch(err){
@@ -1037,6 +1174,57 @@ export default {
                 console.error(err)
                 return false
             }
+        },
+        async FETCH_ANSWERS({dispatch, state, getters}){ // SHOULD BE CALLED PRIOR TO OTHER FETCHES
+            let answers = state.answers
+
+            let obj = {'custom': _.clone(answers)}
+
+            try{
+                let data = await dispatch('FETCH_RESOURCES', obj)
+
+                state.async.answers = data.custom
+                console.log('FETCH ANSWERS', state.async.answers)
+                return true
+            }catch(err){
+                console.log('ERROR ON FETCH ANSWERS', obj)
+                console.error(err)
+                return false
+            }
+        },
+        UPDATE_ANSWERS({dispatch, state, getters}){
+            let _ref_answers = []
+        
+            for(let _id in state.async.answers){
+                let _uuid = state.resources.commands[_id]
+                let _command = state.resources.index[_uuid]
+                let _path = _command._path
+
+                let answers = state.async.answers[_id]
+                _ref_answers = [..._ref_answers, ...answers]
+                
+                let async_path = _command._async_path(state, {_path})
+                
+                let _async = _.toPath(async_path)
+                let index = _async.pop()
+
+                let ante = _.get(state.async, _async)
+
+                if(_.isArray(ante)){
+                    ante.splice(index, 1, ...answers)
+                }else{
+                    if(answers.length == 1) {
+                        ante[index] = answers[0]
+                    }else {
+                        throw new Error(`Updating object command with multiple (${answers.length}) answers is not implemented`)
+                    }
+                }
+
+                // console.log('UPDATE ANSWERS', 'at', `async.${_meta}.${async_path}`, 'with', answers, 'replacing', _command)
+                // console.log(state.async)
+            }
+
+            bus.$emit('UPDATE_ANSWERS', _ref_answers)
         },
 
         // actions as mutations
@@ -1047,7 +1235,11 @@ export default {
             if(!state.resources.tree[value._origin].includes(value._uuid))
                 state.resources.tree[value._origin].push(value._uuid)
 
-            console.log('SET RESOURCE', state.resources.tree, state.resources.index)
+            if(value.meta == 'command'){
+                state.resources.commands[value._id] = value._uuid
+            }
+
+            console.log('SET RESOURCE', state.resources.tree, state.resources.index, state.resources.commands)
         },
         REMOVE_RESOURCE({dispatch, state, getters}, {resource}){
             console.log('REMOVE RESOURCE', resource)
@@ -1066,7 +1258,7 @@ export default {
 
             let stack = [resource._uuid, ...children(resource._uuid)]
             let paths = stack.map(r => _.toPath(state.resources.index[r]._path))
-
+            
             for(let y = stack.length-1; y >= 0; y--){
                 let ref = state
                 let path = paths[y]
@@ -1077,12 +1269,13 @@ export default {
                     ref = ref[path[i]]
                 }
                 
+                
                 delete ref[path[i]]
                 delete state.resources.index[uuid]
                 if(uuid in state.resources.tree)
                     delete state.resources.tree[uuid]
             }
-
+            
             // REFACTOR ARRAYS (remove empty slots and reorganize outdated paths)
             let fromPath = (arr) => {
                 return arr.map(a => {
@@ -1109,7 +1302,11 @@ export default {
                             let old_path = item._path
 
                             item._path = fromPath([...path, i])
-                            state.resources.index[item._uuid]._path = item._path
+
+                            let _uuid = item._uuid
+                            if(item._answer) _uuid = item._origin
+
+                            state.resources.index[_uuid]._path = item._path
 
                             console.log('REFACTOR PATH', `${old_path} -> ${item._path}`)
                         }
@@ -1119,7 +1316,7 @@ export default {
                     p = path.pop()
                 }
             }
-
+            
             // RE-FETCH what was subscribed by the gone ones
             let fetches = []
             let sub_at = stack.map(r => state.subscribed_at[r]).filter(s => s !== undefined)
@@ -1164,7 +1361,7 @@ export default {
                 state.equipment.items.splice(index, 1, value)
             }
 
-            commit('DEFRAG_STATIC_EQUIPMENT')
+            await dispatch('DEFRAG_STATIC_EQUIPMENT')
 
             await dispatch('FETCH_EQUIPMENT') && dispatch('UPDATE_ASYNC', {source: 'equipment'})
         },
@@ -1181,7 +1378,7 @@ export default {
                         }
                     })
 
-                    commit('DEFRAG_STATIC_EQUIPMENT')
+                    await dispatch('DEFRAG_STATIC_EQUIPMENT')
 
                     await dispatch('FETCH_EQUIPMENT') && dispatch('UPDATE_ASYNC', {source: 'equipment'})
                 }
@@ -1195,40 +1392,21 @@ export default {
                 }
             }
         },
-        async REMOVE_EQUIPMENT({ dispatch, state, commit }, { index, _id, _parent}){
-            console.log('REMOVE EQUIPMENT', index, _id, _parent)
+        async REMOVE_EQUIPMENT({ dispatch, state, commit }, { _id, path }){
+            console.log('REMOVE EQUIPMENT', _id, path)
 
             let defrag_needed = false, fetch_needed = true
 
-            var subtract
-            subtract = function(i){
-                // lidar com remover o _parent de um item
-                // se bem que tambem falta terminar o rewind (quando trocar um recurso tipo classe ou background tem que remover os recursos subscritos)
-                var remove
-                remove = function(_i){
-                    dispatch('REMOVE_RESOURCE', {resource: state.equipment.items[_i]})
-                }
+            let item = _.get(state, path)
 
-                if(state.equipment.items[i].mechanics){
-                    if(state.equipment.items[i].mechanics.quantity !== undefined){
-                        state.equipment.items[i].mechanics.quantity--
-
-                        if(state.equipment.items[i].mechanics.quantity == 0){
-                            remove(i)
-                        }
-                    }else{
-                        remove(i)
-                    }
-                }else{
-                    remove(i)
-                }
+            if(item.mechanics && item.mechanics.quantity !== undefined && item.mechanics.quantity > 1 ){
+                item.mechanics.quantity--
+            }else{
+                dispatch('REMOVE_RESOURCE', {resource: item})
             }
-
-            subtract(index)
-
         
             if(defrag_needed){
-                commit('DEFRAG_STATIC_EQUIPMENT')
+                await dispatch('DEFRAG_STATIC_EQUIPMENT')
             }
 
             if(fetch_needed){
@@ -1236,6 +1414,27 @@ export default {
             }else{
                 dispatch('UPDATE_ASYNC', {source: 'equipment'})
             }
+        },
+        async BLOCK_EQUIPMENT({ dispatch, state, commit }, { _id, path, value}){
+            console.log('BLOCK EQUIPMENT', _id, path, value)
+            
+            let item = _.get(state, path)
+            
+            if(item.mechanics){
+                item.mechanics.blocked = value
+            }else{
+                item.mechanics = {
+                    blocked: value
+                }
+            }
+
+            // block also in async
+            let async_path = item._async_path(state, {_path: path})
+            let async_item = _.get(state.async, async_path)
+
+            async_item.mechanics.blocked = value
+            
+            // console.log(state.async.equipment.items)
         },
         async SET_FEATURES({ dispatch, state }, { value, index }){
             console.log('SET FEATURES', value, index)
@@ -1271,18 +1470,51 @@ export default {
             if(value == undefined){
                 dispatch('REMOVE_RESOURCE', {resource: state.spells.by_level[level][index]})
             }else{
-                value = METADATA(dispatch, value, `state.spells.by_level[${level}][${index}]`, 'input', level, 'custom')
+                value = METADATA(dispatch, value, `spells.by_level[${level}][${index}]`, 'input', level, 'custom')
 
                 state.spells.by_level[level].splice(index, 1, value)
             }
             
             await dispatch('FETCH_SPELLS') && dispatch('UPDATE_ASYNC', {source: 'spells'})    
         },
+        async SET_ANSWERS({ dispatch, state }, {command, answer}){
+            console.log('SET ANSWERS', command, answer)
+
+            if(command.transform){
+                let _fn = eval(command.transform)
+                answer = _fn(answer)
+            }
+
+            if(command.inject == undefined){ // if the answer substitutes the command
+                if(!(command._id in state.answers)) state.answers[command._id] = []
+
+                for(let value of answer){
+                    let index = state.answers[command._id].length
+                    value = METADATA(dispatch, value, `answers.${command._id}[${index}]`, command._uuid, command._id, 'command', command._id, {answer: true})
+                    
+                    state.answers[command._id].splice(index, 1, value)
+                }
+                await dispatch('FETCH_ANSWERS') && dispatch('UPDATE_ANSWERS')
+            }else{
+                let target = resources.resolve(command.inject, state)
+
+                try{
+                    target.value = answer
+                }catch(err){
+                    console.log(err)
+                    throw new Error('Command with inject in fields without value not implemented')
+                }
+
+                if(!command.persistent){
+                    throw new Error('Not persistent commands with inject not implemented')
+                }
+            }
+        },
 
         async UPDATE_SUBSCRIPTIONS({ dispatch, state, getters }, { metas, source }){
             
             for(let meta of metas){
-                let table = resources.table(meta, getters.level)
+                let table = resources.table(meta, getters.level || 1)
 
                 for(let key of (meta.subscriptions || [])){
                     // state.subscriptions[key][m.meta] = m[key]
@@ -1302,7 +1534,7 @@ export default {
                             }) // else just merge objects
                         }
                     }
-                    
+
                     let origin = meta._uuid || meta.meta
                     if(_.isString(obj[meta.meta])){                        
                         let d = obj[meta.meta]
@@ -1439,14 +1671,20 @@ export default {
                         stats: 'stats'
                     })[key]
 
-                    let field = _.get(state, target)
+                    let field = resources.get(state, target) // _.get(state, target)
 
                     if(field instanceof Array && injection instanceof Array){
-                        field = _.concat(field, injection)
+                        // field = _.concat(field, injection)
+                        for(let dt of injection){
+                            field.splice(field.length, 1, dt)
+                        }
                     }else if(!(field instanceof Array) && !(injection instanceof Array)){
-                        _.mergeWith(field, injection, (objValue, srcValue) => {
-                            if (_.isArray(objValue)) return objValue.concat(srcValue)
-                        })
+                        // _.mergeWith(field, injection, (objValue, srcValue) => {
+                        //     if (_.isArray(objValue)) return objValue.concat(srcValue)
+                        // })
+                        for(let key in injection){
+                            field[key] = injection[key]
+                        }
                     }else{
                         console.log('ERROR: Data type inconsistency while injecting (field, injection)', field, injection)
                         throw new Error('Data type inconsistency while injecting')
@@ -1471,7 +1709,9 @@ export default {
 
             console.log(`PLUGINS UPDATED (from ${source})`, state.plugins, state)
         },
-        async UPDATE_ASYNC({dispatch, state, commit}, {source}){
+        async UPDATE_ASYNC(store, {source}){
+            let {dispatch, state, commit} = store
+
             let meta = []
             if(!_.isArray(source)) source = [source]
 
@@ -1521,8 +1761,7 @@ export default {
                 let _m = meta.filter(m => {
                     let origin = m._uuid || m.meta
 
-                    let active = (m.mechanics || {active: true}).active
-                    if(active === undefined) active = true
+                    let active = m._active(store)
                     
                     let should_inject = !(origin in state.injections)
                     let has_injections = !!m.injections
@@ -1540,8 +1779,7 @@ export default {
                     let origin = m._uuid || m.meta
                     let subscribed_at = state.subscribed_at[origin]
 
-                    let active = (m.mechanics || {active: true}).active
-                    if(active === undefined) active = true
+                    let active = m._active(store)
                     
                     let should_update = (subscribed_at ? subscribed_at.date < new Date(m._modified_at) : true)
                     let has_subscriptions = !!m.subscriptions
@@ -1571,7 +1809,7 @@ export default {
             if(!fetch) return
 
             if(injections.includes('equipment')){
-                commit('DEFRAG_STATIC_EQUIPMENT')
+                await dispatch('DEFRAG_STATIC_EQUIPMENT')
             }
 
             let fetches = []

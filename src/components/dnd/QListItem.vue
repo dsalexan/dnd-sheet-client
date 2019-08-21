@@ -1,60 +1,62 @@
 <template>
-    <div
-        :class="{focused}"  >
-        <q-item 
-            clickable
-            @click="handleClick">
-            <template v-if="focused">
-                <q-item-section avatar>
-                    <q-icon name="keyboard_backspace" color="black" />
-                </q-item-section>
-            </template>
-
-            <q-item-section>
-                <q-item-label 
-                    v-if="!!title" 
-                    overline>
-                    {{ title }}
-                </q-item-label>
-                <q-item-label>
-                    <template v-if="!focused">
-                        <template v-if="value.length > 0">
-                            {{ value.map(i => name(i)).join(', ') }}
-                        </template>
-                        <template v-else>
-                            <span class="empty">No proficiencies</span>
-                        </template>
-                    </template>
-                </q-item-label>
-            </q-item-section>
-
-            <template v-if="focused">
-                <q-item-section avatar style="opacity: 0">
-                    <q-icon name="keyboard_backspace" color="black" />
-                </q-item-section>
-            </template>
-        </q-item>
+<div :class="{focused}">
+    <q-item 
+        clickable
+        @click="handleClick">
         <template v-if="focused">
-            <div>
-                <q-chip dense square clickable
-                    v-for="(item, index) of non_editables" :key="`ne${index}`">{{ name(item[0] || item) }}</q-chip>
-                    
-                <q-chip dense square clickable :removable="true" @remove="handleRemove(index)"
-                    v-for="(item, index) of editables" :key="`e${index}`">{{ name(item[0] || item) }}</q-chip>
-            </div>
-
-            <x-input 
-                class="input"
-                ref="input"
-                placeholder="Input"
-                type="mention"
-                @input="input_value = $event"
-                @mention="handleMention"
-                :source="remoteSearch"
-                :mentionOptions="mentionOptions"
-                @keypress.enter="handleEnter"/>
+            <q-item-section avatar>
+                <q-icon name="keyboard_backspace" color="black" />
+            </q-item-section>
         </template>
-    </div>
+
+        <q-item-section>
+            <q-item-label 
+                v-if="!!title" 
+                overline>
+                {{ title }}
+            </q-item-label>
+            <q-item-label>
+                <template v-if="!focused">
+                    <template v-if="value.length > 0">
+                        {{ value.map(i => name(i)).join(', ') }}
+                    </template>
+                    <template v-else>
+                        <span class="empty">No proficiencies</span>
+                    </template>
+                </template>
+            </q-item-label>
+        </q-item-section>
+
+        <template v-if="focused">
+            <q-item-section avatar style="opacity: 0">
+                <q-icon name="keyboard_backspace" color="black" />
+            </q-item-section>
+        </template>
+    </q-item>
+    <template v-if="focused">
+        <div>
+            <q-chip dense square clickable 
+                v-for="(item, index) of non_editables" :key="`ne${index}`" @click="handleClickChip(item)">
+                <q-avatar v-if="item.meta == 'command'" icon="priority_high" color="green" text-color="white" />
+                {{ name(item) }}
+            </q-chip>
+                
+            <q-chip dense square clickable :removable="true" @remove="handleRemove(index)"
+                v-for="(item, index) of editables" :key="`e${index}`">{{ name(item[0] || item) }}</q-chip>
+        </div>
+
+        <x-input 
+            class="input"
+            ref="input"
+            placeholder="Input"
+            type="mention"
+            @input="input_value = $event"
+            @mention="handleMention"
+            :source="remoteSearch"
+            :mentionOptions="mentionOptions"
+            @keypress.enter="handleEnter"/>
+    </template>
+</div>
 </template>
 
 
@@ -62,20 +64,10 @@
 import utils from '@/assets/utils/resources.js'
 import axios from 'axios'
 
+import bus from '@/bus'
+
 import XInputVue from '../utils/XInput.vue';
 
-import {
-  Quasar,
-  QExpansionItem,
-  QList,
-  QItem,
-  QItemSection,
-  QItemLabel,
-  Ripple,
-  QPopupEdit,
-  QIcon,
-  QChip
-} from 'quasar'
 
 export default {
     props: {
@@ -97,8 +89,7 @@ export default {
         }
     },
     components: {
-        'x-input': XInputVue,
-        'q-chip': QChip
+        'x-input': XInputVue
     },
     data() {
         return {
@@ -149,13 +140,15 @@ export default {
         handleRemove: function(index){
             this.$emit('remove', index)
         },
-        editItem: function({reset}){
-            console.log('EDIT', reset)
-            reset()
-        },
-        removeItem: function({reset}){
-            console.log('REMOVE', reset)
-            reset()
+        handleClickChip: function(item){
+            if(item.meta == 'command'){
+                bus.$emit('open-command-dialog', { from: item.from, display: utils.name, icon: 'build' }, (values) => {
+                    let answer = values.map(i => ({
+                        slug: '@' + i.path[0]
+                    }))
+                    bus.$emit('choose', { command: item, answer })
+                })
+            }
         },
         name: utils.name 
     }

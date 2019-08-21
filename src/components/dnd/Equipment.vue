@@ -26,42 +26,70 @@
 
                     <q-separator />
                     
-                    <q-expansion-item
-                        clickable
-                        class="tag-item"
-                        :expand-icon-toggle="item._children.length > 0"
-                        :class="{'dont-expand': item._children.length == 0}">
-                        <template v-slot:header>
-
-                            <q-item-section side>
-                                <q-icon class="remove" name="remove" color="gray" clickable @click="removeItem(item._index, item._id, item._parent)"/>
-                            </q-item-section>
-
-                            <q-separator vertical inset />
-                            
-                            <q-item-section>
-                                <q-item-label style="font-weight: 600">{{nameItem(item, false) || item.slug || item}} <span v-if="quantityItem(item) != undefined">{{quantityItem(item)}}</span> </q-item-label>
-                                <q-item-label v-if="captionItem(item) !== undefined" caption lines="2">{{captionItem(item)}}</q-item-label>
-                            </q-item-section>
+                    <!-- @left="({reset}) => blockItem({reset}, item, !item.mechanics.blocked)" -->
+                    <q-slide-item 
+                        :ref="`q-slide-item_${item._uuid}`"
+                        @left="({reset}) => answerCommand({reset}, item)"
+                        @right="({reset}) => removeItem({reset}, item)" :left-color="'green'" :right-color="quantity(item) > 1 ? 'deep-orange' : 'red'">
+                        <template v-slot:left v-if="item.meta == 'command'">
+                            <q-icon color="white" :name="'add'" />
+                            <span style="padding-left: 10px; color: white;"> Choose </span>
                         </template>
-                        <q-list dense>
-                            <q-item clickable v-for="(subitem, subindex) of item._children" :key="subindex">
-                                <q-item-section side>
-                                    <q-icon class="remove" name="remove" color="gray" style="font-size: 1.1rem; width: 1.5rem;" 
-                                        clickable 
-                                        @click="removeItem(subitem._index, subitem._id, subitem._parent)"
-                                        :disable="quantity(subitem) != undefined"/>
+                        <template v-slot:right>
+                            <span style="padding-right: 10px; color: white;">{{ quantity(item) > 1 ? 'Remove' : 'Discard' }}</span>
+                            <q-icon :name="quantity(item) > 1 ? 'remove' : 'clear'" />
+                        </template>
+                        <q-expansion-item
+                            clickable
+                            class="tag-item"
+                            :expand-icon-toggle="item._children.length > 0"
+                            :class="{'dont-expand': item._children.length == 0}">
+                            <template v-slot:header>
+
+                                <!-- <q-item-section side>
+                                    <q-icon class="remove" name="remove" color="gray" clickable @click="removeItem(item._index, item._id, item._parent)"/>
                                 </q-item-section>
 
-                                <q-separator vertical inset />
-
+                                <q-separator vertical inset /> -->
+                                
                                 <q-item-section>
-                                    <div>{{nameItem(subitem) || subitem.slug || subitem}} <span v-if="quantityItem(subitem) != undefined">{{quantityItem(subitem)}}</span></div>
+                                    <q-item-label style="font-weight: 600">{{nameItem(item, false) || item.slug || item}} <span v-if="quantityItem(item) != undefined">{{quantityItem(item)}}</span> </q-item-label>
+                                    <q-item-label v-if="captionItem(item) !== undefined" caption lines="2">{{captionItem(item)}}</q-item-label>
                                 </q-item-section>
-                            </q-item>
-                        </q-list>
-                    </q-expansion-item>
+                            </template>
+                            <q-list dense>
+                                <q-slide-item  
+                                    clickable v-for="(subitem, subindex) of item._children" :key="subindex"
+                                    :ref="`q-slide-item_${subitem._uuid}`"
+                                    @left="({reset}) => answerCommand({reset}, subitem)"
+                                    @right="({reset}) => removeItem({reset}, subitem)" :left-color="'green'" :right-color="quantity(item) > 1 ? 'deep-orange' : 'red'">
+                                    <template v-slot:left v-if="subitem.meta == 'command'">
+                                        <q-icon color="white" :name="'add'" />
+                                        <span style="padding-left: 10px; color: white;"> Choose </span>
+                                    </template>
+                                    <template v-slot:right>
+                                        <span style="padding-right: 10px; color: white;">{{ quantity(subitem) > 1 ? 'Remove' : 'Discard' }}</span>
+                                        <q-icon :name="quantity(subitem) > 1 ? 'remove' : 'clear'" />
+                                    </template>
+                                    <q-item>
+                                        <!-- <q-item-section side>
+                                            <q-icon class="remove" name="remove" color="gray" style="font-size: 1.1rem; width: 1.5rem;" 
+                                                clickable 
+                                                @click="removeItem(subitem._index, subitem._id, subitem._parent)"
+                                                :disable="quantity(subitem) != undefined"/>
+                                        </q-item-section>
 
+                                        <q-separator vertical inset /> -->
+
+                                        <q-item-section>
+                                            <div>{{nameItem(subitem) || subitem.slug || subitem}} <span v-if="quantityItem(subitem) != undefined">{{quantityItem(subitem)}}</span></div>
+                                        </q-item-section>
+                                    </q-item>
+                                </q-slide-item>
+                            </q-list>
+                        </q-expansion-item>
+
+                    </q-slide-item>
                 </div>
 
                 <q-separator />
@@ -73,6 +101,8 @@
 <script>
 import { economy } from '@/assets/rules/dnd/5e'
 import utils from '@/assets/utils/resources'
+
+import { mapState, mapGetters, mapActions, mapMutations } from 'vuex'
 
 import XInput from '@/components/utils/XInput.vue'
 
@@ -116,7 +146,8 @@ export default {
                 },
                 menuContainer: false
             },
-            input_value: ''
+            input_value: '',
+            bugfix_slide: false
         }
     },
     components: {
@@ -127,6 +158,41 @@ export default {
         QExpansionItem,
         QItemLabel,
         QSeparator
+    },
+    mounted(){
+        bus.$on('UPDATE_ANSWERS', (answers) => {
+            console.log('CALLBACK FROM ETERNITY', answers)
+
+            this.bugfix_slide = answers
+
+        })
+    },
+    updated: function () {
+        this.$nextTick(function () {
+            // Código que irá rodar apenas após toda
+            // a árvore do componente ter sido re-renderizada
+            if(this.bugfix_slide){
+                
+                for(let answer of this.bugfix_slide){
+                    let _uuid = `q-slide-item_${answer._uuid}`
+                    
+                    let target = this.$refs[_uuid][0].$el
+                    
+                    let right = target.querySelector('.q-slide-item__right')
+                    let right_div = target.querySelector('.q-slide-item__right > div')
+                    let content = target.querySelector('.q-slide-item__content')
+
+                    right.style.visibility = ''
+                    right_div.style.transform = 'scale3d(0, 0, 1)'
+                    content.style.visibility = 'visible'
+                }
+                
+                this.bugfix_slide = false
+            }
+        })
+    },
+    computed: {
+        ...mapState(['sheet'])
     },
     methods: {
         handleCoin: function(_id, quantity){
@@ -164,8 +230,54 @@ export default {
                 return utils.name(item)
             }
         },
-        removeItem: function(index, _id, _parent){
-            this.$emit('remove', index, _id, _parent)
+        removeItem: function({reset}, item){    
+            let path = item._path, _id = item._id
+
+            if(item._answer){
+                _id = undefined
+                path = this.sheet.resources.index[item._origin]._path
+            }
+            
+            this.$q.notify({
+                message: `<div style="width: 100%; text-align: center">Removing item "<strong>${utils.name(item)}</strong>"</div>`,
+                icon: 'clear',
+                html: true
+            })
+            setTimeout(() => {
+                reset()
+            
+                this.$emit('remove', _id, path)
+            }, 800)
+        },
+        blockItem: function({reset}, item, value){
+            let path = item._path, _id = item._id
+
+            this.$q.notify({
+                message: `<div style="width: 100%; text-align: center">${value ? 'Unlocking' : 'Locking'} item "<strong>${utils.name(item)}</strong>"</div>`,
+                icon: 'block',
+                html: true
+            })
+            setTimeout(() => {
+                reset()
+
+                this.$emit('block', _id, path, value)
+            }, 800)
+        },
+        answerCommand: function({reset}, item){
+            if(item.meta == 'command'){
+                return setTimeout(() => {
+                    reset()
+
+                    bus.$emit('open-command-dialog', { from: item.from, display: utils.name, icon: 'toys' }, (values) => {
+                        let answer = values.map(i => ({
+                            slug: '@' + i.path[0]
+                        }))
+                        
+                        bus.$emit('choose', { command: item, answer })
+                    })
+                }, 600)
+            }
+            reset()
         },
         remoteSearch: function(text, callback){
             axios.get(`http://localhost:3000/equipment?q=${text}&max=10${this.$props.query ? '&query=' + this.$props.query : ''}`)

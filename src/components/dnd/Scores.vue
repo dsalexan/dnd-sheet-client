@@ -89,6 +89,9 @@ export default {
                 border-radius: $radius
                 padding-bottom: $radius
 
+                &.disable, &.disabled
+                    background-color: rgba($bg, 0.8)
+
                 > input
                     text-align: center
                     font-size: 40px

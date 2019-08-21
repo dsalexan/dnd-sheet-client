@@ -1,7 +1,13 @@
 import Vue from 'vue'
+
+import bus from './bus'
+window.bus = bus
+
 import App from './App.vue'
 import router from './router'
 import store from './store'
+window.store = store
+
 import './registerServiceWorker'
 
 import './assets/css/normalize.css'
@@ -19,6 +25,3 @@ Vue.config.productionTip = false
   store,
   render: h => h(App)
 }).$mount('#app')
-
-import bus from './bus'
-window.bus = bus

@@ -1,4 +1,13 @@
 <template>
+<q-slide-item @left="castSpellHigher" @right="removeSpell" :left-color="otherslots > 0 ? 'amber' : 'grey-5'" right-color="red">  
+    <template v-slot:left v-if="!isCantrip">
+        <q-icon :color="otherslots > 0 ? 'black' : 'white'" :name="otherslots > 0 ? 'flash_on' : 'flash_off'" />
+        <span style="padding-left: 10px" :style="{color: otherslots > 0 ? 'black' : 'white'}">Cast at Higher Level</span>
+    </template>
+    <template v-slot:right v-if="value._source == 'custom'">
+        <span style="padding-right: 10px">Remove</span>
+        <q-icon name="clear" />
+    </template>
     <q-item
         class="spell-slot-item"
         :class="{expanded}">
@@ -6,11 +15,13 @@
             <!-- <q-item-label overline>OVERLINE</q-item-label> -->
             <q-item-label style="text-align: left" class="head">
                 <div>
-                    <q-btn flat round size="sm" :color="cast ? 'green' : 'grey-5'" :icon="cast ? 'flash_on' : 'flash_off'" @click="castSpell">
+                    <q-btn flat round size="sm" :color="(cast || isCantrip) ? 'green' : 'grey-5'" :icon="(cast || isCantrip) ? 'flash_on' : 'flash_off'" @click="castSpell">
                         <q-tooltip>
-                            {{ cast ? 'Cast spell' : 'All slots for this level were expent' }}
+                            {{ (cast || isCantrip) ? 'Cast spell' : 'All slots for this level were expent' }}
                         </q-tooltip>
                     </q-btn>
+
+
                     <span class="name">{{ name(value) }}</span>
                     <span class="school">({{ upper((value.mechanics || {}).school) }})</span>
                 </div>
@@ -44,6 +55,7 @@
             </q-item-label>
         </q-item-section>
     </q-item>
+</q-slide-item>
 </template>
 
 <script>
@@ -51,33 +63,24 @@ import utils from '@/assets/utils/resources'
 
 import bus from '@/bus.js'
 
-import {
-  Quasar,
-  QList,
-  QItem,
-  QItemSection,
-  QItemLabel,
-  QIcon,
-  QTooltip,
-  QSeparator
-} from 'quasar'
+import { setTimeout } from 'timers';
 
 export default {
     name: 'dnd-spell-slot-item',
     props: [
-        'value', 'cast'
-    ], components: {
-        QList,
-        QItem,
-        QItemSection,
-        QItemLabel,
-        QIcon,
-        QTooltip,
-        QSeparator
+        'value', 'cast', 'otherslots'
+    ], 
+    components: {
     },
     data(){
         return {
-            expanded: false
+            expanded: false,
+            show_higher: true
+        }
+    },
+    computed: {
+        isCantrip(){
+            return this.$props.value.mechanics.level == 0
         }
     },
     methods: {
@@ -87,11 +90,57 @@ export default {
             return string[0].toUpperCase() + string.substr(1)
         },
         castSpell(event){
-            if(this.$props.cast)
+            if(this.$props.cast || this.isCantrip){
+                let spell = this.$props.value
+                
+                this.$q.notify({
+                    message: `<div style="width: 100%; text-align: center">Casting "<strong>${utils.name(spell)}</strong>"</div>`,
+                    icon: 'flash_on',
+                    html: true
+                })
+
                 this.$emit('cast', this.$props.value)
+            }
         },
-        spellDescription(event){
-            bus.$emit('spell-description', this.$props.value)
+        castSpellHigher({ reset } ) {
+            if(this.$props.otherslots <= 0) return reset()
+
+            let spell = this.$props.value
+            
+            bus.$emit('choose-spell-level', spell.mechanics.level, (level) => {
+                if(level !== undefined){
+                    console.log('LEVEL CHOOSEN', level, spell)
+
+                    let sulfix = ({
+                        1: 'st',
+                        2: 'nd',
+                        3: 'rd',
+                        4: 'th'
+                    })[level > 4 ? 4 : level]
+
+                    this.$q.notify({
+                        message: `<div style="width: 100%; text-align: center">Casting "<strong>${utils.name(spell)}</strong>" at ${level}${sulfix} Level</div>`,
+                        icon: 'flash_on',
+                        html: true
+                    })
+                    
+                    this.$emit('cast', this.$props.value, level)
+                }
+
+                setTimeout(() => reset(), 400)
+            })
+        },
+        removeSpell({ reset }){
+            let spell = this.$props.value
+            this.$q.notify({
+                message: `<div style="width: 100%; text-align: center">Removing ${this.isCantrip ? 'cantrip' : 'spell'} "<strong>${utils.name(spell)}</strong>"</div>`,
+                icon: 'clear',
+                html: true
+            })
+            setTimeout(() => {
+                reset()
+                this.$emit('remove', spell)
+            }, 800)
         }
     }
 }
@@ -124,6 +173,10 @@ export default {
                 .school
                     font-size: 0.8em
                     font-style: italic
+
+                .higher
+                    transform: rotate(90deg)
+                    box-shadow: none
 
         .information
             display: grid

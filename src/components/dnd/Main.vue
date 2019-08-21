@@ -123,7 +123,8 @@
                     :coins="coins"
                     :value="items"
                     @input="(value, _id, _parent) => set_equipment({value, _id, _parent})"
-                    @remove="(index, _id, _parent) => remove_equipment({index, _id, _parent})"
+                    @remove="(_id, path) => remove_equipment({_id, path})"
+                    @block="(_id, path, value) => block_equipment({_id, path, value})"
                     @coin="(value, key) => set_coin({value, key})" />
             </section>
         </section>
@@ -137,7 +138,8 @@
                     <q-list>
                         <q-item 
                             v-for="(content, index) of item.content" :key="index"
-                            clickable="">
+                            clickable
+                            @click="clickPluginContent(content, index, item)">
                             <q-item-section>
                                 <!-- <q-item-label overline>OVERLINE</q-item-label> -->
                                 <q-item-label style="font-weight: bold">{{ name(content) }}</q-item-label>
@@ -160,10 +162,35 @@
                     meta="feature"
                     @input="(value, index) => set_features({value, index})"/>
             </section>
-            <div>
-                FEATURES - {{ JSON.stringify(sheet.async.features, null, 2)}}
-            </div>
         </section>
+
+        
+        <q-dialog v-model="command_dialog.open" position="bottom" @hide="handleHideDialog">
+            <q-card style="max-width: auto; min-width: 400px;" v-if="command_dialog.open">
+                <!-- <q-linear-progress :value="higher_level_percentage" color="amber" /> -->
+
+                <q-card-section class="row items-center no-wrap" style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;">
+                    <div style="flex-grow: 1; display: flex; flex-direction: row; justify-content: center;">
+                        <q-chip
+                            style="border-radius: 16px;"
+                            round
+                            v-for="(item, index) of command_dialog.args.from" :key="index"
+                            clickable
+                            @click="handleClickDialog(index, item)">
+                            <q-avatar :icon="command_dialog.args.icon || 'priority_high'" :color="command_dialog.values.includes(index) ? (command_dialog.args.color || 'green') : 'grey-5'" :text-color="command_dialog.values.includes(index) ? 'white' : 'grey-3'" />
+                            <span :style="{fontWeight: command_dialog.values.includes(index) ? 500 : 400}"> {{ command_dialog.args.display(item) }} </span>
+                        </q-chip>
+                    </div>
+                        <q-separator vertical />
+
+                    <div  style="flex-shrink: 1; display: flex; flex-direction: row; margin-left: 16px">
+
+                        <q-btn flat round color="black" icon="check" :disable="command_dialog.values.length == 0" @click="handleChoiceDialog" v-close-popup/>
+                    </div>
+                </q-card-section>
+                
+            </q-card>
+        </q-dialog>
     </main>
 </template>
 
@@ -184,15 +211,9 @@ import Panel from '@/components/dnd/Panel.vue'
 
 import XInput from '@/components/utils/XInput.vue'
 
+import bus from '@/bus'
+import { debuglog } from 'util';
 
-import {
-  Quasar,
-  QIcon,
-  QList,
-  QItem,
-  QItemSection,
-  QItemLabel
-} from 'quasar'
 
 export default {
     name: 'dnd-main',
@@ -203,12 +224,7 @@ export default {
         'dnd-equipment': Equipment,
         'dnd-list': List,
         'dnd-panel': Panel,
-        'x-input': XInput,
-        QIcon,
-        QList,
-        QItem,
-        QItemSection,
-        QItemLabel
+        'x-input': XInput
     },
     data(){
         return {
@@ -217,8 +233,35 @@ export default {
 
             speed_index: 0,
             focus_hp: false,
-            focus_hit_dice: false
+            focus_hit_dice: false,
+
+            command_dialog: {
+                open: false,
+                callback: undefined,
+                values: [],
+                args: undefined,
+                display: (item) => item
+            }
         }
+    },
+    mounted(){
+        bus.$on('open-command-dialog', (args, callback) => {
+            if(args.current){
+                this.command_dialog.values = args.from.map((v, i) => ({v, i})).filter(item => item.v == (args.current.value || args.current)).map(item => item.i)
+            }
+
+            this.command_dialog.open = true
+            this.command_dialog.args = args
+            this.command_dialog.callback = callback
+
+            if(this.command_dialog.args.display == undefined) this.command_dialog.args.display = this.command_dialog.display
+        })
+
+        bus.$on('choose', ({command, answer}) => {
+            console.log('ANWSER COMMAND', command, answer)
+
+            this.set_answers({command, answer})
+        })
     },
     computed: {
         ...mapState([
@@ -253,8 +296,53 @@ export default {
             set_features: 'sheet/SET_FEATURES',
             set_proficiencies: 'sheet/SET_PROFICIENCIES',
             set_coin: 'sheet/SET_COIN',
-            remove_equipment: 'sheet/REMOVE_EQUIPMENT'
-        })
+            remove_equipment: 'sheet/REMOVE_EQUIPMENT',
+            block_equipment: 'sheet/BLOCK_EQUIPMENT',
+            set_answers: 'sheet/SET_ANSWERS',
+        }),
+        handleHideDialog(){
+            this.command_dialog.values = []
+
+            this.handleChoiceDialog()
+        },
+        handleChoiceDialog(){
+            this.command_dialog.open = false
+            if(this.command_dialog.callback)
+                this.command_dialog.callback(this.command_dialog.values.map(i => this.command_dialog.args.from[i]))
+            
+            this.command_dialog.values = []
+            this.command_dialog.callback = undefined
+            this.command_dialog.args = undefined
+        },
+        handleClickDialog(index, item){
+            if(this.command_dialog.args.multiple){
+                if(this.command_dialog.values.includes(index)){
+                    this.command_dialog.values = this.command_dialog.values.filter(i => i != index) 
+                    return
+                }
+                
+                this.command_dialog.values.push(index)
+            }else{
+                if(this.command_dialog.values.includes(index)){
+                    this.command_dialog.values = []
+                    return
+                }
+                
+                this.command_dialog.values = [index]
+            }
+        },
+        clickPluginContent(item, index, plugin){
+            console.log('CLICK PLUGIN CONTENT', item, index, plugin)
+
+            if(item.meta == 'command'){
+                bus.$emit('open-command-dialog', { from: item.from, display: utils.name, icon: plugin.icon || 'bubble_chart', color: plugin.color, current: utils.resolve(item.inject, this.sheet) }, (values) => {
+
+                    bus.$emit('choose', { command: item, answer: values })
+                })
+            }else{
+                throw new Error(`Meta <${item.meta}> not implemented as plugin content`)
+            }
+        }
     }
 }
 </script>

@@ -19,10 +19,31 @@ import {
   QItem,
   QItemSection,
   QItemLabel,
+  Notify,
+  QTooltip,
+  QSeparator,
+  QSlideItem,
+  Ripple,
+  QKnob,
+  QBtnGroup,
+  QDialog,
+  QChip,
+  QAvatar,
+  ClosePopup,
+  QCard,
+  QCardSection,
+  QLinearProgress,
+  QSpace,
 } from 'quasar'
 
 Vue.use(Quasar, {
-  config: {},
+  config: {
+    notify: {
+      position: 'bottom',
+      timeout: 2000,
+      textColor: 'white'
+    }
+  },
   components: {
     QLayout,
     QHeader,
@@ -37,9 +58,24 @@ Vue.use(Quasar, {
     QItem,
     QItemSection,
     QItemLabel,
+    QTooltip,
+    QSeparator,
+    QSlideItem,
+    QKnob,
+    QBtnGroup,
+    QDialog,
+    QChip,
+    QAvatar,
+    QCard,
+    QCardSection,
+    QLinearProgress,
+    QSpace
   },
   directives: {
+    Ripple,
+    ClosePopup
   },
   plugins: {
+    Notify
   }
  })

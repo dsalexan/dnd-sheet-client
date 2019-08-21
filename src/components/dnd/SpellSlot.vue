@@ -9,7 +9,7 @@
                 <template v-else>
                     <div class="inputs">
                         <x-input class="total clean" label="Slots Total" :value="total" disabled reactive="false"/>
-                        <x-input class="expended clean" label="Slots Expended" :value="expended" @input="handleCast($event, true)" reactive="false"/>
+                        <x-input class="expended clean" label="Slots Expended" :value="expended" @input="handleCast($event, undefined, true)" reactive="false"/>
                     </div>
                 </template>
             </div>
@@ -21,11 +21,31 @@
             <div
                 v-for="(spell, index) in spells" :key="index">
                 <q-separator v-if="index == 0"></q-separator>
+
                 <dnd-spell-slot-item
                     :value="spell"
                     @cast="handleCast"
-                    :cast="expended < total">
+                    :cast="expended < total"
+                    :otherslots="otherslots"
+                    @remove="handleRemove">
                 </dnd-spell-slot-item>
+
+                <q-separator></q-separator>
+            </div>
+            <div
+                v-for="index in empties" :key="`mk${index}`">
+                <q-separator v-if="index == (spells.length == 0 ? 1 : 0)"></q-separator>
+
+                <q-item
+                    class="mockup"
+                    clickable>
+                    <q-item-section>
+                        <q-item-label style="text-align: left; padding-left: 30px; font-style: italic; opacity: 0.6;">
+                            Unknown {{ level == 0 ? 'Cantrip' : 'Spell' }}
+                        </q-item-label>
+                    </q-item-section>
+                </q-item>
+
                 <q-separator></q-separator>
             </div>
         </q-list>
@@ -34,7 +54,7 @@
             type="mention"
             class="input"
             ref="input"
-            :disabled="disabled || !input"
+            :disabled="disabled"
             @input="input_value = $event"
             :source="remoteSearch"
             :mentionOptions="mentionOptions"
@@ -83,12 +103,16 @@ export default {
             default: false
         },
         input: {
-            type: [Boolean],
-            default: false
+            type: [Number],
+            default: 0
         },
         entries: {
             type: Number,
             default: -1
+        },
+        otherslots: {
+            type: Number,
+            default: 0
         }
     },
     data(){
@@ -108,6 +132,9 @@ export default {
         QSeparator
     },
     computed: {
+        empties(){
+            return (this.$props.level == 0 || this.$props.total > 0) ? this.$props.input : 0
+        }
     },
     methods: {
         remoteSearch: function(text, callback){
@@ -128,8 +155,11 @@ export default {
             
             this.$refs.input.empty()
         },
-        handleCast: function(event, force=false){
-            this.$emit('expended', event, force)
+        handleCast: function(event, level=undefined, force=false){
+            this.$emit('expended', event, level, force)
+        },
+        handleRemove: function(event){
+            this.$emit('input', event._index, undefined)
         }
     },
     watch: {
@@ -249,6 +279,11 @@ export default {
                 background-color: #1fcc00
                 background-image: -webkit-linear-gradient(45deg, rgba(255, 255, 255, .2) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .2) 50%, rgba(255, 255, 255, .2) 75%, transparent 75%, transparent)
                 opacity: 0.75
+
+            div
+                div.mockup
+                    cursor: auto !important
+
 
         > div.input
             width: 100%

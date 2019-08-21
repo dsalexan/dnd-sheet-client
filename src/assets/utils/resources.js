@@ -160,7 +160,7 @@ function name(item, from=true){
             }
         }
 
-        return (item.name || {}).en || (item.name || {})['pt-BR'] || item.name || undefined
+        return (item.name || {}).en || (item.name || {})['pt-BR'] || item.name || item.slug || undefined
     }
 }
 
@@ -171,9 +171,14 @@ function table(resource, level=1){
 
     if(!('table' in resource.mechanics)) return obj
 
-    let table = resource.mechanics.table.splice(0, level)
+    let table = []
+    for(let lvl = 1; lvl <= level; lvl++){
+        let of_level = resource.mechanics.table[lvl]
+        if(of_level)
+            table.push(of_level)
+    }
 
-    console.log('TABLE AS ALLOWED', table)
+    console.log('TABLE AS ALLOWED', table, level)
 
     for(let key of subs){
         for(let lvl = 0; lvl < level; lvl++){
@@ -208,6 +213,26 @@ function resolve(mention, state){
     }
 }
 
+function get(source, path){
+    let _path = path
+    if(typeof path == 'string'){
+        _path = _.toPath(path)
+    }
+
+    let ref = undefined
+    for(let p of _path){
+        ref = (ref || source)[p]
+    }
+
+    return ref
+}
+
+class Observer{
+    update(){
+        console.log(this, `OBSERVER WATCHING`)
+    }
+}
+
 export default {
-    schema, name, table, resolve, key
+    schema, name, table, resolve, key, get, Observer
 }
