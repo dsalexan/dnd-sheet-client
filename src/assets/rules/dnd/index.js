@@ -1,1 +1,0 @@
-export {default as fifth} from './5e'
