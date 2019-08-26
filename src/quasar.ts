@@ -34,6 +34,8 @@ import {
     QCardSection,
     QLinearProgress,
     QSpace,
+    QSelect,
+    QSpinner
 } from 'quasar'
 
 Vue.use(Quasar, {
@@ -70,6 +72,8 @@ Vue.use(Quasar, {
         QCardSection,
         QLinearProgress,
         QSpace,
+        QSelect,
+        QSpinner
     },
     directives: {
         Ripple,

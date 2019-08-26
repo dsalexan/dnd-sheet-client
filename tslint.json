@@ -1,11 +1,15 @@
 {
   "defaultSeverity": "warning",
+  "compilerOptions": {
+    "noImplicitAny": false
+  },
   "extends": [
     "tslint:recommended"
   ],
   "linterOptions": {
     "exclude": [
-      "node_modules/**"
+      "node_modules/**",
+      "src/components/utils/XInput.vue"
     ]
   },
   "rules": {
@@ -20,6 +24,13 @@
     "ordered-imports": false,
     "semicolon": false,
     "trailing-comma": false,
+    "no-debugger": false,
+    "no-console": false,
+    "variable-name": false,
+    "curly": false,
+    "member-access": false,
+    "max-line-length": false,
+    "ban-types": false,
     "quotemark": [
       true,
       "single"

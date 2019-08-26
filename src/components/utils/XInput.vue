@@ -20,13 +20,12 @@
     <template v-if="type == 'mention'">
       <tribute :options="tributeOptions" :class="{empty: isEmpty}">
         <div
-          v-once
           ref="input"
           class="content-editable"
           contenteditable="true"
           :placeholder="placeholder"
           :name="name"
-          v-html="valueModel"
+          v-html="value"
           @tribute-replaced="handleMention"
           v-on="inputListeners"
         />
@@ -52,7 +51,7 @@
 
 <script>
 import bus from "@/bus";
-import mentions from "@/assets/utils/mentions.js";
+import mentions from "@/utils/mentions.js";
 
 import VueTribute from "vue-tribute";
 
@@ -213,7 +212,12 @@ export default {
     },
     valueModel: {
       get() {
-        return mentions.parse(this.value, this.source);
+        if(this.type == 'mention'){
+          console.log('XINPUT', this.value, this.source)
+          let _value = mentions.parse(this.value, this.source)
+          if(_value == undefined || _value == '') this.empty()
+          return _value
+        }else return this.value
       },
       set(value) {
         if (this.$props.type == "checkbox") {
@@ -363,10 +367,10 @@ export default {
     empty() {
       this.isEmpty = true;
       if (this.$props.type == "mention") {
-        this.$refs.input.innerText = "";
+        if(this.$refs.input) this.$refs.input.innerText = "";
       } else {
-        this.$refs.input.value = "";
-        this.$refs.input.checked = false;
+        if(this.$refs.input) this.$refs.input.value = "";
+        if(this.$refs.input) this.$refs.input.checked = false;
       }
     }
   },
@@ -466,6 +470,9 @@ export default {
                 border: 1px solid black
                 text-align: center
                 border-radius: $radius
+
+                &::placeholder
+                  color: darkgray
 
     
     .clean

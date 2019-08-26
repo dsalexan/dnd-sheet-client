@@ -48,6 +48,8 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
   - [ ] Spellcasting
     - [ ] SpellSlot
     - [ ] SpellSlotItem
+- [ ] Criar um objeto SHEET que seja observavel
+  - [ ] Talvez usar RxJS, criar algo reativo onde eu possa criar variaveis reativas e manipular mais livremente as subscricoes
 
 ### v1.1-beta
 

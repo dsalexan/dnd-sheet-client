@@ -8,8 +8,8 @@ import store from './store';
 import './registerServiceWorker';
 import './quasar'
 
-import bus from './bus'
-window.bus = bus
+import {Bus} from './bus'
+window.bus = Bus
 
 Vue.config.productionTip = false;
 
