@@ -1,6 +1,6 @@
 import Vue from 'vue'
 
-import { NotifyLevel, NotifySettings } from './types'
+import { NotifyLevel, NotifySettings, CommandSettings } from './types'
 
 
 export const Bus = new Vue()
@@ -14,6 +14,12 @@ export const notify = (settings: NotifySettings ): Promise<Function> => {
     })
 }
 
-export const watch = (path: string, callback: (newValue: string, oldValue: string) => void) => {
-    Bus.$emit('watch', path, callback)
+export const watch = (_uuid: string, path: string, callback: (newValue: string, oldValue: string) => void) => {
+    Bus.$emit('watch', _uuid, path, callback)
+}
+
+export const command = (settings: CommandSettings) => {
+    return new Promise((resolve) => {
+        Bus.$emit('open-command-dialog', {...{icon: 'build'}, ...settings}, resolve)
+    })
 }

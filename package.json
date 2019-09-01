@@ -13,6 +13,7 @@
     "core-js": "^2.6.5",
     "deepdash-es": "^4.2.12",
     "lodash": "^4.17.15",
+    "lzutf8": "^0.5.5",
     "melanke-watchjs": "^1.5.0",
     "quasar": "^1.0.0",
     "register-service-worker": "^1.6.2",

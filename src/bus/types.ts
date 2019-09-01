@@ -1,3 +1,5 @@
+import { Resource } from '@/store/sheet/types';
+
 export enum NotifyLevel {
     SUCCESS,
     INFO,
@@ -14,4 +16,13 @@ export interface NotifySettings {
     icon?: string
     classes?: string
     html?: boolean
+}
+
+export interface CommandSettings {
+    from: Resource[]
+    display: () => {}
+    icon?: string
+    color?: string
+
+    current?: Resource | string
 }

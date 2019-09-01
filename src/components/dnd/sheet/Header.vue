@@ -168,6 +168,7 @@ export default class Header extends Vue {
 
     source: object[] = []
 
+    // to use computed inside here
     _sheet!: any
     setMisc!: (args: any) => {}
 

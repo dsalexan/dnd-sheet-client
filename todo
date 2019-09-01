@@ -1,0 +1,31 @@
+OK - Fazer subscription de stats e misc (de uma maneira que o dado possa ser alterado e salvo)
+OU
+OK - Fazer uma injecao especial que pode ser removida ao remover o pai
+
+OK - Testar stat injection/sub (no esquema de indexacao do stat)                                                
+OK - Remover fairy nao ta removendo plugin (e o resto dos subs?)
+OK - deal with ability scores/attributes addups in fairy   
+    - deal with multiple ones
+OK - i think feeble doesnt work like it should
+    OK - i have to clear async resources, they should only be a repository of async data. metadata should be fetched form static resources
+
+OK - ta dando xabu adicionar skill e depois remover
+OK - implementar o defrag (provavelmente criar um index de _ids pra saber se precisa desfragmentar alguma coisa q o q especificamente, ai eu mesmo os q tiverem repetidos e só removo todos menos o primeiro)
+
+OK - Check a proficiency, uncheck and check again throws a error
+
+- add passive perception
+- add proficiency panel
+- add combat shit
+- add equipment
+- add features
+
+- fix style inpiration and proficiency bonus
+
+- UNCHECK a check proficiency in the middle of work (fetching probably)
+- set level to empty breaks shit
+- what if two shit subscribe/inject a ac??
+- adicionar indicativo dos bonus/onus em cada ability score
+- deal with disadvantage on rolls
+- deal with weapon props restrictions
+

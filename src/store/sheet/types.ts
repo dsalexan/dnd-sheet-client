@@ -12,7 +12,7 @@ export interface Resource {
     _type: string // type inside source (armor, weapons, default)
     _method: string // input, injection, subscription
     _parent?: string // parent's _id/slug (in really strange cases)
-    _active: boolean
+    _active: boolean | undefined
     [key: string]: any // other resource's database data (indexer)
 }
 
@@ -53,7 +53,7 @@ export interface Sheet {
     },
     attributes: {
         ability_scores: {
-            [slug: string]: AbilityScore
+            [slug: string]: number
         },
         hp: {
             rolls: number[],
@@ -66,7 +66,12 @@ export interface Sheet {
             failures: boolean[]
         }
     },
-    stats: Resource[] | AsyncResource[]
+    stats: {
+        _?: {
+            [key: string]: Resource | AsyncResource
+        },
+        [key: string]: any
+    }
     proficiencies: Resource[] | AsyncResource[]
     equipment: Resource[] | AsyncResource[]
     features: Resource[] | AsyncResource[]
@@ -85,18 +90,31 @@ export interface Sheet {
     }
     */
     _index: {
-        subscriptions?: {
-            [_uuid: string]: Date
-        },
         injections?: {
             [_uuid: string]: Date
         }
+        subscriptions?: {
+            [_uuid: string]: Date
+        }
+        answers?: {
+            [_id: string]: any[]
+        }
+        [method: string]: any
     }
+}
+
+export interface Plugin {
+    name: string
+    icon?: string
+    color?: string
+    content: Resource[]
 }
 
 export interface SheetState {
     static: Sheet // static resources loaded from database/added at runtime
     async: Sheet // async resources derived from static
+    virtual: Sheet // virtual normalization of async assets
+    plugins: Plugin[]
     // fetching
     _stack: Resource[] // stack with static resources yet to be fetched,
     _target: Resource | null
@@ -114,11 +132,23 @@ export interface SheetState {
         async: {
             [_uuid: string]: AsyncResource
         },
+        virtual: {
+            [_uuid: string]: any,
+            _remove: string[]
+        },
         commands: {
             [_id: string]: string
-        },
-        answers: {
-            [_uuid_command: string]: string[]
+        }
+        defrag: {
+            pre_stack: {
+                [_id: string]: string[]
+            },
+            pos_fetch: {
+                [_id: string]: string[]
+            },
+            virtual: {
+                [_id: string]: string[]
+            }
         }
     },
     _tree: {
@@ -130,5 +160,7 @@ export interface SheetState {
             dismiss?: Function
         }
     },
-    _observer: string[]
+    _observer: {
+        [_uuid: string]: any[] // store all watchers for each watching resource
+    }
 }

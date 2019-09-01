@@ -1,3 +1,5 @@
+import Vue from 'vue'
+
 // @ts-ignore
 import uuid from 'uuid/v4'
 
@@ -7,7 +9,7 @@ import { SheetState, Sheet, Resource, AsyncResource } from './types'
 import { Module } from 'vuex';
 
 import {notify, watch, Bus} from '@/bus'
-import { Mention as MentionService, Resource as ResourceService } from '@/services'
+import { Mention as MentionService, Resource as ResourceService, Mention } from '@/services'
 // @ts-ignore
 import Resources from '@/utils/resources'
 
@@ -17,8 +19,8 @@ import pathToString from 'deepdash-es/pathToString'
 
 import axios from 'axios'
 
-import Observer from '@/services/observer';
-import { throwError } from 'rxjs';
+
+import { Styles } from '@/console'
 
 function m(_uuid: string) {
     return _uuid.substr(0, 8) + '...' + _uuid.substr(_uuid.length - 5)
@@ -63,13 +65,17 @@ export const empty: SheetState = {
                 failures: []
             }
         },
-        stats: [],
+        stats: {
+            _: {}
+        },
         proficiencies: [],
         equipment: [],
         features: [],
         spells: [],
         _index: {
-            injections: {}
+            subscriptions: {},
+            injections: {},
+            answers: {}
         }
     },
     async: {
@@ -102,15 +108,51 @@ export const empty: SheetState = {
                 failures: []
             }
         },
-        stats: [],
+        stats: {},
         proficiencies: [],
         equipment: [],
         features: [],
         spells: [],
-        _index: {
-            subscriptions: {}
-        }
+        _index: {}
     },
+    virtual: {
+        name: undefined,
+        misc: {
+            class: undefined, // ASYNC
+            level: undefined,
+            background: undefined, // ASYNC
+            race: undefined, // ASYNC
+            alignment: undefined,
+            experience_points: [],
+            age: undefined,
+            height: undefined,
+            weight: undefined,
+            eye_color: undefined,
+            hair_color: undefined,
+            skin_color: undefined,
+            inspiration: false
+        },
+        attributes: {
+            ability_scores: {},
+            hp: {
+                rolls: [],
+                current: 0,
+                temporary: 0
+            },
+            exaustion: 0,
+            death_saves: {
+                successes: [],
+                failures: []
+            }
+        },
+        stats: {},
+        proficiencies: [],
+        equipment: [],
+        features: [],
+        spells: [],
+        _index: {}
+    },
+    plugins: [],
     _stack: [],
     _target: null,
     _pooling: false,
@@ -122,8 +164,15 @@ export const empty: SheetState = {
     _index: {
         static: {},
         async: {},
+        virtual: {
+            _remove: []
+        },
         commands: {},
-        answers: {}
+        defrag: {
+            pre_stack: {},
+            pos_fetch: {},
+            virtual: {}
+        }
     },
     _tree: {},
     _ui: {
@@ -131,7 +180,7 @@ export const empty: SheetState = {
             working: false
         }
     },
-    _observer: []
+    _observer: {}
 }
 
 export const sheet: Module<SheetState, RootState> = {
@@ -147,6 +196,209 @@ export const sheet: Module<SheetState, RootState> = {
         experience_points: (state) => {
             const xp = state.static.misc.experience_points
             return xp.reduce((sum, cur) => sum + cur.points, 0)
+        },
+        ability_scores: (state) => (attr: string) => {
+            const character = state.static.attributes.ability_scores[attr]
+
+            // SEMPRE QUE HOUVER ALGO NOVO ADICIONDADO NA INTERFACE DE UMA ABILITY_SCORE, ADICIONAR O COMPORTAMENTO DE MESCLA AQUI
+            let bonus = (state.static.stats.ability_scores || []).filter((a: any) => a.attr === attr)
+            bonus = bonus.reduce((final: any, cur: any) => ({
+                add: parseInt(final.add || '0', 10) + parseInt(cur.add, 10)
+            }), {
+                add: undefined
+            })
+
+            return {
+                ...bonus,
+                value: character
+            }
+        },
+        modifier: (state, getters) => (attr: string) => {
+            const ability = getters.ability_scores(attr)
+            if (!ability || ability.value === undefined) return undefined
+
+            const mod = Math.floor(((ability.value + (ability.add || 0)) - 10) / 2)
+
+            return mod >= 0 ? '+' + mod : mod
+        },
+        proficiency_bonus: (state, getters) => {
+            // @ts-ignore
+            const level = parseInt(state.static.misc.level as number, 10)
+
+            if (level === undefined || _.isNaN(level)) return undefined
+
+            const bonus = [
+                1, // 0
+                2, 2, 2, 2, // 1-4
+                3, 3, 3, 3, // 5-8
+                4, 4, 4, 4, // 9-12
+                5, 5, 5, 5, // 13-16
+                6, 6, 6, 6 // 17-20
+              ][level]
+
+            return '+' + bonus
+        },
+        proficiency_modifier: (state, getters) => (attr: string, proficient: boolean) => {
+            let mod = getters.modifier(attr)
+            if (mod === undefined) return undefined
+
+            const proficiency_bonus = getters.proficiency_bonus
+            if (proficiency_bonus === undefined) return undefined
+
+
+            mod = parseInt(mod, 10) + (proficient ? parseInt(proficiency_bonus, 10) : 0)
+
+            return mod >= 0 ? '+' + mod : mod
+        },
+        proficient_save: (state, getters) => (attr: string) => {
+            const statics = state.static.proficiencies.filter((r) => r._type === 'saves' && ['@' + attr, attr].includes(r.slug))
+
+            if (statics[0] === undefined) {
+                let profs = state.async.proficiencies
+                profs = profs.filter((r) => r._type === 'saves' && ['@' + attr, attr].includes(r.slug))
+                return profs[0]
+            }
+
+            return statics[0]
+        },
+        proficient_skill: (state, getters) => (skill: string) => {
+            const statics = state.static.proficiencies.filter((r) => r._type === 'skills' && (r._id === skill || ['@' + skill, skill].includes(r.slug)))
+
+            if (statics[0] === undefined) {
+                let profs = state.async.proficiencies
+                profs = profs.filter((r) => r._type === 'skills' && (r._id === skill || ['@' + skill, skill].includes(r.slug)))
+                return profs[0]
+            }
+
+            return statics[0]
+        },
+
+        abilities: () => {
+            const data: Array<{
+                name: string
+                slug: string
+            }> = [
+                {
+                    name: 'Strength',
+                    slug: 'str'
+                },
+                {
+                    name: 'Dexterity',
+                    slug: 'dex'
+                },
+                {
+                    name: 'Constitution',
+                    slug: 'con'
+                },
+                {
+                    name: 'Intelligence',
+                    slug: 'int'
+                },
+                {
+                    name: 'Wisdom',
+                    slug: 'wis'
+                },
+                {
+                    name: 'Charisma',
+                    slug: 'cha'
+                }
+            ]
+
+            return data
+        },
+        skills: () => {
+            return [
+                {
+                    name: 'Acrobatics',
+                    ability: 'dex',
+                    slug: 'acrobatics'
+                },
+                {
+                    name: 'Animal Handling',
+                    ability: 'wis',
+                    slug: 'animal_handling'
+                },
+                {
+                    name: 'Arcana',
+                    ability: 'int',
+                    slug: 'arcana'
+                },
+                {
+                    name: 'Athletics',
+                    ability: 'str',
+                    slug: 'athletics'
+                },
+                {
+                    name: 'Deception',
+                    ability: 'cha',
+                    slug: 'deception'
+                },
+                {
+                    name: 'History',
+                    ability: 'int',
+                    slug: 'history'
+                },
+                {
+                    name: 'Insight',
+                    ability: 'wis',
+                    slug: 'insight'
+                },
+                {
+                    name: 'Intimidation',
+                    ability: 'cha',
+                    slug: 'intimidation'
+                },
+                {
+                    name: 'Investigation',
+                    ability: 'int',
+                    slug: 'investigation'
+                },
+                {
+                    name: 'Medicine',
+                    ability: 'wis',
+                    slug: 'medicine'
+                },
+                {
+                    name: 'Nature',
+                    ability: 'int',
+                    slug: 'nature'
+                },
+                {
+                    name: 'Perception',
+                    ability: 'wis',
+                    slug: 'perception'
+                },
+                {
+                    name: 'Performance',
+                    ability: 'cha',
+                    slug: 'performance'
+                },
+                {
+                    name: 'Persuasion',
+                    ability: 'cha',
+                    slug: 'persuasion'
+                },
+                {
+                    name: 'Religion',
+                    ability: 'int',
+                    slug: 'religion'
+                },
+                {
+                    name: 'Sleight of Hand',
+                    ability: 'dex',
+                    slug: 'sleight_of_hand'
+                },
+                {
+                    name: 'Stealth',
+                    ability: 'dex',
+                    slug: 'stealth'
+                },
+                {
+                    name: 'Survival',
+                    ability: 'wis',
+                    slug: 'survival'
+                }
+            ]
         }
     },
     mutations: {
@@ -159,9 +411,42 @@ export const sheet: Module<SheetState, RootState> = {
 
             state.static.misc.class = classe
             state.static.misc.level = level
+        },
+        SET_ABILITY_SCORE: (state, { value, attr }) => {
+            const intValue = parseInt(value, 10)
+
+            if (_.isNaN(intValue)) throw new Error('Trying to insert non-numeric value on attributes.ability_score')
+            Vue.set(state.static.attributes.ability_scores, attr, intValue)
         }
     },
     actions: {
+        _UI_NOTIFY({ state }, open: boolean) {
+            if (open) {
+                if (!state._ui.fetch.working) {
+                    state._ui.fetch.working = true
+                    notify({ message: 'Fetching content...', classes: 'text-italic text-center', icon: 'cloud_download', timeout: 0}).then((dismiss: Function) => {
+                        state._ui.fetch.dismiss = dismiss
+                    })
+                    console.log('%c NOTIFICATION ', Styles.GRAY, 'fetching...')
+                }
+            } else {
+                if (state._ui.fetch.working) {
+                    if (state._stack.length === 0 && !state._pooling && state._fetching.length === 0 && state._nest._stack.length === 0) {
+                        delay(750).then(() => {
+                            if (state._ui.fetch.working) {
+                                if (state._stack.length === 0 && !state._pooling && state._fetching.length === 0  && state._nest._stack.length === 0) {
+                                    state._ui.fetch.working = false
+                                    if (state._ui.fetch.dismiss) state._ui.fetch.dismiss()
+                                    state._ui.fetch.dismiss = undefined
+
+                                    console.log('%c NOTIFICATION (Close) ', Styles.GRAY, 'fetching stopped.')
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+        },
         RESET({ dispatch, state }) {
             console.log('RESET SHEET', state)
 
@@ -194,11 +479,11 @@ export const sheet: Module<SheetState, RootState> = {
                 const target = state.static
                 target.name = data.name
                 // misc
-                dispatch('SET_MISC', { target: 'class', value: data.misc.class }) // target.misc.class = data.misc.class
+                // dispatch('SET_MISC', { target: 'class', value: data.misc.class }) // target.misc.class = data.misc.class
                 target.misc.level = data.misc.level
-                dispatch('SET_MISC', { target: 'background', value: data.misc.background }) // target.misc.background = data.misc.background
+                // dispatch('SET_MISC', { target: 'background', value: data.misc.background }) // target.misc.background = data.misc.background
                 target.misc.player = data.misc.player
-                dispatch('SET_MISC', { target: 'race', value: data.misc.race }) // target.misc.race = data.misc.race
+                // dispatch('SET_MISC', { target: 'race', value: data.misc.race }) // target.misc.race = data.misc.race
                 target.misc.alignment = data.misc.alignment
                 target.misc.experience_points = data.misc.experience_points
                 target.misc.age = data.misc.age
@@ -236,27 +521,17 @@ export const sheet: Module<SheetState, RootState> = {
                 console.log('LOADED', state)
             })
         },
-        INDEX_RESOURCE( {state, dispatch}, {resource, remove= false, only_tree= false}) {
-            if (!remove) {
-                // index static resource
-                if (!only_tree)
-                    state._index.static[resource._uuid] = resource
+        INDEX_RESOURCE( {state, dispatch}, { resource }) {
+            // index static resource
+            state._index.static[resource._uuid] = resource
 
-                // index parenting
-                if (resource._origin) {
-                    if (!(resource._origin in state._tree)) state._tree[resource._origin] = []
-                    state._tree[resource._origin].push(resource._uuid)
-                }
-            } else {
-                delete state._index.static[resource._uuid]
-
-                // NAO REMOVER O INDICE DE ORIGEM, ISSO VAI SER USADO EM REMOVE RESOURCE
-                // if (resource._parent) {
-                //     state._parent.static[resource._parent].splice(resource._index, 1)
-                // }
+            // index parenting
+            if (resource._origin) {
+                if (!(resource._origin in state._tree)) state._tree[resource._origin] = []
+                state._tree[resource._origin].push(resource._uuid)
             }
         },
-        async CREATE_RESOURCE( { dispatch, state }, { value, path, origin, source, type, method, parent, index, should_index = true }): Promise<Resource> {
+        async CREATE_RESOURCE( { dispatch, state }, { value, path, origin, source, type, method, parent, index }): Promise<Resource> {
             if (_.isString(value)) {
                 if (value[0] === '@') {
                     value = {
@@ -269,8 +544,17 @@ export const sheet: Module<SheetState, RootState> = {
                 }
             }
 
+            let _data = value._id || value.slug || value.name || value.value
+            let from
+            if (value._id !== undefined) from = '_id'
+            else if (value.slug !== undefined) from = 'slug'
+            else if (value.name !== undefined) from = 'name'
+            else if (value.value !== undefined) from = 'value'
+
+            if (from !== undefined) _data = `(${from}) ${_data} #`
+
             const res: Resource = {
-                _active: true,
+                _active: undefined,
                 _uuid: uuid(),
                 _path: path,
                 _origin: origin,
@@ -279,223 +563,119 @@ export const sheet: Module<SheetState, RootState> = {
                 _method: method || 'input',
                 _parent: parent,
                 _index: index,
-                ...value
+                _data
             }
 
-            // TODO evaluate ACTIVE here and SUBSCRIBE to target
-            const targets = ResourceService.active(res, state)
-            // for (const arr of targets) {
-            //     // [target, property, path]
-            //     let [target, property, pathtarget] = arr
+            const resource: Resource = {...res, ...value}
 
-            //     if (!(pathtarget in state._observer)) {
-            //         // @ts-ignore
-            //         target = Observer.observe(target, pathtarget, property, () => {
-            //             console.log('OBSERVING', pathtarget, property, value)
-            //             ResourceService.active(res, state)
-            //         })
+            // active inicial é indefinido, só é definido apos o fetch
 
-            //         state._observer.push(pathtarget)
-            //     } else {
-            //         // @ts-ignore
-            //         Observer.observe(target, pathtarget, property, (value) => {
-            //             console.log('OBSERVING', pathtarget, property, value)
-            //             ResourceService.active(res, state)
-            //         })
-            //     }
-            // }
-            for (const arr of targets) {
-                // [target, property, path]
-                const [target, property, pathtarget] = arr
+            await dispatch('INDEX_RESOURCE', {resource: res})
 
-                watch('static.' + pathtarget, (newValue, oldValue) => {
-                    const oldActive = res._active
-                    ResourceService.active(res, state)
-                    console.log('WATCHED CHANGE', `static.${pathtarget} (${oldValue} -> ${newValue})`, res._id || res.slug || res.name || res.value || res, oldActive, '->', res._active)
-                })
-            }
-
-
-            await dispatch('INDEX_RESOURCE', {resource: res, only_tree: !should_index})
-
-            return res
+            return resource
         },
         STACK_RESOURCE({dispatch, state}, resource) {
-            state._stack.push(resource)
-            // if (state._target == null) dispatch('FETCH_RESOURCE')
-            if (!state._pooling) dispatch('POOL_RESOURCES')
-        },
-        async FETCH_RESOURCE({ dispatch, state }) {
-            if (state._stack.length === 0) {
-                await delay(500)
-            }
+            // // DEFRAG resources to decide if should stack
+            // const copies = state._index.ids[resource._id as string]
 
-            if (state._stack.length === 0) {
-                if (state._ui.fetch.working) {
-                    if (state._ui.fetch.dismiss) state._ui.fetch.dismiss()
-                    state._ui.fetch.dismiss = undefined
-                    state._ui.fetch.working = false
+            // if (copies === undefined) {
+            //     console.log('%c WARNING ', Styles.AMBAR, 'Resource is being stacked but doesnt have a _id index entry', resource._data, resource)
+            // } else if (copies.length > 1) {
+            //     console.log('%c ATTENTION ', Styles.LIGHTEN_YELLOW, 'Should defrag resource', resource._data, copies, resource)
+            // }
 
-                    console.log('STOP FETCHING', state._ui.fetch.working)
-                }
+            const defrag_id = ResourceService.defrag(resource)
 
-                return
-            }
+            if (!(defrag_id in state._index.defrag.pre_stack)) state._index.defrag.pre_stack[defrag_id] = []
+            if (!state._index.defrag.pre_stack[defrag_id].includes(resource._uuid)) state._index.defrag.pre_stack[defrag_id].push(resource._uuid)
 
-            if (!state._ui.fetch.working) {
-                state._ui.fetch.working = true
-                notify({ message: 'Fetching content...', classes: 'text-italic text-center', icon: 'cloud_download', timeout: 0}).then((dismiss: Function) => {
-                    state._ui.fetch.dismiss = dismiss
-                })
-                console.log('NOTIFIED', 'fetching ==', state._ui.fetch.working)
-            }
+            if (state._index.defrag.pre_stack[defrag_id].length > 1) {
+                console.log('DEFRAG', state._index.defrag.pre_stack)
+                // merge os ultimos no primeiro
+                const others = [...state._index.defrag.pre_stack[defrag_id]].splice(1)
+                const first = state._index.defrag.pre_stack[defrag_id][0]
 
-            const resource = state._stack.splice(0, 1)[0]
-            state._target = resource
+                const [static_target, static_prop, static_mention] = Mention.resolve('@me/' + state._index.static[first]._path, state, true, false)
+                const static_others = others.map((res) => Mention.resolve('@me/' + state._index.static[res]._path, state, false, false))
 
-            async function fetch(srcRes: Resource, search: boolean = false): Promise<AsyncResource> {
-                // @ts-ignore
-                let reqRes: AsyncResource = {}
+                console.log('%c DEFRAG (Pre Stack) ', Styles.ORANGE, defrag_id, state._index.defrag.pre_stack[defrag_id], static_others.map((r) => r._path).join(', '), '->', state._index.static[first]._path)
 
-                if (srcRes.meta === 'command') {
-                    const from = srcRes.from instanceof Array ? srcRes.from : [srcRes.from]
-                    const promises = from.map((r) => fetch(r, true))
-
-                    reqRes.from = await Promise.all(promises)
-                } else { // if is a regular resource
-                    const slug = _.isString(srcRes) ? srcRes : srcRes.slug
-                    if (slug) {
-                        const result = await axios.get(`http://localhost:3000/${search ? '' : 'resources'}?q=${slug.substr(1)}`)
-                        reqRes = result.data[0]
-                    }
-                }
-
-                if (reqRes === undefined) {
-                    return {
-                        ...srcRes,
-                        _synced_at: new Date(),
-                        _static: true
-                    }
+                // esse merge tem que ser nos itens estáticos E async
+                if (static_target[static_prop].mechanics) {
+                    static_target[static_prop].mechanics.quantity = static_target[static_prop].mechanics.quantity === undefined ? 1 : static_target[static_prop].mechanics.quantity
                 } else {
-                    let _data = srcRes instanceof Object ? _.cloneDeep(srcRes) : {}
-                    _data = Object.assign({}, _data, {_synced_at: new Date()}) // essa linha ta aqui mais pra tirar o warning do tslint
-
-                    _.mergeWith(_data, reqRes, (objValue, srcValue, key) => {
-                        // if (_.isArray(srcValue)) return srcValue.concat(objValue)
-                        if (key === 'quantity') {
-                            if (_.isNumber(objValue) && _.isNumber(srcValue)) {
-                                return objValue + srcValue
-                            }
-                        } else if (key === 'equipment') {
-                            if (_.isArray(objValue) && _.isArray(srcValue))
-                                return srcValue.concat(objValue)
-                        }
-                    })
-
-                    return _data as AsyncResource
+                    static_target[static_prop].mechanics = {quantity: 1}
                 }
-            }
 
-            const request = await fetch(resource)
-
-            if (request.meta === 'command') {
-                // TODO Lidar com commands e answers
-                // let _id = request._id
-                // let answers = (state.async.answers || {})[_id]
-
-                // if(answers){
-                //     block = answers.map((a, i) => ({
-                //         ...a,
-                //         _index: _index + i,
-                //         _source: _data._source || source,
-                //         _type: _data._type || type
-                //     }))
-                //     debugger
-                // }
-            }
-
-            // find equivalent path at async
-            let target: any = state.async
-            const paths = _.toPath(resource._path)
-            const final_path = paths.pop()
-
-            for (const path of paths) {
-                const is_number = _.isNumber(path)
-
-                if (target === undefined) {
-                    // se for indefinido, partir do path para atribuir objeto/array
-
-                    if (is_number) {
-                        target = []
+                for (const other of static_others) {
+                    if (other.mechanics) {
+                        other.mechanics.quantity = other.mechanics.quantity === undefined ? 1 : other.mechanics.quantity
                     } else {
-                        target = {}
+                        other.mechanics = {quantity: 1}
                     }
+
+                    _.mergeWith(static_target[static_prop], other, ResourceService.merge)
                 }
 
-                if (_.isString(target)) {
-                    throw new Error('Path leads to a primitive target')
-                } else if (_.isArray(target)) {
-                    if (!is_number) {
-                        throw new Error('Non-numeric path on array target')
-                    }
-
-                    target = target[parseInt(path, 10)]
-                } else {
+                // remover os ultimos (inclusive esse aqui que provavelmente é o ultimo)
+                for (const other of _.reverse(static_others)) {
                     // @ts-ignore
-                    target = target[path]
+                    dispatch(`SET_${other._source.toUpperCase()}`, { res: other, value: undefined })
                 }
+
+                dispatch('REFACTOR_SIBLINGS', static_target[static_prop])
+            } else {
+                state._stack.push(resource)
+                // if (state._target == null) dispatch('FETCH_RESOURCE')
+                if (!state._pooling) dispatch('POOL_RESOURCES')
             }
-
-            if (target === undefined) {
-                // se for indefinido, partir do path para atribuir objeto/array
-
-                if (_.isNumber(final_path)) {
-                    target = []
-                } else {
-                    target = {}
-                }
-            }
-
-            // @ts-ignore
-            target[final_path] = request
-
-            // index async resource
-            state._index.async[request._uuid] = request
-
-            // ORIGIN ja foi indexado na parte estatica
-
-            // index command _id
-            if (request.meta === 'command')
-                state._index.commands[request._id] = request._uuid
-
-            state._target = null
-
-            console.log('FETCH RESOURCE', m(resource._uuid), request._id, '->', resource._path, resource, '->', request)
-
-            dispatch('NEST_RESOURCES', request)
-            dispatch('FETCH_RESOURCE')
         },
         async POOL_RESOURCES({ dispatch, state }) {
             if (state._stack.length === 0) return
 
             function extract(srcRes: Resource, search: boolean = false, as_object: boolean = true) {
-                let obj: any[] = []
+                let obj: any
 
-                if (srcRes.meta === 'command') {
+                if (srcRes.meta === 'plugin') {
+                    const content = srcRes.content instanceof Array ? srcRes.content : [srcRes.content]
+
+                    // @ts-ignore
+                    obj = content.map((r) => extract(r, false, false)).reduce((arr, cur) => [...arr, ...cur], [])
+                } else if (srcRes.meta === 'command') {
                     const from = srcRes.from instanceof Array ? srcRes.from : [srcRes.from]
                     // @ts-ignore
                     obj = from.map((r) => extract(r, true, false)).reduce((arr, cur) => [...arr, ...cur], [])
                 } else { // if is a regular resource
-                    let slug = srcRes.slug || (srcRes.path || [])[0] || srcRes.path || srcRes
-                    if (!slug) {
-                        throw new Error('Empty slug cannot be fetched')
+                    const slug = srcRes.slug
+                    const path = (srcRes.path || [])[0] || srcRes.path
+                    const value = (_.isString(srcRes) ? srcRes : undefined)
+                    let q: string = slug || path || value
+
+                    if (q !== undefined && q[0] !== '@') {
+                        if (slug === undefined && path !== undefined) {
+                            // OK, path nao tem @
+                        } else if (slug === undefined && path === undefined && value !== undefined) {
+                            // NOK, value nao pode ser pesquisado no banco se nao tive "@" no inicio
+                            console.log('%c ATTENTION ', Styles.LIGHTEN_YELLOW, `Mention <${q}> (from 'value') not fetching due to not being really a mention (doesnt have @ and is not a object, but a string)`, srcRes)
+                            obj = []
+                        }
                     }
 
-                    slug = slug[0] === '@' ? slug.substr(1) : slug
-                    obj = [{
-                        q: slug,
-                        search
-                    }]
+                    if (obj === undefined)
+                        if (srcRes._source === 'stats')
+                            obj = []
+                        else {
+                            if (q === undefined) {
+                                console.log('%c WARNING ', Styles.AMBAR, srcRes._data, `Resource not fetching due to not having slug/path`, srcRes)
+                                obj = []
+                            } else {
+                                q = q[0] === '@' ? q.substr(1) : q
+                                obj = [{
+                                    q,
+                                    search
+                                }]
+                            }
+                        }
                 }
 
                 if (as_object)
@@ -506,60 +686,34 @@ export const sheet: Module<SheetState, RootState> = {
                 return obj
             }
 
-            if (!state._ui.fetch.working) {
-                state._ui.fetch.working = true
-                notify({ message: 'Fetching content...', classes: 'text-italic text-center', icon: 'cloud_download', timeout: 0}).then((dismiss: Function) => {
-                    state._ui.fetch.dismiss = dismiss
-                })
-                console.log('%c NOTIFICATION ', 'background: #ffbf00; color: black; font-weight: bold;', 'fetching...')
-            }
+            dispatch('_UI_NOTIFY', true)
 
-            const POOL_SIZE = 20
+            const POOL_SIZE = 70
             state._pooling = true
 
             if (state._stack.length <= POOL_SIZE) {
                 await delay(250)
             }
+
             const pool = state._stack.splice(0, POOL_SIZE)
 
             const query = pool
                             .map((r) => extract(r))
                             .reduce((obj, cur) => ({...obj, ...cur}), {})
 
-            dispatch('FETCH_RESOURCES', {query, pool})
-
             state._pooling = false
             dispatch('POOL_RESOURCES')
+
+            dispatch('FETCH_RESOURCES', {query, pool})
         },
         async FETCH_RESOURCES({state, dispatch}, {query, pool}) {
             const self = uuid()
-
-            function merge(resource: Resource, result: {}) {
-                const obj = {
-                    ...resource,
-                    _synced_at: new Date()
-                }
-
-                _.mergeWith(obj, result, (objValue, srcValue, key) => {
-                    // if (_.isArray(srcValue)) return srcValue.concat(objValue)
-                    if (key === 'quantity') {
-                        if (_.isNumber(objValue) && _.isNumber(srcValue)) {
-                            return objValue + srcValue
-                        }
-                    } else if (key === 'equipment') {
-                        if (_.isArray(objValue) && _.isArray(srcValue))
-                            return srcValue.concat(objValue)
-                    }
-                })
-
-                return obj
-            }
 
             state._fetching.push(self)
 
             const request = (await axios.post(`http://localhost:3000/pool`, {data: query})).data
 
-            console.log('FETCH RESOURCES', request, self)
+            console.log('%c FETCH ', Styles.GREEN, request, self)
 
             const resources: AsyncResource[] = []
             for (const source of pool as Resource[]) {
@@ -589,71 +743,109 @@ export const sheet: Module<SheetState, RootState> = {
                     throw new Error('Unimplemented how to deal with multiple resources for the same slug')
                 }
 
-                const resource: AsyncResource = merge(source, result[0])
+                const resource: AsyncResource = ResourceService.extend(source, result[0], state)
 
                 // find equivalent path at async
-                let target: any = state.async
-                const paths = _.toPath(resource._path)
-                const final_path = paths.pop()
+                Mention.set(resource, state.async)
 
-                for (const path of paths) {
-                    const is_number = _.isNumber(path)
-
-                    if (target === undefined) {
-                        // se for indefinido, partir do path para atribuir objeto/array
-
-                        if (is_number) {
-                            target = []
-                        } else {
-                            target = {}
-                        }
-                    }
-
-                    if (_.isString(target)) {
-                        throw new Error('Path leads to a primitive target')
-                    } else if (_.isArray(target)) {
-                        if (!is_number) {
-                            throw new Error('Non-numeric path on array target')
-                        }
-
-                        target = target[parseInt(path, 10)]
-                    } else {
-                        // @ts-ignore
-                        target = target[path]
-                    }
-                }
-
-                if (target === undefined) {
-                    // se for indefinido, partir do path para atribuir objeto/array
-
-                    if (_.isNumber(final_path)) {
-                        target = []
-                    } else {
-                        target = {}
-                    }
-                }
-
-                // @ts-ignore
-                target[final_path] = resource
-
-                // index async resource
+                // index async
                 state._index.async[resource._uuid] = resource
-
-                // ORIGIN ja foi indexado na parte estatica
 
                 // index command _id
                 if (resource.meta === 'command')
                     state._index.commands[resource._id] = resource._uuid
 
-                console.log('    (Resource)', m(resource._uuid), resource._id, '->', resource._path, source, '->', resource)
-                resources.push(resource)
+                // CALCULAR ACTIVENESS
+                const targets = ResourceService.active(resource, {state})
+
+                console.log('    (Resource)', m(resource._uuid), resource._id, '->', resource._path, source, '->', resource, resource._active)
+
+                // para cada variavel respons que e condicao para o active, adicionar um watcher para refazer o calculo
+                for (const arr of targets) {
+                    // [target, property, path]
+                    const [target, property, pathtarget] = arr
+
+                    console.log('%c WATCHING ', Styles.LIGHTEN_BLUE, pathtarget, 'by', resource._data)
+
+                    watch(resource._uuid, 'static.' + pathtarget, (newValue, oldValue) => {
+                        const self = uuid()
+
+                        const oldActive = resource._active
+                        console.log(`%c WATCH (${self.substr(0, 8)}) `, Styles.BLUE, `static.${pathtarget} (${oldValue} -> ${newValue})`, resource._data, oldActive, '-> ???')
+                        ResourceService.active(resource, {state, dispatch})
+                        if (oldActive !== resource._active)
+                            console.log(`%c WATCH (${self.substr(0, 8)}) `, Styles.BLUE, resource._data, oldActive, '->', resource._active)
+                    })
+                }
+
+                // index _id for defragging
+                const defrag_id = ResourceService.defrag(resource)
+
+                if (!(defrag_id in state._index.defrag.pos_fetch)) state._index.defrag.pos_fetch[defrag_id] = []
+                if (!state._index.defrag.pos_fetch[defrag_id].includes(resource._uuid)) state._index.defrag.pos_fetch[defrag_id].push(resource._uuid)
+
+                if (state._index.defrag.pos_fetch[defrag_id].length > 1) {
+                    // merge os ultimos no primeiro
+                    const others = [...state._index.defrag.pos_fetch[defrag_id]].splice(1)
+                    const first = state._index.defrag.pos_fetch[defrag_id][0]
+
+                    const [static_target, static_prop, static_mention] = Mention.resolve('@me/' + state._index.static[first]._path, state, true, false)
+                    const static_others = others.map((res) => Mention.resolve('@me/' + state._index.static[res]._path, state, false, false))
+
+                    console.log('%c DEFRAG (Pos Fetch) ', Styles.ORANGE, defrag_id, state._index.defrag.pos_fetch[defrag_id], static_others.map((r) => r._path), '->', state._index.static[first]._path)
+
+                    // E ASYNC
+                    const [async_target, async_prop, async_mention] = Mention.resolve('@me/' + state._index.async[first]._path, state, true, true)
+                    const async_others = others.map((res) => Mention.resolve('@me/' + state._index.async[res]._path, state, false, true))
+
+                    if (async_target[async_prop].mechanics) {
+                        async_target[async_prop].mechanics.quantity = async_target[async_prop].mechanics.quantity === undefined ? 1 : async_target[async_prop].mechanics.quantity
+                    } else {
+                        async_target[async_prop].mechanics = {quantity: 1}
+                    }
+
+                    for (const other of async_others) {
+                        if (other.mechanics) {
+                            other.mechanics.quantity = other.mechanics.quantity === undefined ? 1 : other.mechanics.quantity
+                        } else {
+                            other.mechanics = {quantity: 1}
+                        }
+
+                        _.mergeWith(async_target[async_prop], other, ResourceService.merge)
+                    }
+
+                    // esse merge tem que ser nos itens estáticos E async
+                    if (static_target[static_prop].mechanics) {
+                        static_target[static_prop].mechanics.quantity = static_target[static_prop].mechanics.quantity === undefined ? 1 : static_target[static_prop].mechanics.quantity
+                    } else {
+                        static_target[static_prop].mechanics = {quantity: 1}
+                    }
+
+                    for (const other of static_others) {
+                        if (other.mechanics) {
+                            other.mechanics.quantity = other.mechanics.quantity === undefined ? 1 : other.mechanics.quantity
+                        } else {
+                            other.mechanics = {quantity: 1}
+                        }
+
+                        _.mergeWith(static_target[static_prop], other, ResourceService.merge)
+                    }
+
+                    // remover os ultimos (inclusive esse aqui que provavelmente é o ultimo)
+                    for (const other of _.reverse(static_others)) {
+                        // @ts-ignore
+                        await dispatch(`SET_${other._source.toUpperCase()}`, { res: other, value: undefined })
+                    }
+                } else { // se houver um defrag nesse recurso, ele nao sobrevive
+                    resources.push(resource)
+                }
             }
 
             state._fetching = state._fetching.filter((u) => u !== self)
 
             dispatch('NEST_RESOURCES', resources)
         },
-        NEST_RESOURCES({state, dispatch}, resources: AsyncResource[]) {
+        async NEST_RESOURCES({state, dispatch}, resources: AsyncResource[]) {
             console.log(`ADDING ${resources.length} RESOURCES TO NEST`, `(${state._nest._stack.length})`)
             state._nest._stack = [...state._nest._stack, ...resources]
             if (!state._nest._nesting) dispatch('NEST_RESOURCE')
@@ -665,20 +857,15 @@ export const sheet: Module<SheetState, RootState> = {
             }
 
             if (state._nest._stack.length === 0) {
-                if (state._ui.fetch.working) {
-                    if (state._stack.length === 0 && !state._pooling && state._fetching.length === 0 && state._nest._stack.length === 0) {
-                        delay(750).then(() => {
-                            if (state._ui.fetch.working) {
-                                if (state._stack.length === 0 && !state._pooling && state._fetching.length === 0  && state._nest._stack.length === 0) {
-                                    state._ui.fetch.working = false
-                                    if (state._ui.fetch.dismiss) state._ui.fetch.dismiss()
-                                    state._ui.fetch.dismiss = undefined
+                // acabou uma leva de fetches
+                dispatch('_UI_NOTIFY', false)
 
-                                    console.log('%c NOTIFICATION (Close) ', 'background: #ffbf00; color: black; font-weight: bold;', 'fetching stopped.')
-                                }
-                            }
-                        })
-                    }
+                if (state._stack.length === 0 && !state._pooling && state._fetching.length === 0 && state._nest._stack.length === 0) {
+                    delay(750).then(() => {
+                        if (state._stack.length === 0 && !state._pooling && state._fetching.length === 0  && state._nest._stack.length === 0) {
+                            dispatch('NORMALIZE_RESOURCES')
+                        }
+                    })
                 }
 
                 return
@@ -687,90 +874,110 @@ export const sheet: Module<SheetState, RootState> = {
             state._nest._nesting = true
             const resource: AsyncResource = state._nest._stack.splice(0, 1)[0]
 
-            console.log('NESTING RESOURCE', resource, `(of ${state._nest._stack.length})`)
-            // debugger
-            const subscriptions = resource.subscriptions
-            const injections = resource.injections
-            const plugins = resource.plugins
+            if (resource._active === false) {
+                console.log('> SKIPPING NEST RESOURCE', resource._data, `<${resource._path}>`, resource, `(of ${state._nest._stack.length})`)
+            } else {
+                console.log('NESTING RESOURCE', resource._data, `<${resource._path}>`, `from ${resource._parent} (${m(resource._origin)})`, resource, `(of ${state._nest._stack.length})`)
+                // debugger
+                const subscriptions = resource.subscriptions
+                const injections = resource.injections
+                const plugins = resource.plugins
 
-            const table = ResourceService.table(resource) // a funcao da table é injetar um _active baseado em level automaticamente
+                const table = ResourceService.table(resource) // a funcao da table é injetar um _active baseado em level automaticamente
 
-            if (subscriptions !== undefined || injections !== undefined) {
-                if (subscriptions) {
-                    if (resource._uuid in (state.async._index.subscriptions || {})) {
-                        console.log('TENTANDO SUBSCRIBE ALGO QUE JA FOI SUBSCRIBED', resource)
-                        debugger
-                    } else {
-                        for (const sub of subscriptions) { // proficiencies
-                            const meta = {...resource.mechanics[sub], ...(table[sub] || {})} // mechanics.proficiencies
+                if (subscriptions !== undefined || injections !== undefined || plugins !== undefined) {
 
-                            let objeto: any
-                            if (_.isArray(meta)) objeto = {default: meta}
-                            else objeto = {...meta}
-
-                            let index = 0
-                            for (const key of Object.keys(objeto)) { // armor
-                                for (const value of objeto[key]) { // @armor/light
-                                    const options = {
-                                        path: `${sub}[${index}]`,
-                                        origin: resource._uuid,
-                                        source: sub,
-                                        type: key,
-                                        method: 'subscription',
-                                        parent: resource._id,
-                                        index: ++index
-                                    }
-
-                                    // MAKE RESOURCE
-                                    const nested_resource = await dispatch('CREATE_RESOURCE', {value, ...options, should_index: false})
-                                    // this static resource should die here right?
-
-                                    // PUSH TO ASYNC STACK
-                                    dispatch('STACK_RESOURCE', nested_resource)
-                                }
-                            }
-                        }
-
-                        if (state.async._index.subscriptions === undefined) state.async._index.subscriptions = {}
-                        state.async._index.subscriptions[resource._uuid] = new Date()
+                    const methods = {
+                        subscriptions, injections
                     }
-                }
+                    for (const method_name of Object.keys(methods)) {
+                        // @ts-ignore
+                        const method = methods[method_name]
 
-                if (injections) {
-                    if (resource._uuid in (state.static._index.injections || {})) {
-                        console.log('Resource already injected', resource)
-                        debugger
-                    } else {
-                        for (const sub of injections) { // equipment
-                            const meta = {...resource.mechanics[sub], ...(table[sub] || {})} // mechanics.equipment
+                        if (method && method.length > 0) {
+                            const order = {
+                                stats: 0,
+                                proficiencies: 1,
+                                equipment: 2,
+                                features: 3,
+                                spells: 4,
+                            }
+                            // @ts-ignore
+                            method.sort((a: string, b: string) => order[a] - order[b])
 
-                            let objeto: any
-                            if (_.isArray(meta)) objeto = {default: meta}
-                            else objeto = {...meta}
+                            if (resource._uuid in (state.static._index[method_name] || {})) {
+                                console.log('%c WARNING ', Styles.AMBAR, 'Resource already ' + (method_name === 'injections' ? 'injected' : 'subscripted'), resource._data, resource)
+                            } else {
+                                for (const sub of method as string[]) { // equipment
+                                    let _from_mechanics = resource.mechanics[sub]
+                                    let _from_table = (table[sub] || {})
 
-                            let index = 0
-                            for (const key of Object.keys(objeto)) { // items
-                                for (const value of objeto[key]) { // @longsword
-                                    const options = {
-                                        path: `${sub}[${index}]`,
-                                        origin: resource._uuid,
-                                        source: sub,
-                                        type: key,
-                                        method: 'injection',
-                                        parent: resource._id,
-                                        index
+                                    if (_.isArray(_from_mechanics)) _from_mechanics = {default: _from_mechanics}
+                                    if (_.isArray(_from_table)) _from_table = {default: _from_table}
+
+                                    const objeto = {..._from_mechanics, ..._from_table} // mechanics.proficiencies
+
+                                    if (['stats', 'misc'].includes(sub)) {
+                                        for (const key of Object.keys(objeto) as string[]) { // items
+                                            const options = {
+                                                path: `${sub}.${key}`,
+                                                origin: resource._uuid,
+                                                source: sub,
+                                                type: key,
+                                                method: method_name,
+                                                parent: resource._id
+                                            }
+
+                                            // INJECT RESOURCE
+                                            await dispatch(`SET_${sub.toUpperCase()}`, { target: key, value: objeto[key], base: options }) // automatically push to stack and index
+                                        }
+                                    } else {
+                                        for (const key of Object.keys(objeto)) { // items
+                                            for (const value of objeto[key]) { // @longsword
+                                                // @ts-ignore
+                                                const index =  state.static[sub].length
+
+                                                const options = {
+                                                    path: `${sub}[${index}]`,
+                                                    origin: resource._uuid,
+                                                    source: sub,
+                                                    type: key,
+                                                    method: method_name,
+                                                    parent: resource._id,
+                                                    index
+                                                }
+                                                // INJECT RESOURCE
+                                                await dispatch(`SET_${sub.toUpperCase()}`, { index, value, base: options }) // automatically push to stack and index
+                                            }
+                                        }
                                     }
-
-                                    // INJECT RESOURCE
-                                    await dispatch(`SET_${sub.toUpperCase()}`, { index, value, base: options }) // automatically push to stack and index
-
-                                    index++
                                 }
+
+                                state.static._index[method_name][resource._uuid] = new Date()
                             }
                         }
+                    }
 
-                        if (state.static._index.injections === undefined) state.static._index.injections = {}
-                        state.static._index.injections[resource._uuid] = new Date()
+                    if (plugins && plugins.length > 0) {
+                        let index = state.plugins.length
+                        for (const plugin of resource.mechanics.plugins) {
+                            if (plugin.name in state.plugins) continue
+
+                            const options = {
+                                path: `plugins[${index}]`,
+                                origin: resource._uuid,
+                                source: 'plugins',
+                                type: plugin.name,
+                                method: 'plugin',
+                                parent: resource._id,
+                                index
+                            }
+
+                            // INJECT RESOURCE
+                            await dispatch(`SET_PLUGINS`, { index, value: plugin, base: options }) // automatically push to stack and index
+
+                            index++
+                        }
                     }
                 }
             }
@@ -778,7 +985,205 @@ export const sheet: Module<SheetState, RootState> = {
             state._nest._nesting = false
             dispatch('NEST_RESOURCE')
         },
-        async REMOVE_RESOURCE( { state, dispatch}, resource: AsyncResource ) {
+        async NORMALIZE_RESOURCES({ state, dispatch }) {
+            console.log('%c NORMALIZE ', Styles.GRAY, state._index.async)
+
+            const _uuids = Object.keys(state._index.async)
+
+            console.log('CLEAR VIRTUAL DEFRAG', state._index.defrag.virtual, '->', {})
+            state._index.defrag.virtual = {}
+
+            // how to remove from virtual after removal from async (and subsequentlly removal form static)
+            let _uuid = state._index.virtual._remove.pop()
+            while (_uuid !== undefined) {
+                const virtual = state._index.virtual[_uuid]
+
+                if (virtual === undefined) {
+                    console.log('    REMOVE ', 'Resource doesnt exists as virtual', _uuid, virtual)
+                    _uuid = state._index.virtual._remove.pop()
+                    continue
+                }
+
+                console.log('%c     REMOVE ', Styles.LIGHTEN_RED, 'Remove resource from virtual cluster', _uuid, virtual._uuid, virtual)
+
+                let ref: any = state.virtual
+                const virtual_path = _.toPath(virtual._path)
+                const final_path = virtual_path.pop()
+                for (const path of virtual_path) {
+                    ref = ref[path]
+                }
+
+                if (_.isArray(ref)) {
+                    ref.splice(parseInt(final_path as string, 10), 1)
+
+                    let index = 0
+                    for (const sibling of ref) {
+                        const oldIndex = sibling._index
+                        const oldPath = sibling._path
+
+                        if (oldIndex !== index) {
+                            sibling._index = index
+
+                            const sib_path = _.toPath(sibling._path)
+                            sib_path[sib_path.length - 1] = index.toString()
+                            sibling._path = pathToString(sib_path)
+
+                            console.log('%c     REMOVE - Refactor sibling\'s index and path ', Styles.LIGHTEN_RED, `(${oldIndex}) (${oldPath}) -> (${index}) (${sibling._path})`, sibling)
+                        }
+
+                        index++
+                    }
+                } else {
+                    ref[final_path as string] = undefined
+                }
+
+                for (const res of virtual._resources) {
+                    delete state._index.virtual[res]
+                }
+
+                _uuid = state._index.virtual._remove.pop()
+            }
+
+            let defrag_order = []
+
+            // defining what and how to defrag
+            for (const _uuid of _uuids) {
+                const resource = state._index.async[_uuid]
+
+                if (resource._method === 'plugin') continue // nope
+
+                // index _id for virtual defragging
+                let defrag_id = ResourceService.defrag(resource, true)
+                if (!resource._active) defrag_id = `inactive_resource` // inactive_resources should not show up on virtual, their virtual index should be undefined
+
+                if (!(defrag_id in state._index.defrag.virtual)) state._index.defrag.virtual[defrag_id] = []
+                if (!state._index.defrag.virtual[defrag_id].includes(resource._uuid)) state._index.defrag.virtual[defrag_id].push(resource._uuid)
+
+                defrag_order.push([..._.toPath(resource._path), defrag_id])
+            }
+
+            function i(value: string) {return _.isNaN(parseInt(value, 10)) ? value : parseInt(value, 10)}
+            defrag_order = _.sortBy(defrag_order, [(o: string[]) => i(o[0]), (o: string[]) => i(o[1]), (o: string[]) => i(o[2])]) // sorted by path ids
+
+            const defrag_list = Array.from(new Set(defrag_order.map((o: string[]) => o.splice(-1)[0])))
+
+            // virtualize resources and set them in place
+            for (const id of defrag_list) {
+                const uuids = state._index.defrag.virtual[id]
+
+                if (uuids.length === 1) {
+                    const resource = state._index.async[uuids[0]]
+                    const index = state._index.virtual[resource._uuid]
+
+                    if (index !== undefined) {
+                        // console.log('    VIRTUAL POSITION CORRECT', id, resource._data, index._uuid, index)
+                    } else {
+                        const virtual = ResourceService.virtual([resource], state, false)
+
+                        // refactor path, if necessary
+                        if (virtual._index !== undefined) {
+                            let _path: any = _.toPath(virtual._path)
+                            _path.splice(-1) // path to insert
+
+                            // get current size (and runtime index if necessary)
+                            let target: any = state.virtual
+                            for (const p of _path) {
+                                target = target[p]
+                            }
+
+                            const _index: number = target.length
+                            _path = pathToString([..._path, _index])
+
+                            virtual._path = _path
+                            virtual._index = _index
+                        }
+
+                        Mention.set(virtual, state.virtual)
+                        state._index.virtual[resource._uuid] = virtual
+
+                        console.log('    CORRECTING VIRTUAL POSITION', resource._data, resource._uuid, '->', virtual._uuid, resource._path, '->', virtual._path, virtual)
+                    }
+                } else if (uuids.length > 1) {
+                    if (id !== 'inactive_resource') {
+                        const resources = uuids.map((uid) => state._index.async[uid])
+                        const index = state._index.virtual[uuids[0]]
+
+                        if (index !== undefined) {
+                            // console.log('    VIRTUAL POSITION CORRECT', id, uuids, index._uuid, index)
+                        } else {
+                            // how to merge
+                            const virtual = ResourceService.virtual(resources, state)
+
+                            // refactor path, if necessary
+                            if (virtual._index !== undefined) {
+                                let _path: any = _.toPath(virtual._path)
+                                _path.splice(-1) // path to insert
+
+                                // get current size (and runtime index if necessary)
+                                let target: any = state.virtual
+                                for (const p of _path) {
+                                    target = target[p]
+                                }
+
+                                const _index: number = target.length
+                                _path = pathToString([..._path, _index])
+
+                                virtual._path = _path
+                                virtual._index = _index
+                            }
+
+                            Mention.set(virtual, state.virtual)
+
+                            for (const resource of resources) {
+                                state._index.virtual[resource._uuid] = virtual
+                            }
+
+                            console.log('%c DEFRAG (Virtual) ', Styles.ORANGE, id, uuids, virtual._uuid, `${resources[0]._path}|${resources[resources.length - 1]._path}`, '->', virtual._path, virtual)
+                        }
+                    } else {
+                        console.log('    SKIPPING INACIVE RESOURCES', uuids)
+                    }
+                }
+            }
+        },
+        REFACTOR_SIBLINGS({state, dispatch}, resource: Resource) {
+            if (resource._index !== undefined) {
+                const path = _.toPath(resource._path)
+                path.pop()
+                let target = resource._method === 'plugin' ? state : state.static
+                for (const p of path) {
+                    // @ts-ignore
+                    target = target[p]
+                }
+
+                // target is resources parent
+                if (!_.isArray(target)) {
+                    debugger
+                    throw new Error('Removed resource has _index but parent is not an array')
+                }
+
+                let index = 0
+                for (const sibling of target) {
+                    const oldIndex = sibling._index
+                    const oldPath = sibling._path
+
+                    if (oldIndex !== index) {
+                        sibling._index = index
+
+                        const sib_path = _.toPath(sibling._path)
+                        sib_path[sib_path.length - 1] = index.toString()
+                        sibling._path = pathToString(sib_path)
+
+                        state._index.static[sibling._uuid]._index = index
+                        state._index.static[sibling._uuid]._path = sibling._path
+                        console.log('%c REMOVE - Refactor sibling\'s index and path ', Styles.LIGHTEN_RED, `(${oldIndex}) (${oldPath}) -> (${index}) (${sibling._path})`, sibling._data, sibling)
+                    }
+
+                    index++
+                }
+            }
+        },
+        async REMOVE_RESOURCE( { state, dispatch}, resource: Resource ) {
             if (resource === undefined) return
 
             function children(root: string): string[] {
@@ -793,45 +1198,104 @@ export const sheet: Module<SheetState, RootState> = {
                 return [..._children, ..._grandchildren]
             }
 
-            const stack = [resource._uuid, ...children(resource._uuid).filter((r) => state._index.async[r]._method === 'subscription')]
-            const paths = stack.map((r) => _.toPath(state._index.async[r]._path))
+            const _children = children(resource._uuid)
+            const stack = [resource._uuid, ..._children.filter((r) => ['subscriptions', 'plugin'].includes(state._index.static[r]._method))]
+            const paths = stack.map((r, i) => _.toPath(i === 0 ? resource._path : state._index.static[r]._path))
 
-            for (let y = stack.length - 1; y > 0; y--) {
-                let ref2 = state.async
+            for (let y = paths.length - 1; y > 0; y--) {
+                const target_resource = state._index.static[stack[y]]
 
-                for (const path of paths[y]) {
-                    // @ts-ignore
-                    ref2 = ref2[path]
-                }
-
-                // @ts-ignore
-                const target = pathToString(_.toPath(ref2._path).splice(1))
-
-                const target_resource = state._index.async[stack[y]]
                 // @ts-ignore
                 await dispatch(`SET_${target_resource._source.toUpperCase()}`, { res: target_resource, value: undefined })
                 // target -> SET_MISC
                 // index -> SET_EQUIPMENT
             }
 
-            let ref = state.async
-            const final_path = paths[0].pop()
-            for (const path of paths[0]) {
-                // @ts-ignore
-                ref = ref[path]
-            }
+            if (resource._method !== 'plugin') {
+                let ref: any = state.async
+                const final_path = paths[0].pop()
+                for (const path of paths[0]) {
+                    ref = ref[path]
+                }
 
-            // @ts-ignore
-            ref[final_path] = undefined
+                if (_.isArray(ref)) {
+                    ref.splice(parseInt(final_path as string, 10), 1)
+                } else {
+                    // @ts-ignore
+                    ref[final_path] = undefined
+                }
+            }
 
             delete state._index.static[resource._uuid]
             delete state._index.async[resource._uuid]
+            state._index.virtual._remove.push(resource._uuid) // flag to remove resource
+            delete state._index.commands[resource._id]
+            delete state._tree[resource._uuid]
+
+            const defrag_id = ResourceService.defrag(resource)
+            state._index.defrag.pre_stack[defrag_id] = state._index.defrag.pre_stack[defrag_id].filter((u) => u !== resource._uuid)
+            state._index.defrag.pos_fetch[defrag_id] = state._index.defrag.pos_fetch[defrag_id].filter((u) => u !== resource._uuid)
+
+            const y = state._tree[resource._origin].map((v, i) => ({v, i})).filter((_uuid) => _uuid.v === resource._uuid)[0].i
+            state._tree[resource._origin].splice(y, 1)
+
+            // @ts-ignore
+            delete state.static._index.injections[resource._uuid]
+            // @ts-ignore
+            delete state.static._index.subscriptions[resource._uuid]
+            // @ts-ignore
+            delete state.static._index.answers[resource._id]
+
+            if (state._observer[resource._uuid]) { // is is observer
+                for (const unwatch of state._observer[resource._uuid]) {
+                    unwatch()
+                }
+
+                delete state._observer[resource._uuid]
+            }
+
+            // update siblings index
+            dispatch('REFACTOR_SIBLINGS', resource)
 
             if (resource.meta === 'command') {
                 console.log('LIDAR COM A REMOCAO DE COMMANDS')
             }
 
-            console.log('REMOVE RESOURCE', m(resource._uuid), resource._id, resource._path, '->', undefined, resource)
+            console.log('%c REMOVE ', Styles.RED, m(resource._uuid), resource._id, resource._path, '->', undefined, resource)
+
+            if (state._stack.length === 0 && !state._pooling && state._fetching.length === 0  && state._nest._stack.length === 0) {
+                dispatch('NORMALIZE_RESOURCES')
+            }
+        },
+        async RIPPLE_RESOURCE({ state, dispatch }, { resource, directive }) {
+            console.log('RIPPLE', directive, resource._data, resource)
+
+            if (!directive) {
+                // call for children
+                const children = state._tree[resource._uuid]
+                if (children) {
+                    for (const child of children) {
+                        const child_path = state._index.static[child]._path
+                        const [target, prop, mention] = Mention.resolve('@me/' + child_path, state, true)
+
+                        let res
+                        if (target._ !== undefined) {
+                            res = target._[prop]
+                        } else {
+                            res = target[prop]
+                        }
+
+                        if (res._method === 'subscriptions') {
+                            console.log('%c (Ripple) REMOVE ', Styles.RED, res._data, res)
+
+                            dispatch(`SET_${res._source.toUpperCase()}`, { res, value: undefined })
+                        }
+                    }
+                }
+            } else {
+                console.log('%c (Ripple) NEST ', Styles.GREEN, resource._data, resource)
+                dispatch('NEST_RESOURCES', [resource])
+            }
         },
         async SET_MISC({ state, dispatch }, { target, value, base= {}, res }) {
             if (value === undefined) {
@@ -844,17 +1308,16 @@ export const sheet: Module<SheetState, RootState> = {
                     resource = state.static.misc[target]
                 }
 
-
+                const _data = resource._data
                 // @ts-ignore
-                state.static.misc[target] = undefined
+                const LEFTOVER = state.static.misc[target]
 
-                if (resource._uuid !== undefined)
-                    // remove index
-                    await dispatch('INDEX_RESOURCE', {resource, remove: true})
+                Vue.set(state.static.misc, target, undefined)
 
-                dispatch('REMOVE_RESOURCE', resource)
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                console.log('REMOVE MISC', target, resource._id || resource.name || resource.slug || resource.value, '->', undefined)
+                console.log('%c REMOVE MISC ', Styles.BOLD, target, _data, '->', undefined)
             } else {
 
                 // PREPARE OPTIONS
@@ -864,7 +1327,7 @@ export const sheet: Module<SheetState, RootState> = {
                         origin: 'input',
                         source: 'misc',
                         type: target,
-                        parent: 'misc'
+                        parent: 'custom'
                     },
                     ...base
                 }
@@ -873,13 +1336,12 @@ export const sheet: Module<SheetState, RootState> = {
                 const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
 
                 // SET STATIC
-                // @ts-ignore
-                state.static.misc[target] = resource // eu deveria quardar aqui o _uuid e o resto de metadados do resource?
+                Vue.set(state.static.misc, target, resource)
 
                 // PUSH TO ASYNC STACK
                 dispatch('STACK_RESOURCE', resource)
 
-                console.log('SET MISC', value, '->', target)
+                console.log('%c SET MISC ', Styles.BOLD, value, '->', target)
             }
         },
         async SET_EQUIPMENT({ state, dispatch }, { index, value, base= {}, res }) {
@@ -893,15 +1355,16 @@ export const sheet: Module<SheetState, RootState> = {
                     resource = state.static.equipment[index]
                 }
 
+                const _data = resource._data
+                // @ts-ignore
+                const LEFTOVER = state.static.equipment[index]
+
                 state.static.equipment.splice(index, 1)
 
-                if (resource._uuid !== undefined)
-                    // remove index
-                    await dispatch('INDEX_RESOURCE', {resource, remove: true})
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                dispatch('REMOVE_RESOURCE', resource)
-
-                console.log('REMOVE EQUIPMENT', index, resource._id || resource.name || resource.value, '->', undefined)
+                console.log('REMOVE EQUIPMENT', index, _data, '->', undefined)
             } else {
 
                 // PREPARE OPTIONS
@@ -911,7 +1374,7 @@ export const sheet: Module<SheetState, RootState> = {
                         origin: 'input',
                         source: 'equipment',
                         // type // IDEM
-                        // parent // NAO TEM COMO EU SABER O _parent DAQUI
+                        parent: 'custom',
                         index
                     },
                     ...base
@@ -926,7 +1389,7 @@ export const sheet: Module<SheetState, RootState> = {
                 // PUSH TO ASYNC STACK
                 dispatch('STACK_RESOURCE', resource)
 
-                console.log('SET EQUIPMENT', value, '->', index)
+                console.log('%c SET EQUIPMENT ', Styles.BOLD, value, '->', index, resource)
             }
         },
         async SET_PROFICIENCIES({ state, dispatch }, { index, value, base= {}, res }) {
@@ -940,15 +1403,16 @@ export const sheet: Module<SheetState, RootState> = {
                     resource = state.static.proficiencies[index]
                 }
 
+                const _data = resource._data
+                // @ts-ignore
+                const LEFTOVER = state.static.proficiencies[index]
+
                 state.static.proficiencies.splice(index, 1)
 
-                if (resource._uuid !== undefined)
-                    // remove index
-                    await dispatch('INDEX_RESOURCE', {resource, remove: true})
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                dispatch('REMOVE_RESOURCE', resource)
-
-                console.log('REMOVE PROFICIENCIES', index, resource._id || resource.name || resource.value, '->', undefined)
+                console.log('REMOVE PROFICIENCIES', index, _data, '->', undefined)
             } else {
                 // PREPARE OPTIONS
                 const options = {
@@ -957,7 +1421,7 @@ export const sheet: Module<SheetState, RootState> = {
                         origin: 'input',
                         source: 'proficiencies',
                         // type // IDEM
-                        // parent // NAO TEM COMO EU SABER O _parent DAQUI
+                        parent: 'custom',
                         index
                     },
                     ...base
@@ -972,7 +1436,7 @@ export const sheet: Module<SheetState, RootState> = {
                 // PUSH TO ASYNC STACK
                 dispatch('STACK_RESOURCE', resource)
 
-                console.log('SET PROFICIENCIES', value, '->', index)
+                console.log('%c SET PROFICIENCIES ', Styles.BOLD, value, '->', index, resource)
             }
         },
         async SET_FEATURES({ state, dispatch }, { index, value, base= {}, res }) {
@@ -986,15 +1450,16 @@ export const sheet: Module<SheetState, RootState> = {
                     resource = state.static.features[index]
                 }
 
+                const _data = resource._data
+                // @ts-ignore
+                const LEFTOVER = state.static.features[index]
+
                 state.static.features.splice(index, 1)
 
-                if (resource._uuid !== undefined)
-                    // remove index
-                    await dispatch('INDEX_RESOURCE', {resource, remove: true})
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                dispatch('REMOVE_RESOURCE', resource)
-
-                console.log('REMOVE FEATURES', index, resource._id || resource.name || resource.value, '->', undefined)
+                console.log('REMOVE FEATURE', index, _data, '->', undefined)
             } else {
                 // PREPARE OPTIONS
                 const options = {
@@ -1003,7 +1468,7 @@ export const sheet: Module<SheetState, RootState> = {
                         origin: 'input',
                         source: 'features',
                         // type // IDEM
-                        // parent // NAO TEM COMO EU SABER O _parent DAQUI
+                        parent: 'custom',
                         index
                     },
                     ...base
@@ -1018,8 +1483,166 @@ export const sheet: Module<SheetState, RootState> = {
                 // PUSH TO ASYNC STACK
                 dispatch('STACK_RESOURCE', resource)
 
-                console.log('SET FEATURES', value, '->', index)
+                console.log('%c SET FEATURE ', Styles.BOLD, value, '->', index)
             }
-        }
+        },
+        async SET_STATS({ state, dispatch }, { target, value, base= {}, res }) {
+            if (value === undefined) {
+                let resource
+                if (target === undefined) {
+                    target = res._type
+
+                    // double-check if resource is really the one to be removed
+                    // @ts-ignore
+                    if (state.static.stats._[target]._uuid !== res._uuid) {
+                        // @ts-ignore
+                        console.log('%c WARNING ', Styles.AMBAR, 'Resource indicated is no the one in position likely was already removed by other means', res._data, res, 'in loco', state.static.stats._[target])
+                        return
+                    }
+
+                    resource = res
+                } else {
+                    // @ts-ignore
+                    resource = state.static.stats._[target]
+                }
+
+                const _data = resource._data
+                // @ts-ignore
+                const LEFTOVER = state.static.stats._[target]
+
+                // @ts-ignore
+                Vue.set(state.static.stats._, target, undefined)
+                Vue.set(state.static.stats, target, undefined)
+
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    dispatch('REMOVE_RESOURCE', LEFTOVER)
+
+                console.log('REMOVE STAT', target, _data, '->', undefined)
+            } else {
+                // PREPARE OPTIONS
+                const options = {
+                    ...{
+                        path: `stats.${target}`,
+                        origin: 'input',
+                        source: 'stats',
+                        type: target,
+                        parent: 'custom'
+                    },
+                    ...base
+                }
+
+                // MAKE RESOURCE
+                const resource = await dispatch('CREATE_RESOURCE', { value: target, ...options })
+
+                // SET STATIC
+                // @ts-ignore
+                Vue.set(state.static.stats._, target, resource)
+                Vue.set(state.static.stats, target, value)
+
+                // PUSH TO ASYNC STACK
+                dispatch('STACK_RESOURCE', resource)
+
+                console.log('%c SET STATS ', Styles.BOLD, value, '->', target)
+            }
+        },
+        async SET_PLUGINS({ state, dispatch }, { index, value, base= {}, res }) {
+            if (value === undefined) {
+                let resource
+                if (index === undefined) {
+                    index = res._index
+                    resource = res
+                } else {
+                    // @ts-ignore
+                    resource = state.plugins[index]
+                }
+
+                const _data = resource._data
+                // @ts-ignore
+                const LEFTOVER = state.static.plugins[index]
+
+                state.plugins.splice(index, 1)
+
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    dispatch('REMOVE_RESOURCE', LEFTOVER)
+
+                console.log('REMOVE PLUGIN', index, _data, '->', undefined)
+            } else {
+                // PREPARE OPTIONS
+                const options = {
+                    ...{
+                        path: pathToString(['plugins', index]),
+                        origin: 'input',
+                        source: 'plugins',
+                        // type // IDEM
+                        parent: 'custom',
+                        index
+                    },
+                    ...base
+                }
+
+                // MAKE RESOURCE
+                const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
+
+                // SET STATIC
+                state.plugins.splice(index, 1, resource)
+
+                // PUSH TO ASYNC STACK
+                dispatch('STACK_RESOURCE', resource)
+
+                console.log('%c SET PLUGIN ', Styles.BOLD, value, '->', index)
+            }
+        },
+        async SET_ANSWERS({ dispatch, state }, { command, answer, base= {}, res }) {
+            if (command.transform) {
+                answer = eval(command.transform)(answer)
+            }
+
+            if (command.inject === undefined) { // if the answer substitutes the command
+                debugger
+                if (state.static._index.answers === undefined) state.static._index.answers = {}
+                if (!(command._id in state.static._index.answers)) state.static._index.answers[command._id] = []
+
+                let index = state.static._index.answers[command._id].length
+                for (const value of answer) {
+                    // PREPARE OPTIONS
+                    const options = {
+                        ...{
+                            path: `answers.${command._id}[${index}]`,
+                            origin: command._uuid,
+                            source: 'command',
+                            type: command._id,
+                            parent: command._id,
+                            index
+                        },
+                        ...base
+                    }
+
+                    // MAKE RESOURCE
+                    const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
+
+                    // PUSH TO ASYNC STACK
+                    dispatch('STACK_RESOURCE', resource)
+
+                    index++
+                }
+            } else {
+                const [target, prop, mention] = Mention.resolve(command.inject, state, true)
+
+                try {
+                    // setting value in reactive wat
+                    Vue.set(target, prop, answer)
+                } catch (err) {
+                    console.log(err)
+                    debugger
+                    throw new Error('Command with inject in fields without value not implemented')
+                }
+
+                if (!command.persistent) {
+                    throw new Error('Not persistent commands with inject not implemented')
+                }
+            }
+
+            console.log('%c SET ANSWER ', Styles.BOLD, command.inject ? 'injecting' : 'replacing', answer, '->', command.inject ? command.inject : command._path, command)
+        },
     }
 }

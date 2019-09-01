@@ -6,12 +6,13 @@
             <button @click="state = !state">Show State</button>
             <button @click="logState(false)">Log State</button>
             <button @click="logState(true)">Log State (Pretty)</button>
+            <button @click="test">Test</button>
             <div v-if="state" style="max-height: 600px; overflow-y: auto; background: #333; color: #ddd; padding: 10px 25px;">
                 <pre>{{pretty_sheet}}</pre>
             </div>
             <dnd-header />
-            <!-- <dnd-main />
-            <dnd-header type="physical" />
+            <dnd-main />
+            <!-- <dnd-header type="physical" />
             <dnd-spellcasting type="spellcasting" /> -->
         </form>
     </div>
@@ -31,12 +32,14 @@ import { NotifyLevel, NotifySettings } from '@/bus/types'
 // import Sheet from "@/services/sheet";
 
 import Header from '@/components/dnd/sheet/Header.vue'
-// import Main from '@/components/dnd/Main.vue'
+import Main from '@/components/dnd/sheet/Main.vue'
 // import Spellcasting from '@/components/dnd/Spellcasting.vue'
 
 @Component({
+    // @ts-ignore
     components: {
-        'dnd-header': Header
+        'dnd-header': Header,
+        'dnd-main': Main
     },
     computed: {
         ...mapState(['sheet'])
@@ -44,13 +47,17 @@ import Header from '@/components/dnd/sheet/Header.vue'
     methods: {
         ...mapActions({
             reset: 'sheet/RESET',
-            load: 'sheet/LOAD'
+            load: 'sheet/LOAD',
+            removeResource: 'sheet/REMOVE_RESOURCE',
+            normalizeResources: 'sheet/NORMALIZE_RESOURCES'
         })
     },
 })
 export default class Sheet extends Vue {
     public sheet!: any
     public load!: (id: string) => {}
+    removeResource!: any
+    normalizeResources!: any
 
     public state: boolean = false
 
@@ -73,8 +80,8 @@ export default class Sheet extends Vue {
             })
         })
 
-        Bus.$on('watch', (pathname: string, callback: () => void) => {
-            this.$store.watch(
+        Bus.$on('watch', (_uuid: string, pathname: string, callback: () => void) => {
+            const unwatch = this.$store.watch(
                 (state, getters) => {
                     let target = state.sheet
                     const path = _.toPath(pathname)
@@ -91,13 +98,22 @@ export default class Sheet extends Vue {
                 },
                 callback,
             )
+
+            if (!(_uuid in this.$store.state.sheet._observer)) this.$store.state.sheet._observer[_uuid] = []
+            this.$store.state.sheet._observer[_uuid].push(unwatch)
         })
 
-        this.load('5d64533836faaf2a6c6b8319')
+        this.load('5d6c31af08561e6358c0baef')
     }
 
     logState(pretty: boolean = false) {
         console.log(this.sheet)
+    }
+
+    test() {
+        const resource = this.sheet.static.features[0]
+        this.removeResource(resource)
+        this.normalizeResources()
     }
 };
 </script>
