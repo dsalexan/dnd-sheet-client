@@ -14,8 +14,9 @@ function delay(ms: number) {
 }
 
 export default class Mention {
-    public static async search(text: string, meta: string = '', max?: number, query?: string): Promise<object[]> {
+    public static async search(text: string, meta: string = '', options: {max?: number, query?: string} = {}): Promise<object[]> {
         console.log('SEARCH', text, meta)
+        const {max, query} = options
         const response = await axios.get(`http://localhost:3000/${meta}?q=${text}${max ? '&max=' + max : ''}${query ? '&query=' + query : ''}`)
         return response.data
     }
@@ -115,17 +116,17 @@ export default class Mention {
         }
 
         // ser value on target (reactive way)
-        const is_number = !_.isNaN(parseInt(final_path as string, 10))
+        const is_final_number = !_.isNaN(parseInt(final_path as string, 10))
 
         if (_.isString(target)) {
             throw new Error('Path leads to a primitive target')
         } else if (_.isArray(target)) {
-            if (!is_number) {
+            if (!is_final_number) {
                 throw new Error('Non-numeric path on array target')
             }
         }
 
-        if (is_number) {
+        if (is_final_number) {
             Vue.set(target, parseInt(final_path as string, 10), resource)
         } else {
             Vue.set(target, final_path as string, resource)

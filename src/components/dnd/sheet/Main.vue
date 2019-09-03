@@ -39,6 +39,97 @@
                     </div>
                 </div>
             </section>
+            <x-input transparent="false" class="passive-perception clean" name="passiveperception" label="Passive Perception (Wisdom)" placeholder="10" :value="passive_proficiency('perception')" box reactive="false" disabled/>
+
+            <section class="otherprofs textblock">
+                <label>Other Proficiencies and Languages</label>
+                <dnd-panel 
+                    label="Proficiency"
+                    :cols="2"
+                    query="{ 'meta': {'$not': { '$eq': 'feature' }} }"
+                    :base="['armor', 'weapons', 'tools', 'languages']"
+                    :value="sheet.virtual.proficiencies"
+                    @input="(value, index, key) => setProficiencies({index, value, base: {type: key}})"/>
+            </section>
+        </section>
+        <section>
+            <section class="combat">
+                <div class="armorclass">
+                    <x-input transparent="false" class="clean" label="Armor Class" name="ac" placeholder="10" :value="10" disabled/>
+                </div>
+                <div class="initiative">
+                    <x-input transparent="false" class="clean" label="Initiative" name="initiative" placeholder="+0" :value="modifier('dex')" disabled/>
+                </div>
+                <div class="speed" :class="{'has-prev': speed_index > 0, 'has-next': speed_index < speed.length - 1}">
+                    <div class="prev">
+                        <div class="icon" @click="speed_index -= speed_index > 0 ? 1 : 0">
+                            <q-icon name="chevron_left"/>
+                        </div>
+                    </div>
+                    <x-input transparent="false" class="clean" :label="labelSpeed" name="speed" placeholder="30" :value="(speed[speed_index] || {}).speed" disabled/>
+                    <div class="next">
+                        <div class="icon" @click="speed_index += speed_index < speed.length - 1 ? 1 : 0">
+                            <q-icon name="chevron_right"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="hp">
+                    <div class="regular">
+                        <x-input transparent="false" class="max clean" label="Hit Point Maximum" name="maxhp" placeholder="10" :value="maximum_hp" disabled/>
+                        <x-input transparent="false" class="current" label="Current Hit Points" name="currenthp" placeholder="10" 
+                            :value="focus_hp ? sheet.static.attributes.hp.current : (sheet.static.attributes.hp.current == undefined ? maximum_hp : sheet.static.attributes.hp.current)" 
+                            @input="sheet.static.attributes.hp.current = $event" 
+                            @focus="focus_hp=true"
+                            @blur="focus_hp=false"
+                            reactive="false"/>
+                    </div>
+                    <x-input transparent="false" class="temporary" label="Temporary Hit Points" name="temphp" placeholder="10" v-model="sheet.static.attributes.hp.temporary" reactive="false"/>
+                </div>
+                <div class="hitdice">
+                    <div>
+                        <x-input transparent="false" class="total clean" label="Total" name="totalhd" placeholder="1d10" :value="maximum_hit_dice" disabled/>
+                        <x-input transparent="false" class="remaining" label="Hit Dice" name="remaininghd" placeholder="1d10" 
+                        @input="sheet.static.attributes.hit_dice = $event" 
+                        :value="focus_hit_dice ? sheet.static.attributes.hit_dice : (sheet.static.attributes.hit_dice == undefined ? maximum_hit_dice : sheet.static.attributes.hit_dice)" 
+                        @focus="focus_hit_dice=true"
+                        @blur="focus_hit_dice=false"
+                        reactive="false"/>
+                    </div>
+                </div>
+                <!-- <dnd-death-saves v-model="sheet.stats.death_saves" /> -->
+            </section>
+            <!-- <section class="attacksandspellcasting">
+                <div>
+                    <label>Attacks & Spellcasting</label>
+                    <div>
+                        <q-list v-if="attacks_spellcasting.length > 0">
+                            <q-item 
+                                v-for="(item) of attacks_spellcasting" :key="item._id"
+                                clickable>
+                                <q-item-section>
+                                    <q-item-label><b style="margin-right: 10px">{{ name(item) }}</b> {{ ((item.mechanics || {}).damage || []).map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ') }}</q-item-label>
+                                    <q-item-label caption>{{ ((item.mechanics || {}).properties || []).map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ') }}</q-item-label>
+                                </q-item-section>
+
+                                <q-item-section side top>
+                                    <q-item-label caption style="font-size: 1.05em; color: rgba(0,0,0, 0.6)">+4</q-item-label>
+                                </q-item-section>
+                            </q-item>
+                        </q-list>
+                        <span v-if="attacks_spellcasting.length == 0" style="color: lightgray; font-style: italic; font-size: 0.9em;">No Attacks/Spellcasting</span>
+                    </div>
+                </div>
+            </section>
+            <section class="equipment">
+                <dnd-equipment 
+                    transparent="false"
+                    :coins="coins"
+                    :value="items"
+                    @input="(value, _id, _parent) => set_equipment({value, _id, _parent})"
+                    @remove="(_id, path) => remove_equipment({_id, path})"
+                    @block="(_id, path, value) => block_equipment({_id, path, value})"
+                    @coin="(value, key) => set_coin({value, key})" />
+            </section> -->
         </section>
         <section>
             <section 
@@ -68,8 +159,8 @@
         </section>
 
         
-        <q-dialog v-model="command_dialog.open" position="bottom" @hide="handleHideDialog">
-            <q-card style="max-width: auto; min-width: 400px;" v-if="command_dialog.open">
+        <q-dialog class="command-dialog" v-model="command_dialog.open" position="bottom" @hide="handleHideDialog" full-width>
+            <q-card style="min-width: 400px; width: auto !important;" v-if="command_dialog.open">
                 <!-- <q-linear-progress :value="higher_level_percentage" color="amber" /> -->
 
                 <q-card-section class="row items-center no-wrap" style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;">
@@ -117,25 +208,30 @@ import { Mention } from '../../../services';
 import { Styles } from '../../../console';
 import Scores from './Scores.vue';
 import Proficiency from './Proficiency.vue';
+import Panel from './Panel.vue';
 
 
 @Component({
     components: {
         'x-input': XInput,
         'dnd-scores': Scores,
-        'dnd-proficiency': Proficiency
+        'dnd-proficiency': Proficiency,
+        'dnd-panel': Panel
     },
     computed: {
         ...mapState({
             sheet: 'sheet',
         }),
         ...mapGetters({
+            modifier: 'sheet/modifier',
             plugins: 'sheet/plugins',
             proficiency_bonus: 'sheet/proficiency_bonus',
             abilities: 'sheet/abilities',
             skills: 'sheet/skills',
             proficient_save: 'sheet/proficient_save',
-            proficient_skill: 'sheet/proficient_skill'
+            proficient_skill: 'sheet/proficient_skill',
+            passive_proficiency: 'sheet/passive_proficiency',
+            speed: 'sheet/speed',
         })
     },
     methods: {
@@ -259,8 +355,10 @@ export default class Main extends Vue {
                 color: plugin.color,
                 current: this.resolve(item.inject)
             }).then((answer: any) => {
-                console.log(`%c PLUGIN (${plugin.name}) `, Styles[plugin.color as string], answer, item)
-                this.setAnswers({answer, command: item})
+                if (answer.length > 0) {
+                    console.log(`%c PLUGIN (${plugin.name}) `, Styles[plugin.color as string], answer, item)
+                    this.setAnswers({answer, command: item})
+                }
             })
         } else {
             throw new Error(`Meta <${item.meta}> not implemented as plugin content`)
@@ -403,7 +501,7 @@ export default class Main extends Vue {
                         justify-content: center
                         align-items: start
                         
-                        > div
+                        > /deep/ div.x-input
                             display: flex
                             flex-direction: column-reverse
                             align-items: center
@@ -666,5 +764,4 @@ export default class Main extends Vue {
 
                 > label
                     text-align: center
-
 </style>

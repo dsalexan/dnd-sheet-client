@@ -298,57 +298,23 @@ export default class Header extends Vue {
                                 background: $faded
 
                 > /deep/ div.q-field.q-select
+                    @import '@/assets/sass/q-select.sass'
+                    
                     width: calc(33.33333% - 10px)
                     display: flex
                     margin-right: 5px
                     margin-left: 5px
-                    
+                        
                     .q-field__inner
                         .q-field__control
-                            &::before
-                                content: none
-
-                            &::after
-                                content: none
-
                             .q-field__control-container
-                                display: -webkit-box
-                                display: -ms-flexbox
-                                display: flex
-                                flex-direction: column
-                                padding-top: 0
-
                                 .q-field__native
-                                    padding-bottom: 0
-                                    line-height: auto
-
                                     input
                                         border-bottom: 1px solid #ddd
 
                                         &::placeholder
                                             color: darkgray
 
-                                .q-field__label.absolute
-                                    position: relative
-                                    transform: none !important
-                                    left: 0
-                                    right: 0
-                                    top: 0
-                                    color: black
-                                    line-height: 1.5
-                                    font-size: 14px
-                                    margin-bottom: 5px
-                                    margin-top: 5px
-
-                            .q-field__append 
-                                height: auto
-                
-                    &.q-field--float
-                        .q-field__inner
-                            .q-field__control
-                                .q-field__control-container
-                                    .q-field__label.absolute
-                                        color: lightgray
 
 
         

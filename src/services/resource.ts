@@ -8,6 +8,23 @@ import { Styles } from '@/console';
 import LZUTF8 from 'lzutf8'
 
 export default class Resource {
+    public static string(item: IResource | string, from: boolean = true) {
+        if (typeof item === 'string') return item
+        else if (typeof item === 'object') {
+            if (item.meta === 'command') {
+                if (item.text) return item.text
+
+                if (item.choose !== undefined) {
+                    return `Choose ${item.choose} from <${from ? (item.from.map ? item.from.map((i: any) => Resource.string(i)) : item.from) : '...'}>`
+                } else {
+                    return '<Unknown command>'
+                }
+            }
+
+            return (item.name || {}).en || (item.name || {})['pt-BR'] || item.name || item.slug || undefined
+        }
+    }
+
     public static table(resource: IResource) {
         const obj: {
             [key: string]: {
@@ -192,7 +209,10 @@ export default class Resource {
                     let target = _resource._method === 'plugin' ? state : state.static
                     for (const p of _.toPath(_resource._path)) {
                         target = target[p]
-                        if (target === undefined) console.trace('%c ERROR ', Styles.RED, 'Path most likely incorrect', resource._uuid, _resource._path)
+                        if (target === undefined) {
+                            console.trace('%c ERROR ', Styles.RED, 'Path most likely incorrect', resource._uuid, _resource._path)
+                            return undefined
+                        }
                         if ('_' in target) target = target._
                     }
 
@@ -209,7 +229,10 @@ export default class Resource {
                     let target = _resource._method === 'plugin' ? state : state.static
                     for (const p of path) {
                         target = target[p]
-                        if (target === undefined) console.trace('%c ERROR ', 'Path most likely incorrect', resource._uuid, _resource._path)
+                        if (target === undefined) {
+                            console.trace('%c ERROR ', 'Path most likely incorrect', resource._uuid, _resource._path)
+                            return undefined
+                        }
                         if ('_' in target) target = target._
                     }
 

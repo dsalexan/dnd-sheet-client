@@ -1,0 +1,42 @@
+
+&.q-select
+    .q-field__inner
+        .q-field__control
+            &::before
+                content: none
+
+            &::after
+                content: none
+
+            .q-field__control-container
+                display: -webkit-box
+                display: -ms-flexbox
+                display: flex
+                flex-direction: column
+                padding-top: 0
+
+                .q-field__native
+                    padding-bottom: 0
+                    line-height: auto
+                    
+                .q-field__label.absolute
+                    position: relative
+                    transform: none !important
+                    left: 0
+                    right: 0
+                    top: 0
+                    color: black
+                    line-height: 1.5
+                    font-size: 14px
+                    margin-bottom: 5px
+                    margin-top: 5px
+
+            .q-field__append 
+                height: auto
+
+    &.q-field--float
+        .q-field__inner
+            .q-field__control
+                .q-field__control-container
+                    .q-field__label.absolute
+                        color: lightgray

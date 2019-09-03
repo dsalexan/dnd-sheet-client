@@ -15,12 +15,16 @@ OK - implementar o defrag (provavelmente criar um index de _ids pra saber se pre
 OK - Check a proficiency, uncheck and check again throws a error
 
 - add passive perception
+    - Its not workings, even when i check perception as proficient
 - add proficiency panel
 - add combat shit
 - add equipment
 - add features
 
+- add expertise
+
 - fix style inpiration and proficiency bonus
+- remove class with open prof panel and then trying to go back in the panel throws error
 
 - UNCHECK a check proficiency in the middle of work (fetching probably)
 - set level to empty breaks shit

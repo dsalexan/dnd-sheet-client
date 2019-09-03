@@ -35,7 +35,9 @@ import {
     QLinearProgress,
     QSpace,
     QSelect,
-    QSpinner
+    QSpinner,
+    QExpansionItem,
+    QPopupEdit
 } from 'quasar'
 
 Vue.use(Quasar, {
@@ -73,7 +75,9 @@ Vue.use(Quasar, {
         QLinearProgress,
         QSpace,
         QSelect,
-        QSpinner
+        QSpinner,
+        QExpansionItem,
+        QPopupEdit
     },
     directives: {
         Ripple,

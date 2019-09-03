@@ -21,6 +21,7 @@ import axios from 'axios'
 
 
 import { Styles } from '@/console'
+import Die from '@/utils/die';
 
 function m(_uuid: string) {
     return _uuid.substr(0, 8) + '...' + _uuid.substr(_uuid.length - 5)
@@ -165,7 +166,8 @@ export const empty: SheetState = {
         static: {},
         async: {},
         virtual: {
-            _remove: []
+            _remove: [],
+            _update: []
         },
         commands: {},
         defrag: {
@@ -192,6 +194,13 @@ export const sheet: Module<SheetState, RootState> = {
             const level = state.static.misc.level
             if (_class === undefined && level === undefined) return undefined
             return `${_class} ${level}`
+        },
+        level: (state) => {
+            const level = state.static.misc.level
+            if (level === undefined) return undefined
+
+            // @ts-ignore
+            return parseInt(level, 10)
         },
         experience_points: (state) => {
             const xp = state.static.misc.experience_points
@@ -222,8 +231,7 @@ export const sheet: Module<SheetState, RootState> = {
             return mod >= 0 ? '+' + mod : mod
         },
         proficiency_bonus: (state, getters) => {
-            // @ts-ignore
-            const level = parseInt(state.static.misc.level as number, 10)
+            const level = getters.level
 
             if (level === undefined || _.isNaN(level)) return undefined
 
@@ -254,7 +262,7 @@ export const sheet: Module<SheetState, RootState> = {
             const statics = state.static.proficiencies.filter((r) => r._type === 'saves' && ['@' + attr, attr].includes(r.slug))
 
             if (statics[0] === undefined) {
-                let profs = state.async.proficiencies
+                let profs = state.virtual.proficiencies
                 profs = profs.filter((r) => r._type === 'saves' && ['@' + attr, attr].includes(r.slug))
                 return profs[0]
             }
@@ -265,12 +273,79 @@ export const sheet: Module<SheetState, RootState> = {
             const statics = state.static.proficiencies.filter((r) => r._type === 'skills' && (r._id === skill || ['@' + skill, skill].includes(r.slug)))
 
             if (statics[0] === undefined) {
-                let profs = state.async.proficiencies
+                let profs = state.virtual.proficiencies
                 profs = profs.filter((r) => r._type === 'skills' && (r._id === skill || ['@' + skill, skill].includes(r.slug)))
                 return profs[0]
             }
 
             return statics[0]
+        },
+        passive_proficiency: (state, getters) => (slug: string) => {
+            let skill: any = state.virtual.proficiencies
+            skill = skill.filter((r: any) => r._type === 'skills' && (r._id === skill || ['@' + skill, skill].includes(r.slug)))
+            skill = skill[0]
+
+            // TODO maybe download previously all abilities and skills as reference
+            if (skill === undefined) return undefined
+
+            const proficient = !!getters.proficient_skill(slug)
+            const modifier = getters.proficiency_modifier(skill.attribute, proficient)
+            if (modifier === undefined) return undefined
+            return parseInt(modifier, 10) + 10
+        },
+        speed: (state, getters) => {
+            const virtual = state.static.stats.speed
+
+            if (virtual === undefined) return []
+
+            const order = ['walk', 'flight']
+
+            const source = _.isArray(virtual) ? [...virtual] : [virtual]
+            const speed = []
+
+            for (const o of order) {
+                const unit = source.filter((s: any) => s.movement === o)[0]
+                if (unit) speed.push(unit)
+            }
+
+            return speed.concat(source.filter((s: any) => !order.includes(s.movement)))
+                .map((unit) => ({
+                    ...unit,
+                    speed: _.isArray(unit.speed) ? unit.speed.join('') : unit.speed
+                }))
+        },
+        maximum_hp: (state, getters) => {
+            const level = getters.level
+
+            const CON = getters.modifier('con')
+            const die = state.static.stats.hit_die
+
+            if (level === undefined || CON === undefined || die === undefined) return undefined
+
+            const l1 = parseInt(_.last(die.split('d')) as string, 10)
+
+            const hp = state.static.attributes.hp.rolls.reduce((sum, cur) => sum + cur, l1)
+            return hp + (CON * level)
+        },
+        maximum_hit_dice: (state, getters) => {
+            const level = getters.level
+            let die = state.static.stats.hit_die
+
+            if (level === undefined || die === undefined) return undefined
+
+            die = new Die(die, {quantity: 1})
+            die.quantity *= level
+
+            return die.template
+        },
+        ac: (state) => {
+            const AC = state.static.stats.ac
+
+            if (AC === undefined) return 10
+
+            const bonus = (AC.add || []).reduce((sum: number, cur: number) => sum + cur, 0)
+
+            return (AC.base || 10) + bonus
         },
 
         abilities: () => {
@@ -483,7 +558,7 @@ export const sheet: Module<SheetState, RootState> = {
                 target.misc.level = data.misc.level
                 // dispatch('SET_MISC', { target: 'background', value: data.misc.background }) // target.misc.background = data.misc.background
                 target.misc.player = data.misc.player
-                // dispatch('SET_MISC', { target: 'race', value: data.misc.race }) // target.misc.race = data.misc.race
+                dispatch('SET_MISC', { target: 'race', value: data.misc.race }) // target.misc.race = data.misc.race
                 target.misc.alignment = data.misc.alignment
                 target.misc.experience_points = data.misc.experience_points
                 target.misc.age = data.misc.age
@@ -986,6 +1061,10 @@ export const sheet: Module<SheetState, RootState> = {
             dispatch('NEST_RESOURCE')
         },
         async NORMALIZE_RESOURCES({ state, dispatch }) {
+            if (!(state._stack.length === 0 && !state._pooling && state._fetching.length === 0  && state._nest._stack.length === 0)) {
+                return
+            }
+
             console.log('%c NORMALIZE ', Styles.GRAY, state._index.async)
 
             const _uuids = Object.keys(state._index.async)
@@ -1070,12 +1149,17 @@ export const sheet: Module<SheetState, RootState> = {
             // virtualize resources and set them in place
             for (const id of defrag_list) {
                 const uuids = state._index.defrag.virtual[id]
+                const should_update = _.intersection(state._index.virtual._update, uuids).length > 0
 
                 if (uuids.length === 1) {
                     const resource = state._index.async[uuids[0]]
                     const index = state._index.virtual[resource._uuid]
 
-                    if (index !== undefined) {
+                    if (should_update) {
+                        console.log('%c    SHOULD UPDATE VIRTUAL ', Styles.LIGHTEN_YELLOW, uuids[0], id, resource, '->', state._index.virtual[uuids[0]])
+                    }
+
+                    if (index !== undefined && !should_update) {
                         // console.log('    VIRTUAL POSITION CORRECT', id, resource._data, index._uuid, index)
                     } else {
                         const virtual = ResourceService.virtual([resource], state, false)
@@ -1091,7 +1175,7 @@ export const sheet: Module<SheetState, RootState> = {
                                 target = target[p]
                             }
 
-                            const _index: number = target.length
+                            const _index: number = should_update ? virtual._index : target.length
                             _path = pathToString([..._path, _index])
 
                             virtual._path = _path
@@ -1108,7 +1192,11 @@ export const sheet: Module<SheetState, RootState> = {
                         const resources = uuids.map((uid) => state._index.async[uid])
                         const index = state._index.virtual[uuids[0]]
 
-                        if (index !== undefined) {
+                        if (should_update) {
+                            console.log('%c    SHOULD UPDATE VIRTUAL ', Styles.LIGHTEN_YELLOW, uuids[0], id, resources, '->', state._index.virtual[uuids[0]])
+                        }
+
+                        if (index !== undefined && !should_update) {
                             // console.log('    VIRTUAL POSITION CORRECT', id, uuids, index._uuid, index)
                         } else {
                             // how to merge
@@ -1125,7 +1213,7 @@ export const sheet: Module<SheetState, RootState> = {
                                     target = target[p]
                                 }
 
-                                const _index: number = target.length
+                                const _index: number = should_update ? virtual._index : target.length
                                 _path = pathToString([..._path, _index])
 
                                 virtual._path = _path
@@ -1263,9 +1351,7 @@ export const sheet: Module<SheetState, RootState> = {
 
             console.log('%c REMOVE ', Styles.RED, m(resource._uuid), resource._id, resource._path, '->', undefined, resource)
 
-            if (state._stack.length === 0 && !state._pooling && state._fetching.length === 0  && state._nest._stack.length === 0) {
-                dispatch('NORMALIZE_RESOURCES')
-            }
+            dispatch('NORMALIZE_RESOURCES')
         },
         async RIPPLE_RESOURCE({ state, dispatch }, { resource, directive }) {
             console.log('RIPPLE', directive, resource._data, resource)
@@ -1593,38 +1679,123 @@ export const sheet: Module<SheetState, RootState> = {
             }
         },
         async SET_ANSWERS({ dispatch, state }, { command, answer, base= {}, res }) {
+            console.log('%c SET ANSWER ', Styles.BOLD, command.inject ? 'injecting' : 'replacing', answer, '->', command.inject ? command.inject : command._path, command)
+
             if (command.transform) {
                 answer = eval(command.transform)(answer)
             }
 
             if (command.inject === undefined) { // if the answer substitutes the command
-                debugger
-                if (state.static._index.answers === undefined) state.static._index.answers = {}
-                if (!(command._id in state.static._index.answers)) state.static._index.answers[command._id] = []
+                // debugger
+                // if (state.static._index.answers === undefined) state.static._index.answers = {}
+                // if (!(command._id in state.static._index.answers)) state.static._index.answers[command._id] = []
 
-                let index = state.static._index.answers[command._id].length
-                for (const value of answer) {
-                    // PREPARE OPTIONS
-                    const options = {
-                        ...{
-                            path: `answers.${command._id}[${index}]`,
-                            origin: command._uuid,
-                            source: 'command',
-                            type: command._id,
-                            parent: command._id,
-                            index
-                        },
-                        ...base
-                    }
+                // let index = state.static._index.answers[command._id].length
+                // for (const value of answer) {
+                //     // PREPARE OPTIONS
+                //     const options = {
+                //         ...{
+                //             path: `answers.${command._id}[${index}]`,
+                //             origin: command._uuid,
+                //             source: 'answers',
+                //             type: command._id,
+                //             method: 'command',
+                //             parent: command._id,
+                //             index
+                //         },
+                //         ...base
+                //     }
 
-                    // MAKE RESOURCE
-                    const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
+                //     // MAKE RESOURCE
+                //     const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
 
-                    // PUSH TO ASYNC STACK
-                    dispatch('STACK_RESOURCE', resource)
+                //     // PUSH TO ASYNC STACK
+                //     dispatch('STACK_RESOURCE', resource)
 
-                    index++
+                //     index++
+                // }
+
+                /**
+                 * get static path
+                 * get async path
+                 * replace in async path
+                 * replace in static path
+                 * run normalization process
+                 */
+
+                const _path = command._path
+                const _uuid = command._uuid
+
+                if (answer.length > 1) {
+                    throw new Error('Unimplemented answer injection with more than one shit')
                 }
+
+                const value = answer[0]
+
+                // slugification of path
+                if (value.slug === undefined) {
+                    const paths = value.path
+                    paths.sort((a: string, b: string) => b.length - a.length)
+                    value.slug = '@' + paths[0]
+                }
+
+                let _data = value._id || value.slug || value.name || value.value
+                let from
+                if (value._id !== undefined) from = '_id'
+                else if (value.slug !== undefined) from = 'slug'
+                else if (value.name !== undefined) from = 'name'
+                else if (value.value !== undefined) from = 'value'
+
+                if (from !== undefined) _data = `(${from}) ${_data} #`
+
+                const METADATA = [
+                    '_uuid',
+                    '_path',
+                    '_origin',
+                    '_source',
+                    '_type',
+                    '_method',
+                    '_parent',
+                    '_active',
+                    // '_data', // should actually remake data
+                    '_index'
+                ]
+
+                // STATIC REPLACE
+                const [target, prop, mention] = Mention.resolve('@me/' + _path, state, true, false)
+
+                // mantain metadata, remove the rest
+                for (const key of Object.keys(target[prop])) {
+                    if (!METADATA.includes(key)) {
+                        delete target[prop][key]
+                    }
+                }
+
+                Vue.set(target[prop], '_data',  _data)
+                Vue.set(target[prop], 'slug',  value.slug)
+                Vue.set(target[prop], 'mechanics',  value.mechanics)
+
+                // ASYNC REPLACE
+                const [async_target, async_prop, async_mention] = Mention.resolve('@me/' + _path, state, true, true)
+
+                for (const key of Object.keys(async_target[async_prop])) {
+                    if (!METADATA.includes(key)) {
+                        delete async_target[async_prop][key]
+                    }
+                }
+
+                Vue.set(async_target[async_prop], '_data',  _data)
+
+                for (const key of Object.keys(value)) {
+                    if (!METADATA.includes(key)) {
+                        Vue.set(async_target[async_prop], key, value[key])
+                    }
+                }
+
+                console.log('REPLACE COMMAND BY ANSWER', answer, '->', _uuid, '@', _path, command)
+
+                state._index.virtual._update.push(_uuid)
+                dispatch('NORMALIZE_RESOURCES')
             } else {
                 const [target, prop, mention] = Mention.resolve(command.inject, state, true)
 
@@ -1641,8 +1812,6 @@ export const sheet: Module<SheetState, RootState> = {
                     throw new Error('Not persistent commands with inject not implemented')
                 }
             }
-
-            console.log('%c SET ANSWER ', Styles.BOLD, command.inject ? 'injecting' : 'replacing', answer, '->', command.inject ? command.inject : command._path, command)
         },
     }
 }
