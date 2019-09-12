@@ -851,8 +851,17 @@ export const sheet: Module<SheetState, RootState> = {
                     _.mergeWith(static_target[static_prop], other, ResourceService.merge)
                 }
 
+                // atualizar qtd in async
+                const [async_target, async_prop, async_mention] = Mention.resolve('@me/' + state._index.static[first]._path, state, true, true)
+                if (async_target[async_prop] !== undefined)
+                    if (static_target[static_prop].mechanics.quantity !== 1) {
+                        if (!('mechanics' in async_target[async_prop])) async_target[async_prop].mechanics = {quantity: 1}
+                        async_target[async_prop].mechanics.quantity = static_target[static_prop].mechanics.quantity
+                    }
+
                 // remover os ultimos (inclusive esse aqui que provavelmente é o ultimo)
                 for (const other of _.reverse(static_others)) {
+                    state._index.defrag.pre_stack[defrag_id] = state._index.defrag.pre_stack[defrag_id].filter((_uuid: string) => _uuid !== other._uuid)
                     // @ts-ignore
                     dispatch(`SET_${other._source.toUpperCase()}`, { res: other, value: undefined })
                 }
@@ -1604,7 +1613,7 @@ export const sheet: Module<SheetState, RootState> = {
                 console.log('%c SET MISC ', Styles.BOLD, value, '->', target)
             }
         },
-        async SET_EQUIPMENT({ state, dispatch }, { index, value, base= {}, res, injected }) {
+        async SET_EQUIPMENT({ state, dispatch }, { index, value, base= {}, res, injected, quantity = false }) {
             if (value === undefined) {
                 let resource
                 if (index === undefined) {
@@ -1616,6 +1625,26 @@ export const sheet: Module<SheetState, RootState> = {
                 }
 
                 const _data = resource._data
+
+                if (quantity) {
+                    const [static_target, static_prop, static_mention] = Mention.resolve('@me/' + resource._path, state, true, false)
+                    if (!('mechanics' in static_target[static_prop])) static_target[static_prop].mechanics = {quantity: 1}
+                    static_target[static_prop].mechanics.quantity += quantity
+
+                    // atualizar qtd in async
+                    const [async_target, async_prop, async_mention] = Mention.resolve('@me/' + resource._path, state, true, true)
+                    if (!('mechanics' in async_target[async_prop])) async_target[async_prop].mechanics = {quantity: 1}
+                    async_target[async_prop].mechanics.quantity = static_target[static_prop].mechanics.quantity
+
+                    // make virtual reload
+                    const virtual = state._index.virtual[resource._uuid]
+                    const update_key = `__update__${uuid()}__`
+                    Vue.set(state.virtual.equipment[virtual._index], update_key, uuid())
+                    Vue.delete(state.virtual.equipment[virtual._index], update_key)
+
+                    console.log('%c ADD/SUBTRACT EQUIPMENT ', Styles.BOLD, quantity, '->', async_target[async_prop].mechanics.quantity, resource._data, resource)
+                    if (static_target[static_prop].mechanics.quantity > 0) return
+                }
 
                 console.log('REMOVE EQUIPMENT', index, _data, '->', undefined)
                 // @ts-ignore

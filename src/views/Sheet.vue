@@ -118,7 +118,7 @@ export default class Sheet extends Vue {
 };
 </script>
 
-<style lang="sass" scoped>
+<style lang="sass">
   @import '@/assets/sass/dnd5e-sheet.sass'
 
   form.charsheet

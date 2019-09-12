@@ -1,6 +1,6 @@
 <template>
     <div class="dnd-equipment" :class="{collapsed, collapsed_input}">
-        <label>Equipment</label>
+        <!-- <label>Equipment</label> -->
         <q-btn flat class="expand-coin" :class="{'full-width': collapsed}" :icon="collapsed ? 'attach_money' : 'money_off'" @click="collapsed = !collapsed"/>
         <div class="money">
             <ul>
@@ -258,7 +258,7 @@ export default class Equipment extends Vue {
         setTimeout(() => {
             reset()
 
-            this.$emit('remove', item.__async__._index, item.__async__._type)
+            this.$emit('remove', item.__async__._index, item.__async__._type, -1)
         }, 800)
     }
 
@@ -385,6 +385,12 @@ div.dnd-equipment
     padding-top: 5px !important
     display: grid
 
+    border: 1px solid black
+    width: 100%
+    padding: 15px
+    border-radius: 10px
+    flex-grow: 1
+
     &:not(.collapsed)
         grid-template-columns: 29px 60px 1fr
         grid-template-rows: 1fr auto
@@ -489,7 +495,7 @@ div.dnd-equipment
 
     > div.items
         grid-area: items
-        max-height: 250px
+        max-height: 388px
         overflow-y: auto
         padding-left: 7px
         padding-right: 3px

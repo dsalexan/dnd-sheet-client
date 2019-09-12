@@ -21,6 +21,13 @@ OK - add combat shit
 OK - add equipment
 OK - add features
 
+OK - virtual is not showing proper quantity
+OK - remove is DISCARTING item
+OK - update async quantity doesnt update virtual one
+OK - adicionar equip, remover equip, adicionar equip e TENTAR remover da erro
+
+- add spells
+
 - save
 - load
 
@@ -28,6 +35,8 @@ OK - add features
 - add damage spells to attacks_spellcasting
 - detect if is proficient with weapon when calculating attacks_spellcasting modifier
 - when there were duplicates (like longsword choosen from bard and a input longsword) indicate the origin of each item
+
+- ERROR: adicionar handaxe, adiciona longsword, adiciona handaxe, adiciona longsword ACABA SOMANDO +1 NO HANDAXE -> (handaxe x3, longsword x1)
 
 - fix style inpiration and proficiency bonus
 - remove class with open prof panel and then trying to go back in the panel throws error

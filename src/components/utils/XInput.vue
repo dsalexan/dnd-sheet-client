@@ -445,14 +445,16 @@ export default {
             border: 1px solid black
             border-left: 0
             text-align: center
+            display: flex
+            align-items: center
 
             > label
-                position: absolute
-                left: 0
-                top: 1px
-                transform: translate(0%, 50%)
+                // position: absolute
+                // left: 0
+                // top: 1px
+                // transform: translate(0%, 50%)
                 width: 100%
-                font-size: 8px
+                font-size: 9px
                                        
         & > input
             &[type="checkbox"]

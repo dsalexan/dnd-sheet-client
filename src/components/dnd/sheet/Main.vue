@@ -51,31 +51,6 @@
                     :value="sheet.virtual.proficiencies"
                     @input="(value, index, key) => setProficiencies({index, value, base: {type: key}})"/>
             </section>
-            <br />
-            <br />
-            <br />
-            <br />
-            <br /><br />
-            <br />
-            <br /><br />
-            <br />
-            <br />
-            <br />
-            <br />
-            <br />
-            <br />
-            <br />
-            <br />
-            v
-            <br />
-            <br />
-            <br />v<br /><br />
-            <br />
-            <br />
-            v
-            <br />
-            <br /><br />
-            <br />  
         </section>
         <section>
             <section class="combat">
@@ -148,13 +123,14 @@
                     </div>
                 </div>
             </section>
-            <section class="equipment">
+            <section class="equipment textblock">
+                <label>Equipment</label>
                 <dnd-equipment 
                     transparent="false"
                     :coins="coins"
                     :value="items"
-                    @input="(value, parent) => setEquipment({value, index, base: {parent, type: 'items'}})"
-                    @remove="(index, type) => setEquipment({index, value: undefined})"
+                    @input="(value, parent) => setEquipment({value, base: {parent, type: 'items'}})"
+                    @remove="(index, type, quantity) => setEquipment({index, value: undefined, quantity})"
                     @coin="(value, key) => setCoin({value, key})" />
                     <!-- @block="(_id, path, value) => blockEquipment({_id, path, value})" -->
             </section>
@@ -439,14 +415,17 @@ export default class Main extends Vue {
         margin-top: $gutter*2
         margin-bottom: $gutter*2
         
-        div.label-container
-            height: $small-box-width - $radius - 2px
-            margin-top: $radius / 2 + 1px
+        & /deep/ .x-input
+
+            div.label-container
+                height: $small-box-width - $radius - 2px
+                margin-top: $radius / 2 + 1px
 
         > section
             width: 32%
             display: flex
             flex-direction: column
+            justify-content: space-between
             
             section.attributes
                 width: 100%
@@ -462,10 +441,6 @@ export default class Main extends Vue {
                     display: flex
                     flex-direction: column
                     justify-content: center
-
-                    label
-                        font-size: 8px
-                        font-weight: bold
 
                     ul
                         display: flex
@@ -484,9 +459,16 @@ export default class Main extends Vue {
                             &::last-of-type
                                 padding-bottom: 0
                             
+                            label
+                                font-size: 9.5px
+                                font-weight: bold
+                            
                 div.attr-applications
                     flex-grow: 1
                     margin-left: 10px
+                    display: flex
+                    flex-direction: column
+                    justify-content: space-between
 
                     div.list-section
                         border: 1px solid black
@@ -501,42 +483,51 @@ export default class Main extends Vue {
                             font-size: 10px
                             font-weight: bold
                         
-                        ul li
-                            display: flex
-                            align-items: center
+                        ul
+                            padding-left: $gutter * 2
+                            
+                            li
+                                display: flex
+                                align-items: center
 
-                            > *
-                                margin-left: $gutter / 2
+                                > *
+                                    margin-left: $gutter / 2
 
-                            label
-                                text-transform: none
-                                font-size: 10px
-                                text-align: left
-                                order: 3
-                                
-                                span.skill
-                                    color: $faded-dark
+                                > /deep/ .x-input
+                                    margin-left: $gutter / 2
 
-                            input
-                                &[type="text"]
-                                    width: 30px
-                                    font-size: 12px
-                                    text-align: center
-                                    border: 0
-                                    border-bottom: 1px solid black
-                                    order: 2
-                                &[type="checkbox"]
-                                    appearance: none
-                                    width: $bubble-size
-                                    height: $bubble-size
-                                    border: 1px solid black
-                                    border-radius: $bubble-size
-                                    order: 1
-                                    &:checked
-                                        background-color: black
+                                    label
+                                        text-transform: none
+                                        font-size: 10px
+                                        text-align: left
+                                        order: 3
+                                        
+                                        span.skill
+                                            color: $faded-dark
+
+                                    input
+                                        &[type="text"]
+                                            width: 30px
+                                            font-size: 12px
+                                            text-align: center
+                                            border: 0
+                                            border-bottom: 1px solid black
+                                            order: 2
+                                        &[type="checkbox"]
+                                            appearance: none
+                                            width: $bubble-size
+                                            height: $bubble-size
+                                            border: 1px solid black
+                                            border-radius: $bubble-size
+                                            order: 1
+                                            &:checked
+                                                background-color: black
 
             & /deep/ .x-input
                 &.passive-perception, &.proficiencybonus
+                    margin-top: $gutter*1.5
+                    margin-bottom: $gutter*0.5
+
                     input
                         opacity: 1 !important
                         font-weight: bold
@@ -792,9 +783,10 @@ export default class Main extends Vue {
 
             
             section.equipment
-                border: 1px solid black
-                border-radius: $radius
+                // border: 1px solid black
+                // border-radius: $radius
                 margin-top: $gutter
+                flex-grow: 1
                 
                 > div
                     padding: $gutter

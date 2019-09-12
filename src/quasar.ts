@@ -37,7 +37,9 @@ import {
     QSelect,
     QSpinner,
     QExpansionItem,
-    QPopupEdit
+    QPopupEdit,
+    QRating,
+    QCardActions
 } from 'quasar'
 
 Vue.use(Quasar, {
@@ -77,7 +79,9 @@ Vue.use(Quasar, {
         QSelect,
         QSpinner,
         QExpansionItem,
-        QPopupEdit
+        QPopupEdit,
+        QRating,
+        QCardActions
     },
     directives: {
         Ripple,
