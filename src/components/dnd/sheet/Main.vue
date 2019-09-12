@@ -51,11 +51,36 @@
                     :value="sheet.virtual.proficiencies"
                     @input="(value, index, key) => setProficiencies({index, value, base: {type: key}})"/>
             </section>
+            <br />
+            <br />
+            <br />
+            <br />
+            <br /><br />
+            <br />
+            <br /><br />
+            <br />
+            <br />
+            <br />
+            <br />
+            <br />
+            <br />
+            <br />
+            <br />
+            v
+            <br />
+            <br />
+            <br />v<br /><br />
+            <br />
+            <br />
+            v
+            <br />
+            <br /><br />
+            <br />  
         </section>
         <section>
             <section class="combat">
                 <div class="armorclass">
-                    <x-input transparent="false" class="clean" label="Armor Class" name="ac" placeholder="10" :value="10" disabled/>
+                    <x-input transparent="false" class="clean" label="Armor Class" name="ac" placeholder="10" :value="ac" disabled/>
                 </div>
                 <div class="initiative">
                     <x-input transparent="false" class="clean" label="Initiative" name="initiative" placeholder="+0" :value="modifier('dex')" disabled/>
@@ -90,21 +115,21 @@
                         <x-input transparent="false" class="total clean" label="Total" name="totalhd" placeholder="1d10" :value="maximum_hit_dice" disabled/>
                         <x-input transparent="false" class="remaining" label="Hit Dice" name="remaininghd" placeholder="1d10" 
                         @input="sheet.static.attributes.hit_dice = $event" 
-                        :value="focus_hit_dice ? sheet.static.attributes.hit_dice : (sheet.static.attributes.hit_dice == undefined ? maximum_hit_dice : sheet.static.attributes.hit_dice)" 
+                        :value="focus_hit_dice ? sheet.static.attributes.hit_dice : (sheet.static.attributes.hit_dice == undefined ? maximum_hit_dice : hit_dice)" 
                         @focus="focus_hit_dice=true"
                         @blur="focus_hit_dice=false"
                         reactive="false"/>
                     </div>
                 </div>
-                <!-- <dnd-death-saves v-model="sheet.stats.death_saves" /> -->
+                <dnd-death-saves :value="sheet.static.attributes.death_saves" @change="(type, index, value) => sheet.static.attributes.death_saves[type][index] = value"/>
             </section>
-            <!-- <section class="attacksandspellcasting">
+            <section class="attacksandspellcasting">
                 <div>
                     <label>Attacks & Spellcasting</label>
                     <div>
                         <q-list v-if="attacks_spellcasting.length > 0">
                             <q-item 
-                                v-for="(item) of attacks_spellcasting" :key="item._id"
+                                v-for="(item) of attacks_spellcasting" :key="item._uuid"
                                 clickable>
                                 <q-item-section>
                                     <q-item-label><b style="margin-right: 10px">{{ name(item) }}</b> {{ ((item.mechanics || {}).damage || []).map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ') }}</q-item-label>
@@ -112,11 +137,14 @@
                                 </q-item-section>
 
                                 <q-item-section side top>
-                                    <q-item-label caption style="font-size: 1.05em; color: rgba(0,0,0, 0.6)">+4</q-item-label>
+                                    <div style="display: flex; flex-direction: column; justify-content: space-around; align-items: flex-end">
+                                        <q-item-label caption style="font-size: 1.05em; color: rgba(0,0,0, 0.6); font-weight: bold;">{{ w(item).utils.modifier(store) }}</q-item-label>
+                                        <q-item-label caption style="font-size: 0.85em; color: rgba(0,0,0, 0.4); text-transform: uppercase;">{{ w(item).utils.ability }}</q-item-label>
+                                    </div>
                                 </q-item-section>
                             </q-item>
                         </q-list>
-                        <span v-if="attacks_spellcasting.length == 0" style="color: lightgray; font-style: italic; font-size: 0.9em;">No Attacks/Spellcasting</span>
+                        <span v-if="attacks_spellcasting.length == 0" style="display: inline-block; text-align: center; width: 100%; color: lightgray; font-style: italic; font-size: 0.9em;">No Attacks/Spellcasting</span>
                     </div>
                 </div>
             </section>
@@ -125,11 +153,11 @@
                     transparent="false"
                     :coins="coins"
                     :value="items"
-                    @input="(value, _id, _parent) => set_equipment({value, _id, _parent})"
-                    @remove="(_id, path) => remove_equipment({_id, path})"
-                    @block="(_id, path, value) => block_equipment({_id, path, value})"
-                    @coin="(value, key) => set_coin({value, key})" />
-            </section> -->
+                    @input="(value, parent) => setEquipment({value, index, base: {parent, type: 'items'}})"
+                    @remove="(index, type) => setEquipment({index, value: undefined})"
+                    @coin="(value, key) => setCoin({value, key})" />
+                    <!-- @block="(_id, path, value) => blockEquipment({_id, path, value})" -->
+            </section>
         </section>
         <section>
             <section 
@@ -155,6 +183,15 @@
                         </q-item>
                     </q-list>
                 </div>
+            </section>
+            <section class="features textblock">
+                <label>Features & Traits</label>
+                <dnd-list 
+                    :expansion="true"
+                    label="Feature"
+                    :value="features"
+                    meta="feature"
+                    @input="(value, index) => setFeatures({value, index, base: {type: 'custom'}})"/>
             </section>
         </section>
 
@@ -204,11 +241,14 @@ import { Bus, command } from '@/bus'
 
 import { Resource, Plugin } from '@/store/sheet/types';
 import { CommandSettings } from '../../../bus/types';
-import { Mention } from '../../../services';
+import { Mention, Resource as ResourceService } from '../../../services';
 import { Styles } from '../../../console';
 import Scores from './Scores.vue';
 import Proficiency from './Proficiency.vue';
 import Panel from './Panel.vue';
+import DeathSaves from './DeathSaves.vue';
+import Equipment from './Equipment.vue';
+import List from './List.vue';
 
 
 @Component({
@@ -216,7 +256,10 @@ import Panel from './Panel.vue';
         'x-input': XInput,
         'dnd-scores': Scores,
         'dnd-proficiency': Proficiency,
-        'dnd-panel': Panel
+        'dnd-panel': Panel,
+        'dnd-death-saves': DeathSaves,
+        'dnd-equipment': Equipment,
+        'dnd-list': List
     },
     computed: {
         ...mapState({
@@ -232,12 +275,23 @@ import Panel from './Panel.vue';
             proficient_skill: 'sheet/proficient_skill',
             passive_proficiency: 'sheet/passive_proficiency',
             speed: 'sheet/speed',
+            maximum_hp: 'sheet/maximum_hp',
+            maximum_hit_dice: 'sheet/maximum_hit_dice',
+            hit_dice: 'sheet/hit_dice',
+            attacks_spellcasting: 'sheet/attacks_spellcasting',
+            ac: 'sheet/ac',
+            coins: 'sheet/coins',
+            items: 'sheet/items_with_quantity',
+            features: 'sheet/tree_features'
         })
     },
     methods: {
         ...mapActions({
+            setCoin: 'sheet/SET_COIN',
             setAnswers: 'sheet/SET_ANSWERS',
-            setProficiencies: 'sheet/SET_PROFICIENCIES'
+            setFeatures: 'sheet/SET_FEATURES',
+            setProficiencies: 'sheet/SET_PROFICIENCIES',
+            setEquipment: 'sheet/SET_EQUIPMENT'
         })
     },
 })
@@ -262,6 +316,11 @@ export default class Main extends Vue {
     setProficiencies!: any
     proficient_save!: any
     proficient_skill!: any
+
+
+    get store() {
+        return this.$store
+    }
 
     get labelSpeed() {
         if (this.speed.length > 1)
@@ -363,6 +422,10 @@ export default class Main extends Vue {
         } else {
             throw new Error(`Meta <${item.meta}> not implemented as plugin content`)
         }
+    }
+
+    w(resource: Resource) {
+        return ResourceService.weapon(resource)
     }
 }
 </script>
@@ -582,33 +645,56 @@ export default class Main extends Vue {
                             margin-bottom: $gutter / 2
                             border-radius: $radius $radius 0 0
                         
-                            > div.max
-                                display: flex
-                                justify-content: space-around
-                                align-items: baseline
-                                padding-top: $radius * 0.75
-                                
-                                label
-                                    font-size: 10px
-                                    text-transform: none
-                                    color: $faded-dark
-                                
-                                input
-                                    width: 40%
-                                    border: 0
-                                    border-bottom: 1px solid $faded
-                                    font-size: 12px
-                                    text-align: center
+                            > /deep/ div.x-input
+                                &.max
+                                    display: flex
+                                    justify-content: space-around
+                                    align-items: baseline
+                                    padding-top: $radius * 0.75
+                                    
+                                    label
+                                        font-size: 10px
+                                        text-transform: none
+                                        color: $faded-dark
+                                    
+                                    input
+                                        width: 40%
+                                        border: 0
+                                        border-bottom: 1px solid $faded
+                                        font-size: 12px
+                                        text-align: center
 
-                            > div.current
+                                &.current
+                                    display: flex
+                                    flex-direction: column-reverse
+
+                                    input
+                                        border: 0
+                                        width: 100%
+                                        padding: 0.75em 0
+                                        font-size: 30px
+                                        text-align: center
+
+                                    label
+                                        font-size: 10px
+                                        padding-bottom: 5px
+                                        text-align: center
+                                        font-weight: bold
+                            
+                        > /deep/ div.x-input
+                            &.temporary
+                                margin: $gutter
+                                margin-top: 0
+                                border: 1px solid black
+                                border-radius: 0 0 $radius $radius
                                 display: flex
                                 flex-direction: column-reverse
-
+                                background-color: $bg
+                                
                                 input
-                                    border: 0
-                                    width: 100%
                                     padding: 0.75em 0
-                                    font-size: 30px
+                                    font-size: 20px
+                                    border: 0
                                     text-align: center
 
                                 label
@@ -616,27 +702,6 @@ export default class Main extends Vue {
                                     padding-bottom: 5px
                                     text-align: center
                                     font-weight: bold
-                            
-                        > div.temporary
-                            margin: $gutter
-                            margin-top: 0
-                            border: 1px solid black
-                            border-radius: 0 0 $radius $radius
-                            display: flex
-                            flex-direction: column-reverse
-                            background-color: $bg
-                            
-                            input
-                                padding: 0.75em 0
-                                font-size: 20px
-                                border: 0
-                                text-align: center
-
-                            label
-                                font-size: 10px
-                                padding-bottom: 5px
-                                text-align: center
-                                font-weight: bold
                             
                     &.hitdice, &.deathsaves
                         $height: 100px
@@ -654,44 +719,46 @@ export default class Main extends Vue {
                         display: flex
                         flex-direction: column
 
-                        > div.total
-                            display: flex
-                            align-items: baseline
-                            justify-content: space-around
-                            margin: $gutter
-                            
-                            label
-                                font-size: 10px
-                                color: $faded-dark
-                                margin: 0.25em
-                                text-transform: none
+                        > /deep/ div.x-input
+                            &.total
+                                display: flex
+                                align-items: baseline
+                                justify-content: space-around
+                                margin: $gutter
                                 
-                            input
-                                font-size: 12px
-                                border: 0
-                                border-bottom: 1px solid $faded
-                                width: 40%
-                                margin-right: 0.25em
-                                padding: 0 0.25em
-                                text-align: center
-                            
-                        > div.remaining
-                            flex: 1
-                            display: flex
-                            flex-direction: column-reverse
-
-                            label
-                                text-align: center
-                                padding: 2px
-                                font-size: 10px
+                                label
+                                    font-size: 10px
+                                    color: $faded-dark
+                                    margin: 0.25em
+                                    text-transform: none
+                                    
+                                input
+                                    font-size: 12px
+                                    border: 0
+                                    border-bottom: 1px solid $faded
+                                    width: 40%
+                                    margin-right: 0.25em
+                                    padding: 0 0.25em
+                                    text-align: center
                                 
-                            input
-                                text-align: center
-                                border: 0
+                            &.remaining
                                 flex: 1
+                                display: flex
+                                flex-direction: column-reverse
+
+                                label
+                                    text-align: center
+                                    padding: 2px
+                                    font-size: 10px
+                                    
+                                input
+                                    text-align: center
+                                    border: 0
+                                    flex: 1
                     
                     
-                    &.deathsaves
+                
+                > /deep/ .deathsaves
                         > div
                             margin: $gutter
                             background: $bg

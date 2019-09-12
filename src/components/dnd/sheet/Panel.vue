@@ -125,7 +125,7 @@ export default class Panel extends Vue {
     }
 
     createItem(value: string, key: string) {
-        this.$emit('input', value, this.$props.value.length, key)
+        this.$emit('input', value, undefined, key)
     }
 
     removeItem(index: number, key: string) {

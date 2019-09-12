@@ -41,7 +41,7 @@
                 {{ name(item) }}
             </q-chip>
                 
-            <q-chip dense square clickable :removable="true" @remove="handleRemove(item._index)"
+            <q-chip dense square clickable :removable="true" @remove="handleRemove(item.__async__._index)"
                 v-for="(item, index) of editables" :key="`e${index}`">{{ name(item[0] || item) }}</q-chip>
         </div>
 
@@ -101,6 +101,7 @@ import { command } from '@/bus'
 
 import XInput from '@/components/utils/XInput.vue'
 import Mention from '@/services/mention'
+import { Styles } from '../../../console';
 
 
 export default {
@@ -141,7 +142,7 @@ export default {
     },
     computed: {
         editables(){
-            return this.$props.value.filter(i => i._origin == 'input')
+            return this.$props.value.filter(i => i._origin === 'input')
         },
         non_editables(){
             return this.$props.value.filter(i => i._origin !== 'input')
@@ -170,7 +171,7 @@ export default {
             this.input_value = value
         },
         handleSelect: function(value) {
-            this.$emit('append', value)
+            this.$emit('append', Resource.minimal(value))
             this.input_value = ''
             this.select_value = ''
 
@@ -203,8 +204,10 @@ export default {
                     display: Resource.string,
                     icon: 'build'
                 }).then((answer) => {
-                    if(answer.length > 0)
+                    if(answer.length > 0) {
+                        console.log(`%c COMMAND (${item._id}) `, Styles.GREEN, answer, item)
                         this.setAnswers({answer, command: item})
+                    }
                 })
             }
         },

@@ -16,12 +16,18 @@ OK - Check a proficiency, uncheck and check again throws a error
 
 - add passive perception
     - Its not workings, even when i check perception as proficient
-- add proficiency panel
-- add combat shit
-- add equipment
-- add features
+OK - add proficiency panel
+OK - add combat shit
+OK - add equipment
+OK - add features
+
+- save
+- load
 
 - add expertise
+- add damage spells to attacks_spellcasting
+- detect if is proficient with weapon when calculating attacks_spellcasting modifier
+- when there were duplicates (like longsword choosen from bard and a input longsword) indicate the origin of each item
 
 - fix style inpiration and proficiency bonus
 - remove class with open prof panel and then trying to go back in the panel throws error

@@ -83,7 +83,7 @@ export default class Mention {
                 return [_async === undefined ? _static : _async, final, mention]
             }
         } else if (mention[0] === '@') {
-            return Mention.search(mention.substr(1))
+            return Mention.search(mention.substr(1), 'resource')
         } else {
             throw new Error(`Unimplemented resolve mention for <${mention}>`)
         }

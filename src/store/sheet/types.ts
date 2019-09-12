@@ -57,9 +57,10 @@ export interface Sheet {
         },
         hp: {
             rolls: number[],
-            current: number // REST
-            temporary: number // REST
-        },
+            current: number | undefined // REST
+            temporary: number | undefined // REST
+        }
+        hit_dice: number | undefined
         exaustion: number // REST, default is 0
         death_saves: {
             successes: boolean[]
@@ -124,6 +125,8 @@ export interface SheetState {
         _stack: AsyncResource[],
         _nesting: boolean
     }
+    _removing: boolean | string
+    _injected: any[]
     // indexing
     _index: {
         static: {

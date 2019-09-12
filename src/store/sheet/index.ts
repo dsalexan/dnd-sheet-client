@@ -57,9 +57,10 @@ export const empty: SheetState = {
             ability_scores: {},
             hp: {
                 rolls: [],
-                current: 0,
+                current: undefined,
                 temporary: 0
             },
+            hit_dice: undefined,
             exaustion: 0,
             death_saves: {
                 successes: [],
@@ -100,9 +101,10 @@ export const empty: SheetState = {
             ability_scores: {},
             hp: {
                 rolls: [],
-                current: 0,
+                current: undefined,
                 temporary: 0
             },
+            hit_dice: undefined,
             exaustion: 0,
             death_saves: {
                 successes: [],
@@ -137,9 +139,10 @@ export const empty: SheetState = {
             ability_scores: {},
             hp: {
                 rolls: [],
-                current: 0,
+                current: undefined,
                 temporary: 0
             },
+            hit_dice: undefined,
             exaustion: 0,
             death_saves: {
                 successes: [],
@@ -162,6 +165,8 @@ export const empty: SheetState = {
         _stack: [],
         _nesting: false
     },
+    _removing: false,
+    _injected: [],
     _index: {
         static: {},
         async: {},
@@ -247,7 +252,7 @@ export const sheet: Module<SheetState, RootState> = {
             return '+' + bonus
         },
         proficiency_modifier: (state, getters) => (attr: string, proficient: boolean) => {
-            let mod = getters.modifier(attr)
+            let mod = getters.modifier(attr.replace('@', ''))
             if (mod === undefined) return undefined
 
             const proficiency_bonus = getters.proficiency_bonus
@@ -282,14 +287,14 @@ export const sheet: Module<SheetState, RootState> = {
         },
         passive_proficiency: (state, getters) => (slug: string) => {
             let skill: any = state.virtual.proficiencies
-            skill = skill.filter((r: any) => r._type === 'skills' && (r._id === skill || ['@' + skill, skill].includes(r.slug)))
+            skill = skill.filter((r: any) => r._type === 'skills' && (r._id === slug || ['@' + slug, slug].includes(r.slug)))
             skill = skill[0]
 
             // TODO maybe download previously all abilities and skills as reference
             if (skill === undefined) return undefined
 
             const proficient = !!getters.proficient_skill(slug)
-            const modifier = getters.proficiency_modifier(skill.attribute, proficient)
+            const modifier = getters.proficiency_modifier(skill.mechanics.ability, proficient)
             if (modifier === undefined) return undefined
             return parseInt(modifier, 10) + 10
         },
@@ -338,6 +343,17 @@ export const sheet: Module<SheetState, RootState> = {
 
             return die.template
         },
+        hit_dice: (state, getters) => {
+            const dice = state.static.attributes.hit_dice
+            let die = state.static.stats.hit_die
+
+            if (dice === undefined || die === undefined) return undefined
+
+            die = new Die(die)
+            die.quantity = dice
+
+            return die.template
+        },
         ac: (state) => {
             const AC = state.static.stats.ac
 
@@ -346,6 +362,103 @@ export const sheet: Module<SheetState, RootState> = {
             const bonus = (AC.add || []).reduce((sum: number, cur: number) => sum + cur, 0)
 
             return (AC.base || 10) + bonus
+        },
+        attacks_spellcasting: (state, getters) => {
+            const items = state.async.equipment
+
+            const filtered_items = items.filter((i) => {
+                const quantity = (i.mechanics || {quantity: 1}).quantity
+                const has_quantity = quantity === undefined ? true : (quantity > 0)
+
+                const damage = (i.mechanics || {}).damage || []
+                return has_quantity && damage.length > 0
+            })
+
+            return filtered_items
+        },
+        coins: (state, getters) => {
+            const treasure =  state.virtual.equipment.filter((res) => res._type === 'treasure')
+
+            let coins: any[] = treasure.filter((t) => t.parent === 'coin')
+            coins = coins.reduce((obj, cur) => _.merge(obj, {[cur._id]: cur.mechanics.quantity}), {})
+
+            // @ts-ignore
+            const _coins = getters.cambio.reduce((obj, cur) => _.merge(obj, {[cur.slug]: 0}), {})
+            _.merge(_coins, coins)
+
+            return _coins
+        },
+        items_with_quantity: (state) => {
+            function list_to_tree(list: any[]) {
+                const uuids: string[] = list.map((res: Resource) => res._uuid)
+                const map: any = {}
+                let node
+                const roots = []
+                let i;
+
+                for (i = 0; i < list.length; i += 1) {
+                    map[list[i]._id] = i; // initialize the map
+                    list[i]._children = []; // initialize the children
+                }
+                for (i = 0; i < list.length; i += 1) {
+                    node = list[i];
+                    if (uuids.includes(node._origin)) { // se o node não é raiz
+                        // if you have dangling branches check that map[node.parentId] exists
+                        list[map[node._parent]]._children.push(node);
+                    } else {
+                        roots.push(node);
+                    }
+                }
+                return roots;
+            }
+
+            let items = state.virtual.equipment.filter((res) => res._type === 'items')
+
+            items = items.filter((i) => {
+                const quantity = (i.mechanics || {quantity: 1}).quantity
+                return quantity === undefined ? true : (quantity > 0)
+            })
+
+            items = list_to_tree(items)
+            return items
+        },
+        tree_features: (state) => {
+            function list_to_tree(list: any[]) {
+                const uuids: string[] = list.map((res) => res._uuid)
+                const map: any = {}
+                let node
+                const roots = []
+                let i;
+
+                for (i = 0; i < list.length; i += 1) {
+                    map[list[i]._id] = i; // initialize the map
+                    list[i]._children = []; // initialize the children
+                }
+                for (i = 0; i < list.length; i += 1) {
+                    node = list[i];
+                    // console.log('%c NODE ', Styles.AMBAR, list, i, node, uuids)
+                    if (uuids.includes(node._origin)) { // se o node não é raiz
+                        // if you have dangling branches check that map[node.parentId] exists
+                        if (map[node._parent] !== undefined)
+                            list[map[node._parent]]._children.push(node);
+                    } else {
+                        roots.push(node);
+                    }
+                }
+                return roots;
+            }
+
+            const features: Resource[] = state.virtual.features
+            // console.log('%c TREE FEATURES RUNNING ', Styles.RED, features)
+            const tree = list_to_tree([...features])
+
+            const ref: any = {}
+            for (const feature of tree) {
+                if (!(feature._type in ref)) ref[feature._type] = []
+                ref[feature._type].push(feature)
+            }
+
+            return ref
         },
 
         abilities: () => {
@@ -474,7 +587,30 @@ export const sheet: Module<SheetState, RootState> = {
                     slug: 'survival'
                 }
             ]
-        }
+        },
+        cambio: () => [
+            {
+                name: 'Copper Piece',
+                slug: 'cp',
+                base_value: 10 ** -3
+            }, {
+                name: 'Silver Piece',
+                slug: 'sp',
+                base_value: 10 ** -2
+            }, {
+                name: 'Electrum Piece',
+                slug: 'ep',
+                base_value: 10 ** -1
+            }, {
+                name: 'Gold Piece',
+                slug: 'gp',
+                base_value: 10 ** 0
+            }, {
+                name: 'Platinum Piece',
+                slug: 'pp',
+                base_value: 10 ** 1
+            }
+        ]
     },
     mutations: {
         SET_CLASS_LEVEL: (state, value) => {
@@ -554,11 +690,11 @@ export const sheet: Module<SheetState, RootState> = {
                 const target = state.static
                 target.name = data.name
                 // misc
-                // dispatch('SET_MISC', { target: 'class', value: data.misc.class }) // target.misc.class = data.misc.class
+                dispatch('SET_MISC', { target: 'class', value: data.misc.class }) // target.misc.class = data.misc.class
                 target.misc.level = data.misc.level
                 // dispatch('SET_MISC', { target: 'background', value: data.misc.background }) // target.misc.background = data.misc.background
                 target.misc.player = data.misc.player
-                dispatch('SET_MISC', { target: 'race', value: data.misc.race }) // target.misc.race = data.misc.race
+                // dispatch('SET_MISC', { target: 'race', value: data.misc.race }) // target.misc.race = data.misc.race
                 target.misc.alignment = data.misc.alignment
                 target.misc.experience_points = data.misc.experience_points
                 target.misc.age = data.misc.age
@@ -606,6 +742,29 @@ export const sheet: Module<SheetState, RootState> = {
                 state._tree[resource._origin].push(resource._uuid)
             }
         },
+        UNINDEX_RESOURCE({ state }, resource) {
+            delete state._index.static[resource._uuid]
+            delete state._index.async[resource._uuid]
+            state._index.virtual._remove.push(resource._uuid) // flag to remove resource
+            // delete state._index.commands[resource._id]
+            delete state._tree[resource._uuid]
+
+            // const stack_defrag = resource._stack_defrag
+            // const fetch_defrag = resource._fetch_defrag
+            // state._index.defrag.pre_stack[stack_defrag] = state._index.defrag.pre_stack[stack_defrag].filter((u) => u !== resource._uuid)
+            // if (fetch_defrag === undefined) throw new Error('UNDEFINED POS-FETCH DEFRAG ID')
+            // state._index.defrag.pos_fetch[fetch_defrag] = state._index.defrag.pos_fetch[fetch_defrag].filter((u) => u !== resource._uuid)
+
+            const y = state._tree[resource._origin].map((v, i) => ({v, i})).filter((_uuid) => _uuid.v === resource._uuid)[0].i
+            state._tree[resource._origin].splice(y, 1)
+
+            // @ts-ignore
+            delete state.static._index.injections[resource._uuid]
+            // @ts-ignore
+            delete state.static._index.subscriptions[resource._uuid]
+            // @ts-ignore
+            // delete state.static._index.answers[resource._id]
+        },
         async CREATE_RESOURCE( { dispatch, state }, { value, path, origin, source, type, method, parent, index }): Promise<Resource> {
             if (_.isString(value)) {
                 if (value[0] === '@') {
@@ -630,7 +789,7 @@ export const sheet: Module<SheetState, RootState> = {
 
             const res: Resource = {
                 _active: undefined,
-                _uuid: uuid(),
+                _uuid: value._uuid || uuid(), // propaga UUID if already exists
                 _path: path,
                 _origin: origin,
                 _source: source,
@@ -649,7 +808,7 @@ export const sheet: Module<SheetState, RootState> = {
 
             return resource
         },
-        STACK_RESOURCE({dispatch, state}, resource) {
+        STACK_RESOURCE({dispatch, state}, {resource}) {
             // // DEFRAG resources to decide if should stack
             // const copies = state._index.ids[resource._id as string]
 
@@ -795,8 +954,14 @@ export const sheet: Module<SheetState, RootState> = {
                 let result = request[source._uuid]
 
                 if (source.meta === 'command') {
+                    const arr = []
+
+                    for (const entry of result) {
+                        arr[entry.__at__] = entry
+                    }
+
                     result = [{
-                        from: result
+                        from: arr
                     }]
                     // TODO Lidar com commands e answers
                     // let _id = request._id
@@ -1009,20 +1174,15 @@ export const sheet: Module<SheetState, RootState> = {
                                     } else {
                                         for (const key of Object.keys(objeto)) { // items
                                             for (const value of objeto[key]) { // @longsword
-                                                // @ts-ignore
-                                                const index =  state.static[sub].length
-
                                                 const options = {
-                                                    path: `${sub}[${index}]`,
                                                     origin: resource._uuid,
                                                     source: sub,
                                                     type: key,
                                                     method: method_name,
-                                                    parent: resource._id,
-                                                    index
+                                                    parent: resource._id
                                                 }
                                                 // INJECT RESOURCE
-                                                await dispatch(`SET_${sub.toUpperCase()}`, { index, value, base: options }) // automatically push to stack and index
+                                                await dispatch(`SET_${sub.toUpperCase()}`, { value, base: options }) // automatically push to stack and index
                                             }
                                         }
                                     }
@@ -1060,12 +1220,14 @@ export const sheet: Module<SheetState, RootState> = {
             state._nest._nesting = false
             dispatch('NEST_RESOURCE')
         },
-        async NORMALIZE_RESOURCES({ state, dispatch }) {
+        async NORMALIZE_RESOURCES({ state, dispatch }, { self } = {}) {
             if (!(state._stack.length === 0 && !state._pooling && state._fetching.length === 0  && state._nest._stack.length === 0)) {
                 return
             }
 
-            console.log('%c NORMALIZE ', Styles.GRAY, state._index.async)
+            if (state._removing && state._removing !== self) return
+
+            console.log('%c NORMALIZE ', Styles.GRAY, state._index.async, '(removing block)', state._removing, '<>', self)
 
             const _uuids = Object.keys(state._index.async)
 
@@ -1233,8 +1395,18 @@ export const sheet: Module<SheetState, RootState> = {
                     }
                 }
             }
+
+            if (state._removing) {
+                console.log('%c NORMALIZED FROM REMOVE ', Styles.GRAY, 'Remove stack finished, normalization post-removal too', self)
+                state._removing = false
+            }
+
+            if (state._injected.length > 0) {
+                Bus.$emit('injected', _.flattenDeep(state._injected))
+                state._injected = []
+            }
         },
-        REFACTOR_SIBLINGS({state, dispatch}, resource: Resource) {
+        async REFACTOR_SIBLINGS({state, dispatch}, resource: Resource) {
             if (resource._index !== undefined) {
                 const path = _.toPath(resource._path)
                 path.pop()
@@ -1252,6 +1424,8 @@ export const sheet: Module<SheetState, RootState> = {
 
                 let index = 0
                 for (const sibling of target) {
+                    if (sibling._uuid === resource._uuid) continue
+
                     const oldIndex = sibling._index
                     const oldPath = sibling._path
 
@@ -1273,6 +1447,9 @@ export const sheet: Module<SheetState, RootState> = {
         },
         async REMOVE_RESOURCE( { state, dispatch}, resource: Resource ) {
             if (resource === undefined) return
+
+            const self = uuid()
+            if (state._removing === false) state._removing = self
 
             function children(root: string): string[] {
                 const _children = state._tree[root]
@@ -1314,23 +1491,15 @@ export const sheet: Module<SheetState, RootState> = {
                 }
             }
 
-            delete state._index.static[resource._uuid]
-            delete state._index.async[resource._uuid]
-            state._index.virtual._remove.push(resource._uuid) // flag to remove resource
+            dispatch('UNINDEX_RESOURCE', resource)
             delete state._index.commands[resource._id]
-            delete state._tree[resource._uuid]
 
-            const defrag_id = ResourceService.defrag(resource)
-            state._index.defrag.pre_stack[defrag_id] = state._index.defrag.pre_stack[defrag_id].filter((u) => u !== resource._uuid)
-            state._index.defrag.pos_fetch[defrag_id] = state._index.defrag.pos_fetch[defrag_id].filter((u) => u !== resource._uuid)
+            const stack_defrag = resource._stack_defrag
+            const fetch_defrag = resource._fetch_defrag
+            state._index.defrag.pre_stack[stack_defrag] = state._index.defrag.pre_stack[stack_defrag].filter((u) => u !== resource._uuid)
+            if (fetch_defrag === undefined) throw new Error('UNDEFINED POS-FETCH DEFRAG ID')
+            state._index.defrag.pos_fetch[fetch_defrag] = state._index.defrag.pos_fetch[fetch_defrag].filter((u) => u !== resource._uuid)
 
-            const y = state._tree[resource._origin].map((v, i) => ({v, i})).filter((_uuid) => _uuid.v === resource._uuid)[0].i
-            state._tree[resource._origin].splice(y, 1)
-
-            // @ts-ignore
-            delete state.static._index.injections[resource._uuid]
-            // @ts-ignore
-            delete state.static._index.subscriptions[resource._uuid]
             // @ts-ignore
             delete state.static._index.answers[resource._id]
 
@@ -1343,15 +1512,15 @@ export const sheet: Module<SheetState, RootState> = {
             }
 
             // update siblings index
-            dispatch('REFACTOR_SIBLINGS', resource)
+            await dispatch('REFACTOR_SIBLINGS', resource)
 
             if (resource.meta === 'command') {
                 console.log('LIDAR COM A REMOCAO DE COMMANDS')
             }
 
-            console.log('%c REMOVE ', Styles.RED, m(resource._uuid), resource._id, resource._path, '->', undefined, resource)
+            console.log('%c REMOVE ', Styles.RED, m(resource._uuid), resource._id, resource._path, '->', undefined, resource, self)
 
-            dispatch('NORMALIZE_RESOURCES')
+            await dispatch('NORMALIZE_RESOURCES', { self })
         },
         async RIPPLE_RESOURCE({ state, dispatch }, { resource, directive }) {
             console.log('RIPPLE', directive, resource._data, resource)
@@ -1383,7 +1552,7 @@ export const sheet: Module<SheetState, RootState> = {
                 dispatch('NEST_RESOURCES', [resource])
             }
         },
-        async SET_MISC({ state, dispatch }, { target, value, base= {}, res }) {
+        async SET_MISC({ state, dispatch }, { target, value, base= {}, res, injected }) {
             if (value === undefined) {
                 let resource
                 if (target === undefined) {
@@ -1396,12 +1565,12 @@ export const sheet: Module<SheetState, RootState> = {
 
                 const _data = resource._data
                 // @ts-ignore
-                const LEFTOVER = state.static.misc[target]
-
-                Vue.set(state.static.misc, target, undefined)
+                const LEFTOVER = ResourceService.leftover(state.static.misc[target], state)
 
                 if (state._index.async[LEFTOVER._uuid] !== undefined)
                     dispatch('REMOVE_RESOURCE', LEFTOVER)
+
+                Vue.set(state.static.misc, target, undefined)
 
                 console.log('%c REMOVE MISC ', Styles.BOLD, target, _data, '->', undefined)
             } else {
@@ -1418,19 +1587,24 @@ export const sheet: Module<SheetState, RootState> = {
                     ...base
                 }
 
+                // if (target in state.static.misc)
+                //     // @ts-ignore
+                //     await dispatch('UNINDEX_RESOURCE', state.static.misc[target])
+
                 // MAKE RESOURCE
                 const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
 
                 // SET STATIC
                 Vue.set(state.static.misc, target, resource)
 
+                if (injected) state._injected.push(injected)
                 // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', resource)
+                dispatch('STACK_RESOURCE', {resource})
 
                 console.log('%c SET MISC ', Styles.BOLD, value, '->', target)
             }
         },
-        async SET_EQUIPMENT({ state, dispatch }, { index, value, base= {}, res }) {
+        async SET_EQUIPMENT({ state, dispatch }, { index, value, base= {}, res, injected }) {
             if (value === undefined) {
                 let resource
                 if (index === undefined) {
@@ -1442,16 +1616,17 @@ export const sheet: Module<SheetState, RootState> = {
                 }
 
                 const _data = resource._data
-                // @ts-ignore
-                const LEFTOVER = state.static.equipment[index]
 
-                state.static.equipment.splice(index, 1)
+                console.log('REMOVE EQUIPMENT', index, _data, '->', undefined)
+                // @ts-ignore
+                const LEFTOVER = ResourceService.leftover(state.static.equipment[index], state)
 
                 if (state._index.async[LEFTOVER._uuid] !== undefined)
                     dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                console.log('REMOVE EQUIPMENT', index, _data, '->', undefined)
+                state.static.equipment.splice(index, 1)
             } else {
+                if (index === undefined) index = state.static.equipment.length
 
                 // PREPARE OPTIONS
                 const options = {
@@ -1472,13 +1647,14 @@ export const sheet: Module<SheetState, RootState> = {
                 // SET STATIC
                 state.static.equipment.splice(index, 1, resource)
 
+                if (injected) state._injected.push(injected)
                 // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', resource)
+                dispatch('STACK_RESOURCE', {resource})
 
                 console.log('%c SET EQUIPMENT ', Styles.BOLD, value, '->', index, resource)
             }
         },
-        async SET_PROFICIENCIES({ state, dispatch }, { index, value, base= {}, res }) {
+        async SET_PROFICIENCIES({ state, dispatch }, { index, value, base= {}, res, injected }) {
             if (value === undefined) {
                 let resource
                 if (index === undefined) {
@@ -1490,16 +1666,18 @@ export const sheet: Module<SheetState, RootState> = {
                 }
 
                 const _data = resource._data
-                // @ts-ignore
-                const LEFTOVER = state.static.proficiencies[index]
 
-                state.static.proficiencies.splice(index, 1)
+                console.log('REMOVE PROFICIENCIES', index, _data, '->', undefined)
+                // @ts-ignore
+                const LEFTOVER = ResourceService.leftover(state.static.proficiencies[index], state)
 
                 if (state._index.async[LEFTOVER._uuid] !== undefined)
                     dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                console.log('REMOVE PROFICIENCIES', index, _data, '->', undefined)
+                state.static.proficiencies.splice(index, 1)
             } else {
+                if (index === undefined) index = state.static.proficiencies.length
+
                 // PREPARE OPTIONS
                 const options = {
                     ...{
@@ -1519,13 +1697,14 @@ export const sheet: Module<SheetState, RootState> = {
                 // SET STATIC
                 state.static.proficiencies.splice(index, 1, resource)
 
+                if (injected) state._injected.push(injected)
                 // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', resource)
+                dispatch('STACK_RESOURCE', {resource})
 
                 console.log('%c SET PROFICIENCIES ', Styles.BOLD, value, '->', index, resource)
             }
         },
-        async SET_FEATURES({ state, dispatch }, { index, value, base= {}, res }) {
+        async SET_FEATURES({ state, dispatch }, { index, value, base= {}, res, injected }) {
             if (value === undefined) {
                 let resource
                 if (index === undefined) {
@@ -1537,16 +1716,19 @@ export const sheet: Module<SheetState, RootState> = {
                 }
 
                 const _data = resource._data
-                // @ts-ignore
-                const LEFTOVER = state.static.features[index]
-
-                state.static.features.splice(index, 1)
-
-                if (state._index.async[LEFTOVER._uuid] !== undefined)
-                    dispatch('REMOVE_RESOURCE', LEFTOVER)
 
                 console.log('REMOVE FEATURE', index, _data, '->', undefined)
+                if (state.static.features[index] === undefined) debugger
+                // @ts-ignore
+                const LEFTOVER = ResourceService.leftover(state.static.features[index], state)
+
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    await dispatch('REMOVE_RESOURCE', LEFTOVER)
+
+                state.static.features.splice(index, 1)
             } else {
+                if (index === undefined) index = state.static.features.length
+
                 // PREPARE OPTIONS
                 const options = {
                     ...{
@@ -1566,13 +1748,14 @@ export const sheet: Module<SheetState, RootState> = {
                 // SET STATIC
                 state.static.features.splice(index, 1, resource)
 
+                if (injected) state._injected.push(injected)
                 // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', resource)
+                dispatch('STACK_RESOURCE', {resource})
 
                 console.log('%c SET FEATURE ', Styles.BOLD, value, '->', index)
             }
         },
-        async SET_STATS({ state, dispatch }, { target, value, base= {}, res }) {
+        async SET_STATS({ state, dispatch }, { target, value, base= {}, res, injected }) {
             if (value === undefined) {
                 let resource
                 if (target === undefined) {
@@ -1580,9 +1763,9 @@ export const sheet: Module<SheetState, RootState> = {
 
                     // double-check if resource is really the one to be removed
                     // @ts-ignore
-                    if (state.static.stats._[target]._uuid !== res._uuid) {
+                    if (state.static.stats._[target] === undefined || state.static.stats._[target]._uuid !== res._uuid) {
                         // @ts-ignore
-                        console.log('%c WARNING ', Styles.AMBAR, 'Resource indicated is no the one in position likely was already removed by other means', res._data, res, 'in loco', state.static.stats._[target])
+                        console.log('%c WARNING ', Styles.AMBAR, 'Resource indicated is not the one in position likely was already removed by other means > ', target, res._data, res, 'in loco', state.static.stats._[target])
                         return
                     }
 
@@ -1593,17 +1776,17 @@ export const sheet: Module<SheetState, RootState> = {
                 }
 
                 const _data = resource._data
-                // @ts-ignore
-                const LEFTOVER = state.static.stats._[target]
 
+                console.log('REMOVE STAT', target, _data, '->', undefined)
                 // @ts-ignore
-                Vue.set(state.static.stats._, target, undefined)
-                Vue.set(state.static.stats, target, undefined)
+                const LEFTOVER = ResourceService.leftover(state.static.stats._[target], state)
 
                 if (state._index.async[LEFTOVER._uuid] !== undefined)
                     dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                console.log('REMOVE STAT', target, _data, '->', undefined)
+                // @ts-ignore
+                Vue.set(state.static.stats._, target, undefined)
+                Vue.set(state.static.stats, target, undefined)
             } else {
                 // PREPARE OPTIONS
                 const options = {
@@ -1617,6 +1800,12 @@ export const sheet: Module<SheetState, RootState> = {
                     ...base
                 }
 
+                // @ts-ignore
+                if (state.static.stats._[target] && state.static.stats._[target]._uuid) {
+                    // @ts-ignore
+                    await dispatch('UNINDEX_RESOURCE', state.static.stats._[target])
+                }
+
                 // MAKE RESOURCE
                 const resource = await dispatch('CREATE_RESOURCE', { value: target, ...options })
 
@@ -1625,13 +1814,14 @@ export const sheet: Module<SheetState, RootState> = {
                 Vue.set(state.static.stats._, target, resource)
                 Vue.set(state.static.stats, target, value)
 
+                if (injected) state._injected.push(injected)
                 // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', resource)
+                dispatch('STACK_RESOURCE', {resource})
 
                 console.log('%c SET STATS ', Styles.BOLD, value, '->', target)
             }
         },
-        async SET_PLUGINS({ state, dispatch }, { index, value, base= {}, res }) {
+        async SET_PLUGINS({ state, dispatch }, { index, value, base= {}, res, injected }) {
             if (value === undefined) {
                 let resource
                 if (index === undefined) {
@@ -1643,16 +1833,18 @@ export const sheet: Module<SheetState, RootState> = {
                 }
 
                 const _data = resource._data
-                // @ts-ignore
-                const LEFTOVER = state.static.plugins[index]
 
-                state.plugins.splice(index, 1)
+                console.log('REMOVE PLUGIN', index, _data, '->', undefined)
+                // @ts-ignore
+                const LEFTOVER = ResourceService.leftover(state.plugins[index], state)
 
                 if (state._index.async[LEFTOVER._uuid] !== undefined)
                     dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                console.log('REMOVE PLUGIN', index, _data, '->', undefined)
+                state.plugins.splice(index, 1)
             } else {
+                if (index === undefined) index = state.plugins.length
+
                 // PREPARE OPTIONS
                 const options = {
                     ...{
@@ -1672,8 +1864,9 @@ export const sheet: Module<SheetState, RootState> = {
                 // SET STATIC
                 state.plugins.splice(index, 1, resource)
 
+                if (injected) state._injected.push(injected)
                 // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', resource)
+                dispatch('STACK_RESOURCE', {resource})
 
                 console.log('%c SET PLUGIN ', Styles.BOLD, value, '->', index)
             }
@@ -1686,6 +1879,8 @@ export const sheet: Module<SheetState, RootState> = {
             }
 
             if (command.inject === undefined) { // if the answer substitutes the command
+                Bus.$emit('before-injection', [command._uuid])
+
                 // debugger
                 // if (state.static._index.answers === undefined) state.static._index.answers = {}
                 // if (!(command._id in state.static._index.answers)) state.static._index.answers[command._id] = []
@@ -1710,7 +1905,7 @@ export const sheet: Module<SheetState, RootState> = {
                 //     const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
 
                 //     // PUSH TO ASYNC STACK
-                //     dispatch('STACK_RESOURCE', resource)
+                //     dispatch('STACK_RESOURCE', {resource})
 
                 //     index++
                 // }
@@ -1725,6 +1920,7 @@ export const sheet: Module<SheetState, RootState> = {
 
                 const _path = command._path
                 const _uuid = command._uuid
+                const _old_defrag = ResourceService.defrag(command, false)
 
                 if (answer.length > 1) {
                     throw new Error('Unimplemented answer injection with more than one shit')
@@ -1775,27 +1971,43 @@ export const sheet: Module<SheetState, RootState> = {
                 Vue.set(target[prop], 'slug',  value.slug)
                 Vue.set(target[prop], 'mechanics',  value.mechanics)
 
-                // ASYNC REPLACE
-                const [async_target, async_prop, async_mention] = Mention.resolve('@me/' + _path, state, true, true)
+                // no need to async replace, this part will be changed to fetch/pool
+                // // ASYNC REPLACE
+                // const [async_target, async_prop, async_mention] = Mention.resolve('@me/' + _path, state, true, true)
 
-                for (const key of Object.keys(async_target[async_prop])) {
-                    if (!METADATA.includes(key)) {
-                        delete async_target[async_prop][key]
-                    }
-                }
+                // for (const key of Object.keys(async_target[async_prop])) {
+                //     if (!METADATA.includes(key)) {
+                //         delete async_target[async_prop][key]
+                //     }
+                // }
 
-                Vue.set(async_target[async_prop], '_data',  _data)
+                // Vue.set(async_target[async_prop], '_data',  _data)
 
-                for (const key of Object.keys(value)) {
-                    if (!METADATA.includes(key)) {
-                        Vue.set(async_target[async_prop], key, value[key])
-                    }
-                }
+                // for (const key of Object.keys(value)) {
+                //     if (!METADATA.includes(key)) {
+                //         Vue.set(async_target[async_prop], key, value[key])
+                //     }
+                // }
+
+                // // REPLACE DEFRAG INDEXES
+                // //  for commands the pre_stack and pos_fetch defrag id`s should be the same
+                // delete state._index.defrag.pre_stack[_old_defrag]
+                // delete state._index.defrag.pos_fetch[_old_defrag]
+
+                // const _new_stack_defrag = ResourceService.defrag(target[prop])
+                // const _new_fetch_defrag = ResourceService.defrag(async_target[async_prop])
+
+                // if (!(_new_stack_defrag in state._index.defrag.pre_stack)) state._index.defrag.pre_stack[_new_stack_defrag] = []
+                // if (!(_new_fetch_defrag in state._index.defrag.pos_fetch)) state._index.defrag.pos_fetch[_new_fetch_defrag] = []
+
+                // state._index.defrag.pre_stack[_new_stack_defrag].push(_uuid)
+                // state._index.defrag.pos_fetch[_new_fetch_defrag].push(_uuid)
 
                 console.log('REPLACE COMMAND BY ANSWER', answer, '->', _uuid, '@', _path, command)
 
                 state._index.virtual._update.push(_uuid)
-                dispatch('NORMALIZE_RESOURCES')
+                dispatch(`SET_${command._source.toUpperCase()}`, { index: target[prop]._index, value: target[prop], injected: [command] })
+                // dispatch('NORMALIZE_RESOURCES', {injected: [command]})
             } else {
                 const [target, prop, mention] = Mention.resolve(command.inject, state, true)
 
@@ -1810,6 +2022,38 @@ export const sheet: Module<SheetState, RootState> = {
 
                 if (!command.persistent) {
                     throw new Error('Not persistent commands with inject not implemented')
+                }
+            }
+        },
+        async SET_COIN({ dispatch, state, commit }, {value, key}) {
+            console.log('%c SET COIN ', Styles.BOLD, value, '->', key)
+
+            const coin = state.static.equipment.filter((res) => res._type === 'treasure' && res._id === key)[0]
+
+            if (coin === undefined) {
+                if (value !== undefined && value !== 0) {
+                    const resource = {
+                        _id: key,
+                        slug: '@coin/' + key,
+                        mechanics: {
+                            quantity: value
+                        }
+                    }
+
+                    dispatch('SET_EQUIPMENT', {index: state.static.equipment.length, value: resource, base: {type: 'treasure'}})
+                }
+            } else {
+                if (value === undefined) value = 0 // nao quero realmente excluir o treco
+
+                if (value === undefined) {
+                    dispatch('SET_EQUIPMENT', {index: coin._index, value})
+                } else {
+                    if (coin.mechanics) {
+                        coin.mechanics.quantity = value
+                    } else {
+                        coin.mechanics = {}
+                        coin.mechanics.quantity = value
+                    }
                 }
             }
         },

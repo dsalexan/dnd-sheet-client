@@ -103,7 +103,7 @@ export default class Sheet extends Vue {
             this.$store.state.sheet._observer[_uuid].push(unwatch)
         })
 
-        this.load('5d6eade36c56010058df943b')
+        this.load('5d77ffcc936fde6900ab2dba')
     }
 
     logState(pretty: boolean = false) {

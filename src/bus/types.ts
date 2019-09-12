@@ -20,7 +20,7 @@ export interface NotifySettings {
 
 export interface CommandSettings {
     from: Resource[]
-    display: () => {}
+    display: (item: any) => string
     icon?: string
     color?: string
 

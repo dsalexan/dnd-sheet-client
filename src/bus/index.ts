@@ -23,3 +23,15 @@ export const command = (settings: CommandSettings) => {
         Bus.$emit('open-command-dialog', {...{icon: 'build'}, ...settings}, resolve)
     })
 }
+
+export const before_injection = () => {
+    return new Promise((resolve) => {
+        Bus.$on('before-injection', resolve)
+    })
+}
+
+export const injected = () => {
+    return new Promise((resolve) => {
+        Bus.$on('injected', resolve)
+    })
+}

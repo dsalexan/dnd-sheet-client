@@ -8,7 +8,7 @@ import { Styles } from '@/console';
 import LZUTF8 from 'lzutf8'
 
 export default class Resource {
-    public static string(item: IResource | string, from: boolean = true) {
+    public static string(item: IResource | string, from: boolean = true): string {
         if (typeof item === 'string') return item
         else if (typeof item === 'object') {
             if (item.meta === 'command') {
@@ -22,6 +22,27 @@ export default class Resource {
             }
 
             return (item.name || {}).en || (item.name || {})['pt-BR'] || item.name || item.slug || undefined
+        }
+        return '<Unknown>'
+    }
+
+    public static minimal(value: IResource) {
+        return {
+            slug: '@' + (value.path[0] || value.path),
+            _id: value._id
+        }
+    }
+
+    public static leftover(resource: IResource, state: any) {
+        const stack_defrag = Resource.defrag(resource, false)
+
+        const _async = Mention.resolve('@me/' + resource._path, state, false, true)
+        const fetch_defrag = !!_async && Resource.defrag(_async, false)
+
+        return {
+            ...resource,
+            _stack_defrag: stack_defrag,
+            _fetch_defrag: fetch_defrag
         }
     }
 
@@ -211,6 +232,7 @@ export default class Resource {
                         target = target[p]
                         if (target === undefined) {
                             console.trace('%c ERROR ', Styles.RED, 'Path most likely incorrect', resource._uuid, _resource._path)
+                            debugger
                             return undefined
                         }
                         if ('_' in target) target = target._
@@ -280,15 +302,39 @@ export default class Resource {
             _resources: resources.map((r) => r._uuid)
         }
 
+        Object.defineProperty(target, '__async__', {
+            enumerable: false,
+            configurable: false,
+            get() {
+                const oneOrMany = this._resources.map((_uuid: string) =>
+                    state._index.async[_uuid]
+                )
+
+                if (oneOrMany.length === 1) return oneOrMany[0]
+                return oneOrMany
+            }
+        })
+
         for (const prop of PROPS) {
             Object.defineProperty(target, prop, {
                 enumerable: false,   // não enumerável
                 configurable: false, // não configurável
                 get() {
-                    let values = (this._resources.map((_uuid: string) => ({
-                        resource: _uuid,
-                        type: _.isObjectLike(state._index.async[_uuid][prop]) ? 'object' : 'primitive',
-                        value: _.isObjectLike(state._index.async[_uuid][prop]) ? {...state._index.async[_uuid][prop]} : state._index.async[_uuid][prop]
+                    const existent = this._resources.map((_uuid: string) => ({
+                        async: state._index.async[_uuid],
+                        resource: _uuid
+                    })).filter((res: any) => res.async !== undefined)
+
+                    if (existent.length === 0) {
+                        // resource probably doenst exist anymore
+                        console.log('%c                               %c ATTENTION ', '', Styles.LIGHTEN_YELLOW, 'Original resources probably dont exist anymore', this._resources)
+                        return undefined
+                    }
+
+                    let values = (existent.map((res: any) => ({
+                        ...res,
+                        type: _.isArray(res.async[prop]) ? 'array' : _.isObjectLike(res.async[prop]) ? 'object' : 'primitive',
+                        value: _.isArray(res.async[prop]) ? [...res.async[prop]] : _.isObjectLike(res.async[prop]) ? {...res.async[prop]} : res.async[prop]
                     }))).filter((v: any) => v.value !== undefined)
 
                     // @ts-ignore
@@ -303,7 +349,7 @@ export default class Resource {
                         values = values.splice(-1)
                     }
 
-                    let result: any = {}
+                    let result: any = _var_type[0] === 'array' ? [] : {}
                     if (_var_type[0] === 'object') {
 
                         for (const value of values) {
@@ -313,6 +359,10 @@ export default class Resource {
                             }
 
                             result = _.mergeWith(result, value.value, Resource.merge)
+                        }
+                    } else if (_var_type[0] === 'array') {
+                        for (const value of values) {
+                            result = [...result, ...value.value]
                         }
                     } else {
                         result = values.splice(-1)[0].value
@@ -336,12 +386,60 @@ export default class Resource {
     public static defrag(resource: IResource, virtual: boolean = false): string {
         const data = resource._id || resource.slug || (resource.path || [])[0] || resource.path || resource.name
 
-        if (virtual) return `${resource._origin}.${data}`
+        if (virtual) return `${resource._source}.${resource._origin}.${data}`
 
         const active = resource.mechanics && resource.mechanics.active && LZUTF8.compress(JSON.stringify(resource.mechanics.active), {
             outputEncoding: 'Base64'
         })
 
-        return `${resource._origin}.${data}${active === undefined ? '' : '.' + active}`
+        return `${resource._source}.${resource._origin}.${data}${active === undefined ? '' : '.' + active}`
+    }
+
+    public static weapon(resource: IResource) {
+        const obj = {...resource}
+        const properties: any = {
+            improvised: false, // default
+            melee: true, // default
+            reach: [5, 'ft'], // default
+            bonus: 0, // default
+
+            finesse: true,
+
+            ranged: false, // special
+            thrown: false, // special
+
+            versatile: false, // special
+
+            light: false,
+            loading: false
+        }
+
+        for (const prop of (obj.mechanics.properties || [])) {
+            if (prop in properties) properties[prop] = true
+            else {
+                if (prop.match(/versatile/gi)) properties.versatile = prop.match(/\d?d\d+/gi)[0]
+                else if (prop.match(/thrown/gi)) properties.thrown = (/range (\d+\/\d+)/gi.exec(prop) as string[])[1].split('/').map((r) => [parseInt(r, 10), 'ft'])
+                else if (prop.match(/ammunition/gi)) {
+                    properties.ranged = (/range (\d+\/\d+)/gi.exec(prop) as string[])[1].split('/').map((r) => [parseInt(r, 10), 'ft'])
+                    properties.melee = false
+                } else throw new Error('Unimplemented weapon property ' + `<${prop}> for resource: ${resource._data}`)
+            }
+        }
+
+        properties.ability = properties.ranged ? 'dex' : 'str'
+
+        obj.utils = {
+            type: properties.ranged ? 'ranged' : 'melee',
+            ability: properties.ability,
+
+            modifier(store: any) {
+                const proficiency_modifier = store.getters['sheet/proficiency_modifier']
+
+                const value = proficiency_modifier(properties.ability, false)
+                return value
+            }
+        }
+
+        return obj
     }
 }
