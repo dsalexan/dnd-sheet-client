@@ -17,6 +17,7 @@
 </template>
 
 <script lang="ts">
+// FIXME: remove class with open prof panel and then trying to go back in the panel throws error (probably will have to watch class removal and force a reset?)
 import Vue from 'vue'
 import { Component, Prop } from 'vue-property-decorator'
 

@@ -127,6 +127,7 @@
 </template>
 
 <script lang="ts">
+// FIXME: set level to empty breaks shit
 import Vue from 'vue'
 import { Component, Prop } from 'vue-property-decorator'
 

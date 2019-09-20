@@ -1,54 +1,121 @@
-OK - Fazer subscription de stats e misc (de uma maneira que o dado possa ser alterado e salvo)
-OU
-OK - Fazer uma injecao especial que pode ser removida ao remover o pai
 
-OK - Testar stat injection/sub (no esquema de indexacao do stat)                                                
-OK - Remover fairy nao ta removendo plugin (e o resto dos subs?)
-OK - deal with ability scores/attributes addups in fairy   
-    - deal with multiple ones
-OK - i think feeble doesnt work like it should
-    OK - i have to clear async resources, they should only be a repository of async data. metadata should be fetched form static resources
+Sheet:
+  Now:
+    COMPONENTS
+    ☐ Proficiencies
+      ☐ Expertise
+      ☐ Passive Perception
+        ☐ Its not working without checked proficiency (have to download previously all skills)
+    ☐ Equipment
+      ☐ Detect if is proficient with weapon when calculating attacks_spellcasting modifier
+      ☐ when there were duplicates (like longsword choosen from bard and a input longsword) indicate the origin of each item
+    ☐ Spells
+      ✔ nao ta dando pra remover spells que eu inseri @done(19-09-20 17:01)
+      ☐ Rever choose spell level
+      ☐ Nao ta mudando o slots extended ao cast spell
+        ☐ Ver se alterar o input ta resetando o valor realmente (e permitindo o spell casting)
+      ✔ Rever spells derivados como os de Infernal Legacy (especificamente o regime de casting deles) @done(19-09-20 17:00)
+      ☐ Add damage spells to ATTACKS_SPELLCASTING (equipment)
+    STRUCTURE
+    ☐ Automatically sync some stuff com init or load
+      ☐ Skills
+      ☐ Abilities
+      ☐ Saves
+    ☐ Block resources
+      Basicamente a ideia de que um resource pode ser blocked por um periodo de tempo. Esse periodo pode ser nao definido ou 
+      por um intervalo especifico. Vai ser um campo _block na sheet (static), um map. Uma key padrão vai ser "unknown", para
+      todos os recursos congelados por tempo não determinado. Outras keys vão ser o "short_rest" ou "long_rest", denominando
+      recursos que sao resetados com descansos.
+      ☐ Como fica o caso de um recurso-pai estar bloqueado? Pois todos os filhos deveriam ficar inativos em resposta
+      ☐ Adicionar funcionalidade de block
+        ☐ Block itens (ao inves de remover)
+        ☐ Block spells (como os derivados ratial traits) when casted
+        ☐ Block features (talvez ainda colocar um global que define se pode ou nao bloquear features - pode ser util depois)
+        ☐ Blocked resources should appear more discretly
+          ☐ Spells
+          ☐ Itens
+          ☐ Features
+      ☐ Adicionar funcionalidade de unblock
+    DATA PERSISTENCE
+      ☐ Save
+      ☐ Load
+        ✔ Misc @done(19-09-20 17:11)
+        ☐ Attributes
+        ☐ Metas (stats, proficiencies, features, spells, equipment)
+  Next:
+    COMPONENTS
+    ☐ Ability Score
+      ☐ adicionar indicativo dos bonus/onus em cada ability score
+    ☐ fix style inspiration and proficiency bonus
+    STRUCTURE
+    ☐ Subscriptions
+      ☐ what if two shit subscribe/inject a ac??
+    ☐ Better Block resources
+      ☐ Lidar com a questão de bloquera rum resource por X dias ou X minutos (como levar em conta o tempo in-game?)
+    DATA PERSISTENCE
+    ☐ History of interactions
+    PERFORMANCE
+    ☐ UNCHECK a check proficiency in the middle of work (fetching probably, cancel fetching)
+  Future:
+    COMPONENTS
+    ☐ Component to roll some shit?
+    ☐ Component (plugin?/indicator?) to deal with disadvantage/advantage on rolls
+    STRUCTURE
+    ☐ Resource activeness/modifications
+      ☐ deal with weapons properties/restrictions
+  
+Encounter Simulator:
+  Now:
+    COMPONENTS
+    ☐ Characters
+      ☐ Add character
+        ☐ From sheet
+        ☐ From stat block
+      ☐ Remover character
+    ☐ Simulation
+      ☐ Basic
+        ☐ Get avearege damage per round (based on attacks_spellcasting of characters) sum that and output
+  Next:
+    CONCEPT
+    ☐ Remove character after X interval
+  Future:
+    ☐ Add Positioning
+      ☐ Register initial position
+      ☐ Register movements during simulation
+      ☐ How to decide who to attack?
+        ☐ Proximity
+        ☐ Remaining life (or how much life looks life the possible targets have)
 
-OK - ta dando xabu adicionar skill e depois remover
-OK - implementar o defrag (provavelmente criar um index de _ids pra saber se precisa desfragmentar alguma coisa q o q especificamente, ai eu mesmo os q tiverem repetidos e só removo todos menos o primeiro)
-
-OK - Check a proficiency, uncheck and check again throws a error
-
-- add passive perception
-    - Its not working without checked proficiency (have to download previously all skills)
-OK - add proficiency panel
-OK - add combat shit
-OK - add equipment
-OK - add features
-
-OK - virtual is not showing proper quantity
-OK - remove is DISCARTING item
-OK - update async quantity doesnt update virtual one
-OK - adicionar equip, remover equip, adicionar equip e TENTAR remover da erro
-
-- add spells
-    OK - nao ta dando pra remover spells que eu inseri
-    - rever choose spell level
-    - nao ta mudando o slots expended ao cast spell
-    - rever spells como os derivados de Infernal Legacy, o como eles deveriam ser castados (tipo, 1 cast por long rest, onde isso fica registrado)
-
-- save
-- load
-
-- add expertise
-- add damage spells to attacks_spellcasting
-- detect if is proficient with weapon when calculating attacks_spellcasting modifier
-- when there were duplicates (like longsword choosen from bard and a input longsword) indicate the origin of each item
-
-- ERROR: adicionar handaxe, adiciona longsword, adiciona handaxe, adiciona longsword ACABA SOMANDO +1 NO HANDAXE -> (handaxe x3, longsword x1)
-
-- fix style inpiration and proficiency bonus
-- remove class with open prof panel and then trying to go back in the panel throws error
-
-- UNCHECK a check proficiency in the middle of work (fetching probably)
-- set level to empty breaks shit
-- what if two shit subscribe/inject a ac??
-- adicionar indicativo dos bonus/onus em cada ability score
-- deal with disadvantage on rolls
-- deal with weapon props restrictions
-
+Initiative Tracker:
+  Now:
+    COMPONENTS
+    ☐ Characters
+      ☐ Add character
+        ☐ From name/initiative bonus (usually DEX + others)
+        ☐ From a existing SHEET
+      ☐ Remove character
+      ☐ Roll for character
+      ☐ Input a roll
+      ☐ Link (a:href) to:
+        ☐ SHEET when existing
+        ☐ Statblock when existing (and referenced)
+      ☐ Show combat stats
+        ☐ Show current hitpoints
+          ☐ Edit current hitpoints
+        ☐ Show AC
+        ☐ Show saves
+        ☐ Show ability scores
+    ☐ Reorder track
+      ☐ DESC
+      ☐ ASC
+      ☐ Temporarly change the position of a character
+    STRUCTURE
+  Next:
+    COMPONENTS
+    ☐ Add temporary hitpoints to UI
+    STRUCTURE
+    ☐ Share data with SHEET, showing things like
+      ☐ Current conditions
+      ☐ Current HP
+      ☐ What else?
+  Future:

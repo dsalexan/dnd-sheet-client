@@ -305,7 +305,7 @@ export const sheet: Module<SheetState, RootState> = {
             skill = skill.filter((r: any) => r._type === 'skills' && (r._id === slug || ['@' + slug, slug].includes(r.slug)))
             skill = skill[0]
 
-            // TODO maybe download previously all abilities and skills as reference
+            // TODO: maybe download previously all abilities and skills as reference
             if (skill === undefined) return undefined
 
             const proficient = !!getters.proficient_skill(slug)
@@ -1010,7 +1010,7 @@ export const sheet: Module<SheetState, RootState> = {
                     result = [{
                         from: arr
                     }]
-                    // TODO Lidar com commands e answers
+                    // TODO: Lidar com commands e answers
                     // let _id = request._id
                     // let answers = (state.async.answers || {})[_id]
 
@@ -1693,6 +1693,7 @@ export const sheet: Module<SheetState, RootState> = {
 
                 state.static.equipment.splice(index, 1)
             } else {
+                //FIXME: adicionar handaxe, adiciona longsword, adiciona handaxe, adiciona longsword ACABA SOMANDO +1 NO HANDAXE -> (handaxe x3, longsword x1)
                 if (index === undefined) index = state.static.equipment.length
 
                 // PREPARE OPTIONS
