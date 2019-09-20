@@ -32,7 +32,7 @@
                     :entries="spells_left_to_know" 
                     :disabled="spell_slots(lvl) <= 0"
                     :input="spells_left_to_know"
-                    :expended="sheet.spells.slots[lvl]"
+                    :expended="sheet.static.attributes.spell_slots[lvl] || 0"
                     @expended="(event, level, force) => expendSlot(event, level || lvl, force)"
                     @input="(index, value) => set_spells({index, value, level: lvl}) "></dnd-spell-slot>
             </div>
@@ -45,7 +45,7 @@
                     :otherslots="other_spell_slots(lvl)"
                     :disabled="spell_slots(lvl) <= 0"
                     :input="spells_left_to_know"
-                    :expended="sheet.spells.slots[lvl]"
+                    :expended="sheet.static.attributes.spell_slots[lvl]"
                     @expended="(event, level, force) => expendSlot(event, level || lvl, force)"
                     :spells="spells_by_level(lvl)"
                     @input="(index, value) => set_spells({index, value, level: lvl})"></dnd-spell-slot>
@@ -58,7 +58,7 @@
                     :otherslots="other_spell_slots(lvl)"
                     :disabled="spell_slots(lvl) <= 0"
                     :input="spells_left_to_know"
-                    :expended="sheet.spells.slots[lvl]"
+                    :expended="sheet.static.attributes.spell_slots[lvl]"
                     @expended="(event, level, force) => expendSlot(event, level || lvl, force)"
                     :spells="spells_by_level(lvl)"
                     @input="(index, value) => set_spells({index, value, level: lvl})"></dnd-spell-slot>
@@ -153,13 +153,13 @@ export default class Spellcasting extends Vue {
         const spellcasting = this.spellcasting
         if (spellcasting === undefined) return 0
 
-        const others = _.pickBy(spellcasting.mechanics.spell_slots, (value, key) => key != spell_level)
+        const others = _.pickBy(spellcasting.mechanics.spell_slots, (value, key: number) => key !== spell_level)
         const total_others = _.reduce(others, (sum, val, key) => sum + val, 0)
 
         let expent_others = 0
         for (const i in [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
             if (parseInt(i, 10) > spell_level)
-                expent_others += (this.sheet.spells.slots[i] || 0)
+                expent_others += (this.sheet.static.attributes.spell_slots[i] || 0)
         }
 
         return total_others - expent_others
@@ -171,8 +171,8 @@ export default class Spellcasting extends Vue {
         const arr = []
         for (let level = minimum; level <= 9; level++) {
             const slots = this.spell_slots(level)
-            if (slots > 0){
-                if (slots > this.sheet.spells.slots[level]) {
+            if (slots > 0) {
+                if (slots > (this.sheet.static.attributes.spell_slots[level] || 0)) {
                     arr.push(level)
                 }
             } else {
@@ -219,11 +219,11 @@ export default class Spellcasting extends Vue {
     }
 
     get character_class() {
-        return this.sheet.virtual.class
+        return this.sheet.virtual.misc.class
     }
 
     get spellcasting_class() {
-        const classe = this.sheet.virtual.class
+        const classe = this.sheet.virtual.misc.class
         if (classe === undefined) return undefined
 
         return classe.mechanics.spellcasting ? Resource.string(classe) : undefined
@@ -236,7 +236,7 @@ export default class Spellcasting extends Vue {
         return spellcasting.mechanics.cantrips_known || 0
     }
 
-    get cantrips_left_to_know(){
+    get cantrips_left_to_know() {
         const total = this.cantrips_known
         if (total === 0) return 0
 
@@ -245,35 +245,45 @@ export default class Spellcasting extends Vue {
 
     get spells_left_to_know() {
         const spellcasting = this.spellcasting
-        if (spellcasting === undefined) return 0
+        const spells = this.sheet.virtual.spells
+
+        if (spellcasting === undefined || spells === undefined) return 0
 
         const total = spellcasting.mechanics.spells_known || 0
         if (total === 0) return 0
 
-        let current = 0
-        for (const level in this.sheet.virtual.spells) {
-            if (parseInt(level, 10) > 0)
-                current += this.spells_by_level(level, true).length
-        }
+        const current = spells.filter((spell: any) => {
+            const countable_spell = (spell.mechanics || {}).count_as_spell !== false
+            const spell_level = (spell.mechanics || {}).level || 0
+
+            return countable_spell
+        }).length
 
         return total - current
     }
 
     spells_by_level(level: number | string, countable: boolean = false) {
-        if (this.sheet.virtual.spells === undefined) return []
+        if (this.sheet.virtual.spells === undefined || this.sheet.virtual.spells.length === 0) return []
 
-        if (countable) return this.sheet.virtual.spells[level].filter(s => (s.mechanics || {}).count_as_spell !== false)
-        else return this.sheet.virtual.spells[level]
+        const filtered = this.sheet.virtual.spells.filter((spell: any) => {
+            const countable_spell = (spell.mechanics || {}).count_as_spell !== false
+            const spell_level = (spell.mechanics || {}).level || 0
+
+            if (spell_level === level) return countable ? countable_spell : true
+            return false
+        })
+
+        return filtered
     }
 
-    expendSlot(event: any, level: string | number, force_number: boolean = false){
+    expendSlot(event: any, level: string | number, force_number: boolean = false) {
         if (force_number) {
-            this.sheet.spells.slots[level] = parseInt(event || 0, 10)
+            this.sheet.static.attributes.spell_slots[level] = parseInt(event || 0, 10)
             return
         }
         console.log('%c CAST SPELL ', Styles.GREEN, event)
 
-        if (level > 0) this.sheet.spells.slots[level]++
+        if (level > 0) this.sheet.static.attributes.spell_slots[level] = (this.sheet.static.attributes.spell_slots[level] || 0) + 1
     }
 
     handleChoiceSpell() {
@@ -330,7 +340,7 @@ export default class Spellcasting extends Vue {
                 display: flex
                 margin: auto
                 
-                div
+                & /deep/ div
                     display: flex
                     flex-direction: column-reverse
                     margin: auto

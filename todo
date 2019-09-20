@@ -15,7 +15,7 @@ OK - implementar o defrag (provavelmente criar um index de _ids pra saber se pre
 OK - Check a proficiency, uncheck and check again throws a error
 
 - add passive perception
-    - Its not workings, even when i check perception as proficient
+    - Its not working without checked proficiency (have to download previously all skills)
 OK - add proficiency panel
 OK - add combat shit
 OK - add equipment
@@ -27,6 +27,10 @@ OK - update async quantity doesnt update virtual one
 OK - adicionar equip, remover equip, adicionar equip e TENTAR remover da erro
 
 - add spells
+    OK - nao ta dando pra remover spells que eu inseri
+    - rever choose spell level
+    - nao ta mudando o slots expended ao cast spell
+    - rever spells como os derivados de Infernal Legacy, o como eles deveriam ser castados (tipo, 1 cast por long rest, onde isso fica registrado)
 
 - save
 - load

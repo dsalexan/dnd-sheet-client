@@ -1,5 +1,5 @@
 <template>
-    <div class="dnd-spell-slot">
+    <div class="dnd-spell-slot" :class="{disabled}">
         <div class="header">
             <div class="level">{{ level == -1 ? '-' : level }}</div>
             <div class="title">
@@ -50,15 +50,51 @@
             </div>
         </q-list>
 
-        <x-input
-            type="mention"
-            class="input"
+        <x-input 
+            :style="`display: ${mention ? 'none' : ''}`"
+
             ref="input"
+            class="input"
+            placeholder="Input"
+            type="text"
+            @input="handleInput"
             :disabled="disabled"
-            @input="input_value = $event"
-            :source="remoteSearch"
-            :mentionOptions="mentionOptions"
+            
             @keypress.enter="handleEnter"/>
+
+        <q-select
+            :style="`display: ${mention ? '' : 'none'}`"
+
+            :value="select_value_c"
+            @input="handleSelect"
+
+            class="input"
+            ref="select"
+            use-input
+            hide-selected
+            fill-input
+            input-debounce="0"
+            placeholder="Input"
+            :options="source"
+            @filter="remoteSearch"
+            :option-value="opt => opt === null ? null : name(opt)"
+            :option-label="opt => opt === null ? '(Unknown Spell)' : name(opt)"
+        >
+            <template v-slot:no-option>
+                <q-item>
+                    <q-item-section class="text-grey">
+                    No results
+                    </q-item-section>
+                </q-item>
+            </template>
+            <template v-slot:append>
+                <q-icon
+                    class="cursor-pointer"
+                    name="clear"
+                    @click.stop="handleInput(null)"
+                />
+            </template>
+        </q-select>
     </div>
 </template>
 
@@ -70,7 +106,8 @@ import { Component, Prop } from 'vue-property-decorator'
 import axios from 'axios'
 
 import XInputVue from '../../utils/XInput.vue';
-import SpellSlotItemVue from '../SpellSlotItem.vue';
+import SpellSlotItemVue from './SpellSlotItem.vue';
+import { Resource, Mention } from '../../../services';
 
 @Component({
     components: {
@@ -90,6 +127,47 @@ export default class SpellSlot extends Vue {
     @Prop({default: 0}) otherslots!: number
 
     input_value: string = ''
+    select_value: string = ''
+    mention: boolean = false
+    source: any[] = []
+
+    get select_value_c() {
+        return '@' + this.select_value
+    }
+
+    name(value: any) {
+        return Resource.string(value)
+    }
+
+    handleInput(value: string) {
+        this.mention = (value || '')[0] === '@'
+
+        if (this.mention) {
+            // @ts-ignore
+            this.$refs.select.$el.style.display = ''
+            // @ts-ignore
+            this.$refs.select.$el.querySelector('input').focus()
+        }
+
+        this.input_value = value
+    }
+
+    remoteSearch(val: string, update: () => {}, abort: () => void) {
+        if (!this.mention) abort()
+
+        Mention.search(val.substr(1), 'spell', {query: this.$props.query}).then((data) => {
+            this.source = data
+            update()
+        })
+    }
+
+    handleSelect(value: any) {
+        this.$emit('input', undefined, Resource.minimal(value))
+        this.input_value = ''
+        this.select_value = ''
+
+        this.mention = false
+    }
 
     get empties() {
         return (this.$props.level === 0 || this.$props.total > 0) ? this.$props.input : 0
@@ -123,7 +201,7 @@ export default class SpellSlot extends Vue {
         // align-items: center
 
         .header
-            $v-padding: 19px
+            $v-padding: 18px
             $h-padding: 25px
 
             display: flex
@@ -136,7 +214,7 @@ export default class SpellSlot extends Vue {
                 font-weight: bold
                 color: #444
                 padding: 15px 10px
-                border: 2px solid #555
+                border: 1.5px solid #555
                 border-radius: $radius*1 $radius/2 $radius*1 0
                 margin-right: -1px
                 z-index: 1
@@ -153,7 +231,7 @@ export default class SpellSlot extends Vue {
 
                 .label
                     font-weight: bold
-                    padding: $v-padding $h-padding
+                    padding: 16.5px 25px
 
                 .inputs
                     height: 100%
@@ -162,10 +240,11 @@ export default class SpellSlot extends Vue {
                     border-radius: 0 $radius*0.75 $radius*0.75 0
                     padding: 0 $gutter
 
-                    > div
+                    > /deep/ div.x-input
                         height: 100%
                         display: flex
                         flex-direction: column
+                        justify-content: space-around
 
                         &:first-of-type
                             border-right: 1px solid #ccc
@@ -181,7 +260,7 @@ export default class SpellSlot extends Vue {
                             // background: green
                             flex-grow: 1
 
-                        > /deep/ input
+                        > input
                             border: 0
                             background: transparent
                             width: 100%
@@ -189,12 +268,12 @@ export default class SpellSlot extends Vue {
                             flex-grow: 1
                             text-align: center
                             font-size: 2em
-                            margin-bottom: 3px
+                            // margin-bottom: 3px
 
-                        > /deep/ label
+                        > label
                             font-size: 8px
-                            margin-top: 6px
-                            margin-bottom: 2px
+                            margin-top: 5px
+                            // margin-bottom: 2px
 
         .body
             position: relative
@@ -202,7 +281,7 @@ export default class SpellSlot extends Vue {
             border-top: 0
             border-bottom: 0
             width: calc(95% - #{$gutter} *4)
-            margin-top: -10px
+            margin-top: -15px
             padding: #{$gutter} 0
             margin-right: 2%
             margin-left: auto
@@ -227,7 +306,7 @@ export default class SpellSlot extends Vue {
                     cursor: auto !important
 
 
-        > div.input
+        > /deep/ div.input
             width: 100%
             border: 1px solid #000
             border-top: 0
@@ -238,7 +317,7 @@ export default class SpellSlot extends Vue {
             // padding: 0 $gutter
             // padding-top: $gutter/2
             
-            > /deep/ div div.content-editable
+            > input
                 font-size: 0.9em
                 border: 0
                 width: 100%
@@ -247,9 +326,64 @@ export default class SpellSlot extends Vue {
                 padding: 10px 20px
                 border-radius: 0 0 $gutter $gutter
 
-                &:disabled
+                &:disabled, &.disabled
                     background-color: white
+                    color: transparent
+                    cursor: default !important
 
+                    &::placeholder
+                        color: transparent
+        
+        > /deep/ div.q-field.q-select
+            @import '@/assets/sass/q-select.sass'
+
+            calc(95% - 10px *4)
+            margin-right: 2%
+            margin-left: auto
+
+            font-size: 0.9em
+            border: 0
+            background-color: #f7f7f7
+            padding: 10px 20px
+            padding-right: 10px
+            border: 1px solid #000
+            border-top: 0
+            border-radius:  0  0 $radius $radius
+            text-align: center
+            justify-content: center
+                
+            .q-field__inner
+                .q-field__control
+                    min-height: auto
+                    height: 18.9px
+
+                    .q-field__control-container
+                        min-height: 18.9px
+                        height: 18.9px
+
+                        .q-field__native
+                            padding-top: 0
+                            min-height: auto
+
+                            input
+                                line-height: 18.9px
+                                height: 18.9px
+                                min-height: 18.9px
+                                
+                                &::placeholder
+                                    color: #333
+
+            &:not(.mention)
+                .q-field__inner
+                    .q-field__control
+                        .q-field__append
+                            // display: none
+
+        &.disabled            
+            .header
+                .level
+                    font-weight: 300
+                    border: 1.5px solid #555
 </style>
 
 

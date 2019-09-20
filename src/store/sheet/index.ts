@@ -65,7 +65,8 @@ export const empty: SheetState = {
             death_saves: {
                 successes: [],
                 failures: []
-            }
+            },
+            spell_slots: {}
         },
         stats: {
             _: {}
@@ -74,6 +75,10 @@ export const empty: SheetState = {
         equipment: [],
         features: [],
         spells: [],
+        rest: { // stuff blocket until next rest
+            short: [],
+            long: []
+        },
         _index: {
             subscriptions: {},
             injections: {},
@@ -109,13 +114,18 @@ export const empty: SheetState = {
             death_saves: {
                 successes: [],
                 failures: []
-            }
+            },
+            spell_slots: {}
         },
         stats: {},
         proficiencies: [],
         equipment: [],
         features: [],
         spells: [],
+        rest: { // stuff blocket until next rest
+            short: [],
+            long: []
+        },
         _index: {}
     },
     virtual: {
@@ -147,13 +157,18 @@ export const empty: SheetState = {
             death_saves: {
                 successes: [],
                 failures: []
-            }
+            },
+            spell_slots: {}
         },
         stats: {},
         proficiencies: [],
         equipment: [],
         features: [],
         spells: [],
+        rest: { // stuff blocket until next rest
+            short: [],
+            long: []
+        },
         _index: {}
     },
     plugins: [],
@@ -460,6 +475,29 @@ export const sheet: Module<SheetState, RootState> = {
 
             return ref
         },
+        spellcasting: (state, getters) => {
+            const classe: Resource = (state.virtual.misc.class as unknown) as Resource
+            const features = state.virtual.features
+
+            if (classe === undefined || features === undefined) return undefined
+            const spellcasting = classe.mechanics.spellcasting
+
+            if (typeof spellcasting === 'string') {
+                if (spellcasting[0] === '@') {
+                    for (const feature of features) {
+                        if (feature.slug === spellcasting) {
+                            return feature
+                        }
+                    }
+                } else {
+                    throw Error('Unimplemented')
+                }
+            } else if (typeof spellcasting === 'object') {
+                throw Error('Unimplemented')
+            }
+
+            return undefined
+        },
 
         abilities: () => {
             const data: Array<{
@@ -704,9 +742,9 @@ export const sheet: Module<SheetState, RootState> = {
                 target.misc.hair_color = data.misc.hair_color
                 target.misc.skin_color = data.misc.skin_color
                 target.misc.inspiration = data.misc.inspiration
-                // // attributes
-                // // ability scores
-                // target.attributes.ability_scores = data.attributes.ability_scores
+                // attributes
+                // ability scores
+                Vue.set(target.attributes, 'ability_scores', data.attributes.ability_scores)
                 // // hp
                 // target.attributes.hp.rolls = data.attributes.hp.rolls
                 // target.attributes.hp.current = data.attributes.hp.current
@@ -1848,6 +1886,57 @@ export const sheet: Module<SheetState, RootState> = {
                 dispatch('STACK_RESOURCE', {resource})
 
                 console.log('%c SET STATS ', Styles.BOLD, value, '->', target)
+            }
+        },
+        async SET_SPELLS({ state, dispatch }, { index, value, base = {}, res, injected }) {
+            if (value === undefined) {
+                let resource
+                if (index === undefined) {
+                    index = res._index
+                    resource = res
+                } else {
+                    // @ts-ignore
+                    resource = state.static.spells[index]
+                }
+
+                const _data = resource._data
+
+                console.log('REMOVE SPELL', index, _data, '->', undefined)
+                if (state.static.spells[index] === undefined) debugger
+                // @ts-ignore
+                const LEFTOVER = ResourceService.leftover(state.static.spells[index], state)
+
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    await dispatch('REMOVE_RESOURCE', LEFTOVER)
+
+                state.static.spells.splice(index, 1)
+            } else {
+                if (index === undefined) index = state.static.spells.length
+
+                // PREPARE OPTIONS
+                const options = {
+                    ...{
+                        path: pathToString(['spells', index]),
+                        origin: 'input',
+                        source: 'spells',
+                        // type // IDEM
+                        parent: 'custom',
+                        index
+                    },
+                    ...base
+                }
+
+                // MAKE RESOURCE
+                const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
+
+                // SET STATIC
+                state.static.spells.splice(index, 1, resource)
+
+                if (injected) state._injected.push(injected)
+                // PUSH TO ASYNC STACK
+                dispatch('STACK_RESOURCE', {resource})
+
+                console.log('%c SET SPELL ', Styles.BOLD, value, '->', index)
             }
         },
         async SET_PLUGINS({ state, dispatch }, { index, value, base= {}, res, injected }) {

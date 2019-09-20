@@ -189,7 +189,7 @@ export default class Equipment extends Vue {
     mention: boolean = false
     source: any[] = []
 
-    handleCoin(slug: string, quantity: number){
+    handleCoin(slug: string, quantity: number) {
         this.$emit('coin', quantity, slug)
     }
 
@@ -234,7 +234,7 @@ export default class Equipment extends Vue {
         }
     }
 
-    quantityItem(item: any){
+    quantityItem(item: any) {
         return item.meta === 'command' ? undefined : `x${this.quantity(item)}`
     }
 

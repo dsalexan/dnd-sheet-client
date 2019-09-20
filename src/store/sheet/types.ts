@@ -65,6 +65,9 @@ export interface Sheet {
         death_saves: {
             successes: boolean[]
             failures: boolean[]
+        },
+        spell_slots: {
+            [level: number]: number
         }
     },
     stats: {
@@ -90,6 +93,10 @@ export interface Sheet {
         hp: Dice
     }
     */
+    block: { // stuff blocket until something happens
+        short: [],
+        long: []
+    }
     _index: {
         injections?: {
             [_uuid: string]: Date

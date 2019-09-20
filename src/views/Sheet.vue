@@ -10,10 +10,11 @@
             <div v-if="state" style="max-height: 600px; overflow-y: auto; background: #333; color: #ddd; padding: 10px 25px;">
                 <pre>{{pretty_sheet}}</pre>
             </div>
+
             <dnd-header />
             <dnd-main />
-            <!-- <dnd-header type="physical" />
-            <dnd-spellcasting type="spellcasting" /> -->
+            <!-- <dnd-header type="physical" /> -->
+            <dnd-spellcasting type="spellcasting" />
         </form>
     </div>
 </template>
@@ -33,13 +34,14 @@ import { NotifyLevel, NotifySettings } from '@/bus/types'
 
 import Header from '@/components/dnd/sheet/Header.vue'
 import Main from '@/components/dnd/sheet/Main.vue'
-// import Spellcasting from '@/components/dnd/Spellcasting.vue'
+import Spellcasting from '@/components/dnd/sheet/Spellcasting.vue'
 
 @Component({
     // @ts-ignore
     components: {
         'dnd-header': Header,
-        'dnd-main': Main
+        'dnd-main': Main,
+        'dnd-spellcasting': Spellcasting
     },
     computed: {
         ...mapState(['sheet'])
@@ -103,7 +105,7 @@ export default class Sheet extends Vue {
             this.$store.state.sheet._observer[_uuid].push(unwatch)
         })
 
-        this.load('5d77ffcc936fde6900ab2dba')
+        this.load('5d83bbfa800ea254f42477c0')
     }
 
     logState(pretty: boolean = false) {
