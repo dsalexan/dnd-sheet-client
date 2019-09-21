@@ -5,6 +5,7 @@ import Vue from 'vue'
 // @ts-ignore
 import utils from '@/utils/resources'
 import { Resource } from '@/store/sheet/types';
+import { Styles } from '@/console';
 
 
 function delay(ms: number) {
@@ -87,6 +88,21 @@ export default class Mention {
         } else {
             throw new Error(`Unimplemented resolve mention for <${mention}>`)
         }
+    }
+
+    public static check(state: any, meta: string, target: string, res: Resource, type: string = 'static') {
+        let parent = state[type][meta][target]
+        if (meta === 'stats')
+            parent = state[type].stats._[target]
+
+        const resource = parent[target]
+
+        if (resource === undefined || resource._uuid !== res._uuid) {
+            console.log('%c WARNING ', Styles.AMBAR, 'Resource indicated is not the one in position likely was already removed by other means > ', target, res._data, res, 'in loco', resource)
+            return false
+        }
+
+        return true
     }
 
     public static set(resource: Resource, root: any) {

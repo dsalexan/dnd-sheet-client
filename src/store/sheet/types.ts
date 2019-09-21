@@ -80,6 +80,7 @@ export interface Sheet {
     equipment: Resource[] | AsyncResource[]
     features: Resource[] | AsyncResource[]
     spells: Resource[] | AsyncResource[]
+    [key: string]: any
     /*
     example:
     stats: {
@@ -93,7 +94,8 @@ export interface Sheet {
         hp: Dice
     }
     */
-    block: { // stuff blocket until something happens
+    _block: { // stuff blocket until something happens
+        unknown: [],
         short: [],
         long: []
     }

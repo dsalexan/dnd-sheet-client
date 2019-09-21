@@ -75,7 +75,8 @@ export const empty: SheetState = {
         equipment: [],
         features: [],
         spells: [],
-        rest: { // stuff blocket until next rest
+        _block: { // stuff blocket until next rest
+            unknown: [],
             short: [],
             long: []
         },
@@ -122,7 +123,8 @@ export const empty: SheetState = {
         equipment: [],
         features: [],
         spells: [],
-        rest: { // stuff blocket until next rest
+        _block: { // stuff blocket until next rest
+            unknown: [],
             short: [],
             long: []
         },
@@ -165,7 +167,8 @@ export const empty: SheetState = {
         equipment: [],
         features: [],
         spells: [],
-        rest: { // stuff blocket until next rest
+        _block: { // stuff blocket until next rest
+            unknown: [],
             short: [],
             long: []
         },
@@ -1597,6 +1600,96 @@ export const sheet: Module<SheetState, RootState> = {
             } else {
                 console.log('%c (Ripple) NEST ', Styles.GREEN, resource._data, resource)
                 dispatch('NEST_RESOURCES', [resource])
+            }
+        },
+        async SET_RESOURCE({ state, dispatch }, { meta, index, target, value, base= {}, quantity, res, injected }: { meta: string, [key: string]: any }) {
+            if (meta === undefined) throw new Error('Unimplemented SET_RESOURCE without meta information')
+
+            if (value === undefined) {
+                let resource
+                if (target === undefined && index === undefined) {
+                    if (['equipment', 'proficiencies', 'spells'].includes(meta)) index = res._index
+                    else if (['stats', 'misc'].includes(meta)) target = res._type
+
+                    // double-check if resource is really the one to be removed
+                    if (!Mention.check(state, meta, target, res)) return
+
+                    resource = res
+                } else {
+                    // @ts-ignore
+                    resource = state.static[meta][target]
+                }
+
+                const _data = resource._data
+
+                if (quantity) {
+                    const [static_target, static_prop, static_mention] = Mention.resolve('@me/' + resource._path, state, true, false)
+                    if (!('mechanics' in static_target[static_prop])) static_target[static_prop].mechanics = {quantity: 1}
+                    static_target[static_prop].mechanics.quantity += quantity
+
+                    // atualizar qtd in async
+                    const [async_target, async_prop, async_mention] = Mention.resolve('@me/' + resource._path, state, true, true)
+                    if (!('mechanics' in async_target[async_prop])) async_target[async_prop].mechanics = {quantity: 1}
+                    async_target[async_prop].mechanics.quantity = static_target[static_prop].mechanics.quantity
+
+                    // make virtual reload
+                    const virtual = state._index.virtual[resource._uuid]
+                    const update_key = `__update__${uuid()}__`
+                    Vue.set(state.virtual[meta][virtual._index], update_key, uuid())
+                    Vue.delete(state.virtual[meta][virtual._index], update_key)
+
+                    console.log(`%c ADD/SUBTRACT ${meta.toUpperCase()} `, Styles.BOLD, quantity, '->', async_target[async_prop].mechanics.quantity, resource._data, resource)
+                    if (static_target[static_prop].mechanics.quantity > 0) return
+                }
+
+                console.log(`%c REMOVE ${meta.toUpperCase()} `, Styles.BOLD, target || index, _data, '->', undefined)
+
+                // @ts-ignore
+                const LEFTOVER = ResourceService.leftover(state.static[meta][target], state)
+
+                if (state._index.async[LEFTOVER._uuid] !== undefined)
+                    dispatch('REMOVE_RESOURCE', LEFTOVER)
+
+                if (['equipment', 'proficiencies', 'spells'].includes(meta)) state.static[meta].splice(index, 1)
+                else if (['misc'].includes(meta)) Vue.set(state.static[meta], target, undefined)
+                else if (meta === 'stats') {
+                    // @ts-ignore
+                    Vue.set(state.static.stats._, target, undefined)
+                    Vue.set(state.static.stats, target, undefined)
+                }
+            } else {
+                // FIXME: adicionar handaxe, adiciona longsword, adiciona handaxe, adiciona longsword ACABA SOMANDO +1 NO HANDAXE -> (handaxe x3, longsword x1)
+                if (index === undefined) index = state.static[meta].length
+
+                // PREPARE OPTIONS
+                const options = {
+                    ...{
+                        path: pathToString([meta, target || index]),
+                        origin: 'input',
+                        source: meta,
+                        type: target,
+                        parent: 'custom'
+                    },
+                    ...base
+                }
+
+                // MAKE RESOURCE
+                const resource = await dispatch('CREATE_RESOURCE', { value: meta === 'stats' ? target : value, ...options })
+
+                // SET STATIC
+                if (['equipment', 'proficiencies', 'spells'].includes(meta)) state.static[meta].splice(index, 1, resource)
+                else if (['misc', 'stats'].includes(meta)) Vue.set(state.static[meta], target, resource)
+                else if (meta === 'stats') {
+                    // @ts-ignore
+                    Vue.set(state.static.stats._, target, resource)
+                    Vue.set(state.static.stats, target, value)
+                }
+
+                if (injected) state._injected.push(injected)
+                // PUSH TO ASYNC STACK
+                dispatch('STACK_RESOURCE', {resource})
+
+                console.log(`%c SET ${meta.toUpperCase()} `, Styles.BOLD, value, '->', target || index, resource)
             }
         },
         async SET_MISC({ state, dispatch }, { target, value, base= {}, res, injected }) {
