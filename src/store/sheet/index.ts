@@ -467,6 +467,8 @@ export const sheet: Module<SheetState, RootState> = {
             }
 
             const features: Resource[] = state.virtual.features
+            if (features.length === 0) return {}
+
             // console.log('%c TREE FEATURES RUNNING ', Styles.RED, features)
             const tree = list_to_tree([...features])
 
@@ -1387,17 +1389,42 @@ export const sheet: Module<SheetState, RootState> = {
                                 target = target[p]
                             }
 
-                            const _index: number = should_update ? virtual._index : target.length
+                            let _index: number = target.length
+                            if (should_update) {
+                                _index = virtual._index
+                            }
+
                             _path = pathToString([..._path, _index])
 
                             virtual._path = _path
                             virtual._index = _index
                         }
 
+                        if (virtual._index === undefined) {
+                            const _index = _.toPath(virtual._path).splice(-1)
+                            virtual._index = _index
+                        }
+
+                        // deal with filling empty spots
+                        if (['equipment', 'features', 'spells', 'plugins', 'proficiencies'].includes(virtual._source)) {
+                            const empties = (arr: any[]) => arr.reduce((x, y) => x - 1, arr.length)
+                            // @ts-ignore
+                            const parent_size = state.virtual[virtual._source].length - empties(state.virtual[virtual._source])
+
+                            if (virtual._index > parent_size) {
+                                console.log(`        READJUST INDEX BASE ON PARENT SIZE: ${parent_size} x _INDEX: ${virtual._index}`)
+
+                                virtual._index = parent_size
+                                const _path: any = _.toPath(virtual._path)
+                                _path[_path.length - 1] = virtual._index
+                                virtual._path = pathToString(_path)
+                            }
+                        }
+
                         Mention.set(virtual, state.virtual)
                         state._index.virtual[resource._uuid] = virtual
 
-                        console.log('    CORRECTING VIRTUAL POSITION', resource._data, resource._uuid, '->', virtual._uuid, resource._path, '->', virtual._path, virtual)
+                        console.log('    CORRECTING VIRTUAL POSITION', resource._data, resource._uuid, '->', virtual._uuid, resource._path, '->', virtual._path, virtual, `${should_update ? '(should_update)' : ''}`)
                     }
                 } else if (uuids.length > 1) {
                     if (id !== 'inactive_resource') {
@@ -1425,11 +1452,36 @@ export const sheet: Module<SheetState, RootState> = {
                                     target = target[p]
                                 }
 
-                                const _index: number = should_update ? virtual._index : target.length
+                                let _index: number = target.length
+                                if (should_update) {
+                                    _index = virtual._index
+                                }
+
                                 _path = pathToString([..._path, _index])
 
                                 virtual._path = _path
                                 virtual._index = _index
+                            }
+
+                            if (virtual._index === undefined) {
+                                const _index = _.toPath(virtual._path).splice(-1)
+                                virtual._index = _index
+                            }
+    
+                            // deal with filling empty spots
+                            if (['equipment', 'features', 'spells', 'plugins', 'proficiencies'].includes(virtual._source)) {
+                                const empties = (arr: any[]) => arr.reduce((x, y) => x - 1, arr.length)
+                                // @ts-ignore
+                                const parent_size = state.virtual[virtual._source].length - empties(state.virtual[virtual._source])
+    
+                                if (virtual._index > parent_size) {
+                                    console.log(`        READJUST INDEX BASE ON PARENT SIZE: ${parent_size} x _INDEX: ${virtual._index}`)
+    
+                                    virtual._index = parent_size
+                                    const _path: any = _.toPath(virtual._path)
+                                    _path[_path.length - 1] = virtual._index
+                                    virtual._path = pathToString(_path)
+                                }
                             }
 
                             Mention.set(virtual, state.virtual)
@@ -1602,13 +1654,13 @@ export const sheet: Module<SheetState, RootState> = {
                 dispatch('NEST_RESOURCES', [resource])
             }
         },
-        async SET_RESOURCE({ state, dispatch }, { meta, index, target, value, base= {}, quantity, res, injected }: { meta: string, [key: string]: any }) {
+        async SET_RESOURCES({ state, dispatch }, { meta, index, target, value, base= {}, quantity, res, injected }: { meta: string, [key: string]: any }) {
             if (meta === undefined) throw new Error('Unimplemented SET_RESOURCE without meta information')
 
             if (value === undefined) {
                 let resource
                 if (target === undefined && index === undefined) {
-                    if (['equipment', 'proficiencies', 'spells'].includes(meta)) index = res._index
+                    if (['equipment', 'proficiencies', 'features', 'spells'].includes(meta)) index = res._index
                     else if (['stats', 'misc'].includes(meta)) target = res._type
 
                     // double-check if resource is really the one to be removed
@@ -1650,7 +1702,7 @@ export const sheet: Module<SheetState, RootState> = {
                 if (state._index.async[LEFTOVER._uuid] !== undefined)
                     dispatch('REMOVE_RESOURCE', LEFTOVER)
 
-                if (['equipment', 'proficiencies', 'spells'].includes(meta)) state.static[meta].splice(index, 1)
+                if (['equipment', 'proficiencies', 'features', 'spells'].includes(meta)) state.static[meta].splice(index, 1)
                 else if (['misc'].includes(meta)) Vue.set(state.static[meta], target, undefined)
                 else if (meta === 'stats') {
                     // @ts-ignore
@@ -1677,7 +1729,7 @@ export const sheet: Module<SheetState, RootState> = {
                 const resource = await dispatch('CREATE_RESOURCE', { value: meta === 'stats' ? target : value, ...options })
 
                 // SET STATIC
-                if (['equipment', 'proficiencies', 'spells'].includes(meta)) state.static[meta].splice(index, 1, resource)
+                if (['equipment', 'proficiencies', 'features', 'spells'].includes(meta)) state.static[meta].splice(index, 1, resource)
                 else if (['misc', 'stats'].includes(meta)) Vue.set(state.static[meta], target, resource)
                 else if (meta === 'stats') {
                     // @ts-ignore
@@ -1692,346 +1744,23 @@ export const sheet: Module<SheetState, RootState> = {
                 console.log(`%c SET ${meta.toUpperCase()} `, Styles.BOLD, value, '->', target || index, resource)
             }
         },
-        async SET_MISC({ state, dispatch }, { target, value, base= {}, res, injected }) {
-            if (value === undefined) {
-                let resource
-                if (target === undefined) {
-                    target = res._type
-                    resource = res
-                } else {
-                    // @ts-ignore
-                    resource = state.static.misc[target]
-                }
-
-                const _data = resource._data
-                // @ts-ignore
-                const LEFTOVER = ResourceService.leftover(state.static.misc[target], state)
-
-                if (state._index.async[LEFTOVER._uuid] !== undefined)
-                    dispatch('REMOVE_RESOURCE', LEFTOVER)
-
-                Vue.set(state.static.misc, target, undefined)
-
-                console.log('%c REMOVE MISC ', Styles.BOLD, target, _data, '->', undefined)
-            } else {
-
-                // PREPARE OPTIONS
-                const options = {
-                    ...{
-                        path: `misc.${target}`,
-                        origin: 'input',
-                        source: 'misc',
-                        type: target,
-                        parent: 'custom'
-                    },
-                    ...base
-                }
-
-                // if (target in state.static.misc)
-                //     // @ts-ignore
-                //     await dispatch('UNINDEX_RESOURCE', state.static.misc[target])
-
-                // MAKE RESOURCE
-                const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
-
-                // SET STATIC
-                Vue.set(state.static.misc, target, resource)
-
-                if (injected) state._injected.push(injected)
-                // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', {resource})
-
-                console.log('%c SET MISC ', Styles.BOLD, value, '->', target)
-            }
+        async SET_MISC({dispatch}, args) {
+            await dispatch('SET_RESOURCES', { meta: 'misc', ...args })
         },
-        async SET_EQUIPMENT({ state, dispatch }, { index, value, base= {}, res, injected, quantity = false }) {
-            if (value === undefined) {
-                let resource
-                if (index === undefined) {
-                    index = res._index
-                    resource = res
-                } else {
-                    // @ts-ignore
-                    resource = state.static.equipment[index]
-                }
-
-                const _data = resource._data
-
-                if (quantity) {
-                    const [static_target, static_prop, static_mention] = Mention.resolve('@me/' + resource._path, state, true, false)
-                    if (!('mechanics' in static_target[static_prop])) static_target[static_prop].mechanics = {quantity: 1}
-                    static_target[static_prop].mechanics.quantity += quantity
-
-                    // atualizar qtd in async
-                    const [async_target, async_prop, async_mention] = Mention.resolve('@me/' + resource._path, state, true, true)
-                    if (!('mechanics' in async_target[async_prop])) async_target[async_prop].mechanics = {quantity: 1}
-                    async_target[async_prop].mechanics.quantity = static_target[static_prop].mechanics.quantity
-
-                    // make virtual reload
-                    const virtual = state._index.virtual[resource._uuid]
-                    const update_key = `__update__${uuid()}__`
-                    Vue.set(state.virtual.equipment[virtual._index], update_key, uuid())
-                    Vue.delete(state.virtual.equipment[virtual._index], update_key)
-
-                    console.log('%c ADD/SUBTRACT EQUIPMENT ', Styles.BOLD, quantity, '->', async_target[async_prop].mechanics.quantity, resource._data, resource)
-                    if (static_target[static_prop].mechanics.quantity > 0) return
-                }
-
-                console.log('REMOVE EQUIPMENT', index, _data, '->', undefined)
-                // @ts-ignore
-                const LEFTOVER = ResourceService.leftover(state.static.equipment[index], state)
-
-                if (state._index.async[LEFTOVER._uuid] !== undefined)
-                    dispatch('REMOVE_RESOURCE', LEFTOVER)
-
-                state.static.equipment.splice(index, 1)
-            } else {
-                //FIXME: adicionar handaxe, adiciona longsword, adiciona handaxe, adiciona longsword ACABA SOMANDO +1 NO HANDAXE -> (handaxe x3, longsword x1)
-                if (index === undefined) index = state.static.equipment.length
-
-                // PREPARE OPTIONS
-                const options = {
-                    ...{
-                        path: pathToString(['equipment', index]),
-                        origin: 'input',
-                        source: 'equipment',
-                        // type // IDEM
-                        parent: 'custom',
-                        index
-                    },
-                    ...base
-                }
-
-                // MAKE RESOURCE
-                const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
-
-                // SET STATIC
-                state.static.equipment.splice(index, 1, resource)
-
-                if (injected) state._injected.push(injected)
-                // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', {resource})
-
-                console.log('%c SET EQUIPMENT ', Styles.BOLD, value, '->', index, resource)
-            }
+        async SET_STATS({dispatch}, args) {
+            await dispatch('SET_RESOURCES', { meta: 'stats', ...args })
         },
-        async SET_PROFICIENCIES({ state, dispatch }, { index, value, base= {}, res, injected }) {
-            if (value === undefined) {
-                let resource
-                if (index === undefined) {
-                    index = res._index
-                    resource = res
-                } else {
-                    // @ts-ignore
-                    resource = state.static.proficiencies[index]
-                }
-
-                const _data = resource._data
-
-                console.log('REMOVE PROFICIENCIES', index, _data, '->', undefined)
-                // @ts-ignore
-                const LEFTOVER = ResourceService.leftover(state.static.proficiencies[index], state)
-
-                if (state._index.async[LEFTOVER._uuid] !== undefined)
-                    dispatch('REMOVE_RESOURCE', LEFTOVER)
-
-                state.static.proficiencies.splice(index, 1)
-            } else {
-                if (index === undefined) index = state.static.proficiencies.length
-
-                // PREPARE OPTIONS
-                const options = {
-                    ...{
-                        path: pathToString(['proficiencies', index]),
-                        origin: 'input',
-                        source: 'proficiencies',
-                        // type // IDEM
-                        parent: 'custom',
-                        index
-                    },
-                    ...base
-                }
-
-                // MAKE RESOURCE
-                const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
-
-                // SET STATIC
-                state.static.proficiencies.splice(index, 1, resource)
-
-                if (injected) state._injected.push(injected)
-                // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', {resource})
-
-                console.log('%c SET PROFICIENCIES ', Styles.BOLD, value, '->', index, resource)
-            }
+        async SET_PROFICIENCIES({dispatch}, args) {
+            await dispatch('SET_RESOURCES', { meta: 'proficiencies', ...args })
         },
-        async SET_FEATURES({ state, dispatch }, { index, value, base= {}, res, injected }) {
-            if (value === undefined) {
-                let resource
-                if (index === undefined) {
-                    index = res._index
-                    resource = res
-                } else {
-                    // @ts-ignore
-                    resource = state.static.features[index]
-                }
-
-                const _data = resource._data
-
-                console.log('REMOVE FEATURE', index, _data, '->', undefined)
-                if (state.static.features[index] === undefined) debugger
-                // @ts-ignore
-                const LEFTOVER = ResourceService.leftover(state.static.features[index], state)
-
-                if (state._index.async[LEFTOVER._uuid] !== undefined)
-                    await dispatch('REMOVE_RESOURCE', LEFTOVER)
-
-                state.static.features.splice(index, 1)
-            } else {
-                if (index === undefined) index = state.static.features.length
-
-                // PREPARE OPTIONS
-                const options = {
-                    ...{
-                        path: pathToString(['features', index]),
-                        origin: 'input',
-                        source: 'features',
-                        // type // IDEM
-                        parent: 'custom',
-                        index
-                    },
-                    ...base
-                }
-
-                // MAKE RESOURCE
-                const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
-
-                // SET STATIC
-                state.static.features.splice(index, 1, resource)
-
-                if (injected) state._injected.push(injected)
-                // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', {resource})
-
-                console.log('%c SET FEATURE ', Styles.BOLD, value, '->', index)
-            }
+        async SET_EQUIPMENT({dispatch}, args) {
+            await dispatch('SET_RESOURCES', { meta: 'equipment', ...args })
         },
-        async SET_STATS({ state, dispatch }, { target, value, base= {}, res, injected }) {
-            if (value === undefined) {
-                let resource
-                if (target === undefined) {
-                    target = res._type
-
-                    // double-check if resource is really the one to be removed
-                    // @ts-ignore
-                    if (state.static.stats._[target] === undefined || state.static.stats._[target]._uuid !== res._uuid) {
-                        // @ts-ignore
-                        console.log('%c WARNING ', Styles.AMBAR, 'Resource indicated is not the one in position likely was already removed by other means > ', target, res._data, res, 'in loco', state.static.stats._[target])
-                        return
-                    }
-
-                    resource = res
-                } else {
-                    // @ts-ignore
-                    resource = state.static.stats._[target]
-                }
-
-                const _data = resource._data
-
-                console.log('REMOVE STAT', target, _data, '->', undefined)
-                // @ts-ignore
-                const LEFTOVER = ResourceService.leftover(state.static.stats._[target], state)
-
-                if (state._index.async[LEFTOVER._uuid] !== undefined)
-                    dispatch('REMOVE_RESOURCE', LEFTOVER)
-
-                // @ts-ignore
-                Vue.set(state.static.stats._, target, undefined)
-                Vue.set(state.static.stats, target, undefined)
-            } else {
-                // PREPARE OPTIONS
-                const options = {
-                    ...{
-                        path: `stats.${target}`,
-                        origin: 'input',
-                        source: 'stats',
-                        type: target,
-                        parent: 'custom'
-                    },
-                    ...base
-                }
-
-                // @ts-ignore
-                if (state.static.stats._[target] && state.static.stats._[target]._uuid) {
-                    // @ts-ignore
-                    await dispatch('UNINDEX_RESOURCE', state.static.stats._[target])
-                }
-
-                // MAKE RESOURCE
-                const resource = await dispatch('CREATE_RESOURCE', { value: target, ...options })
-
-                // SET STATIC
-                // @ts-ignore
-                Vue.set(state.static.stats._, target, resource)
-                Vue.set(state.static.stats, target, value)
-
-                if (injected) state._injected.push(injected)
-                // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', {resource})
-
-                console.log('%c SET STATS ', Styles.BOLD, value, '->', target)
-            }
+        async SET_FEATURES({dispatch}, args) {
+            await dispatch('SET_RESOURCES', { meta: 'features', ...args })
         },
-        async SET_SPELLS({ state, dispatch }, { index, value, base = {}, res, injected }) {
-            if (value === undefined) {
-                let resource
-                if (index === undefined) {
-                    index = res._index
-                    resource = res
-                } else {
-                    // @ts-ignore
-                    resource = state.static.spells[index]
-                }
-
-                const _data = resource._data
-
-                console.log('REMOVE SPELL', index, _data, '->', undefined)
-                if (state.static.spells[index] === undefined) debugger
-                // @ts-ignore
-                const LEFTOVER = ResourceService.leftover(state.static.spells[index], state)
-
-                if (state._index.async[LEFTOVER._uuid] !== undefined)
-                    await dispatch('REMOVE_RESOURCE', LEFTOVER)
-
-                state.static.spells.splice(index, 1)
-            } else {
-                if (index === undefined) index = state.static.spells.length
-
-                // PREPARE OPTIONS
-                const options = {
-                    ...{
-                        path: pathToString(['spells', index]),
-                        origin: 'input',
-                        source: 'spells',
-                        // type // IDEM
-                        parent: 'custom',
-                        index
-                    },
-                    ...base
-                }
-
-                // MAKE RESOURCE
-                const resource = await dispatch('CREATE_RESOURCE', { value, ...options })
-
-                // SET STATIC
-                state.static.spells.splice(index, 1, resource)
-
-                if (injected) state._injected.push(injected)
-                // PUSH TO ASYNC STACK
-                dispatch('STACK_RESOURCE', {resource})
-
-                console.log('%c SET SPELL ', Styles.BOLD, value, '->', index)
-            }
+        async SET_SPELLS({dispatch}, args) {
+            await dispatch('SET_RESOURCES', { meta: 'spells', ...args })
         },
         async SET_PLUGINS({ state, dispatch }, { index, value, base= {}, res, injected }) {
             if (value === undefined) {
